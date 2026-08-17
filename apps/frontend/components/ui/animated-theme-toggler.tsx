@@ -13,6 +13,15 @@ type AnimatedThemeTogglerProps = {
   className?: string
 }
 
+function persistTheme(theme: "dark" | "light") {
+  try {
+    localStorage.setItem("theme", theme)
+  } catch (e) {
+    // localStorage may be unavailable (private mode, disabled) - cookie below still works
+  }
+  document.cookie = `theme=${theme}; path=/; max-age=31536000; SameSite=Lax`
+}
+
 export const AnimatedThemeToggler = ({ className }: AnimatedThemeTogglerProps) => {
   const buttonRef = useRef<HTMLButtonElement>(null)
   const [darkMode, setDarkMode] = useState(() =>
@@ -36,12 +45,16 @@ export const AnimatedThemeToggler = ({ className }: AnimatedThemeTogglerProps) =
   const onToggle = useCallback(async () => {
     if (!buttonRef.current) return
 
+    const toggled = !darkMode
+
     const applyToggle = () => {
-      const toggled = !darkMode
       setDarkMode(toggled)
       document.documentElement.classList.toggle("dark", toggled)
-      localStorage.setItem("theme", toggled ? "dark" : "light")
     }
+
+    // Persist FIRST, synchronously, before any animation/await - so a
+    // reload at any point after this line always sees the new theme.
+    persistTheme(toggled ? "dark" : "light")
 
     // Not all browsers support View Transitions - fall back gracefully.
     if (typeof document.startViewTransition !== "function") {
@@ -82,7 +95,7 @@ export const AnimatedThemeToggler = ({ className }: AnimatedThemeTogglerProps) =
       onClick={onToggle}
       aria-label="Switch theme"
       className={cn(
-        "flex items-center justify-center p-2 rounded-full outline-none focus:outline-none active:outline-none focus:ring-0 cursor-pointer hover:bg-neutral-800/60 transition-colors",
+        "flex items-center justify-center p-2 rounded-full outline-none focus:outline-none active:outline-none focus:ring-0 cursor-pointer hover:bg-[var(--surface-hover)] transition-colors",
         className
       )}
       type="button"
@@ -95,7 +108,7 @@ export const AnimatedThemeToggler = ({ className }: AnimatedThemeTogglerProps) =
             animate={{ opacity: 1, scale: 1, rotate: 0 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.33 }}
-            className="text-neutral-200"
+            className="text-[var(--foreground)]"
           >
             <Sun size={18} />
           </motion.span>
@@ -106,7 +119,7 @@ export const AnimatedThemeToggler = ({ className }: AnimatedThemeTogglerProps) =
             animate={{ opacity: 1, scale: 1, rotate: 0 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.33 }}
-            className="text-neutral-700"
+            className="text-[var(--foreground)]"
           >
             <Moon size={18} />
           </motion.span>
