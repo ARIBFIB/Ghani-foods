@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { AtSignIcon, LockIcon, Grid2x2PlusIcon } from "lucide-react";
 
+const LOGIN_IMAGE_URL = "https://res.cloudinary.com/dr9dwesyo/image/upload/v1787001758/ghanifoods/ghani-nimko-bag.png";
+
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -28,7 +30,7 @@ export default function LoginPage() {
     <main className="relative md:h-screen md:overflow-hidden lg:grid lg:grid-cols-2">
       <div className="bg-neutral-900 relative hidden h-full flex-col border-r border-neutral-800 lg:flex overflow-hidden">
         <Image
-          src="/images/ghani-nimko-bag.png"
+          src={LOGIN_IMAGE_URL}
           alt="Ghani Food - Nimko"
           fill
           priority
