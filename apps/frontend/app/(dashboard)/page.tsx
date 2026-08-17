@@ -1,4 +1,4 @@
-import { kpis } from "@/lib/mock-data/kpis";
+import { dashboardKpis as kpis } from "@/lib/mock-data/kpis";
 
 function KpiCard({ label, value }: { label: string; value: string | number }) {
   return (

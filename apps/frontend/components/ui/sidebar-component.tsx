@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   Search as SearchIcon,
   Dashboard,
-  Grain,
+  Gradient,
   Archive,
   Package,
   UserMultiple,
@@ -73,7 +73,7 @@ type NavItem = { href: string; label: string; icon: React.ReactNode };
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Dashboard", icon: <Dashboard size={16} /> },
-  { href: "/raw-materials", label: "Raw Materials", icon: <Grain size={16} /> },
+  { href: "/raw-materials", label: "Raw Materials", icon: <Gradient size={16} /> },
   { href: "/packaging", label: "Packaging", icon: <Archive size={16} /> },
   { href: "/batches", label: "Production Batches", icon: <Package size={16} /> },
   { href: "/finished-cartons", label: "Finished Cartons", icon: <Archive size={16} /> },
