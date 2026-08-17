@@ -56,7 +56,9 @@ function RecordPaymentDialog({ open, onClose, customerId, customerName }: { open
 export default function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const invoice = useStore((s) => s.invoices.find((i) => i.id === id));
+  const settings = useStore((s) => s.settings);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
 
   if (!invoice) {
     return (
@@ -66,6 +68,104 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       </div>
     );
   }
+
+  const handleDownloadPDF = async () => {
+    setGeneratingPdf(true);
+    try {
+      const { jsPDF } = await import("jspdf");
+      const doc = new jsPDF({ unit: "pt", format: "a4" });
+
+      const marginX = 48;
+      let y = 56;
+
+      doc.setFontSize(18);
+      doc.setFont("helvetica", "bold");
+      doc.text(settings.businessName || "GhaniFoods", marginX, y);
+
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      y += 16;
+      doc.text(settings.address || "", marginX, y);
+
+      doc.setFontSize(20);
+      doc.setFont("helvetica", "bold");
+      doc.text("INVOICE", 595 - marginX, 56, { align: "right" });
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(invoice.id, 595 - marginX, 74, { align: "right" });
+      doc.text(invoice.invoiceDate, 595 - marginX, 88, { align: "right" });
+
+      y += 32;
+      doc.setDrawColor(200);
+      doc.line(marginX, y, 595 - marginX, y);
+
+      y += 24;
+      doc.setFontSize(9);
+      doc.setTextColor(120);
+      doc.text("BILLED TO", marginX, y);
+      y += 14;
+      doc.setFontSize(12);
+      doc.setTextColor(20);
+      doc.setFont("helvetica", "bold");
+      doc.text(invoice.customerName, marginX, y);
+      doc.setFont("helvetica", "normal");
+
+      y += 30;
+      const colItem = marginX;
+      const colQty = 330;
+      const colPrice = 400;
+      const colSubtotal = 500;
+
+      doc.setFillColor(23, 23, 23);
+      doc.rect(marginX, y - 14, 595 - marginX * 2, 22, "F");
+      doc.setTextColor(255);
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.text("ITEM", colItem + 6, y + 1);
+      doc.text("QTY", colQty, y + 1);
+      doc.text("UNIT PRICE", colPrice, y + 1);
+      doc.text("SUBTOTAL", colSubtotal, y + 1);
+
+      y += 22;
+      doc.setTextColor(30);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+
+      const lines = invoice.items.length > 0
+        ? invoice.items
+        : [{ itemName: "Nimko Carton (legacy record)", qty: 0, unitPrice: 0, subtotal: invoice.totalAmount, itemId: "" }];
+
+      for (const line of lines) {
+        doc.text(String(line.itemName), colItem + 6, y);
+        doc.text(line.qty ? String(line.qty) : "-", colQty, y);
+        doc.text(line.unitPrice ? `Rs. ${line.unitPrice.toLocaleString()}` : "-", colPrice, y);
+        doc.text(`Rs. ${line.subtotal.toLocaleString()}`, colSubtotal, y);
+        y += 20;
+        doc.setDrawColor(230);
+        doc.line(marginX, y - 6, 595 - marginX, y - 6);
+      }
+
+      y += 20;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.text("Total:", colPrice, y);
+      doc.text(`Rs. ${invoice.totalAmount.toLocaleString()}`, colSubtotal, y);
+
+      y += 50;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(120);
+      doc.text(settings.invoiceFooterText || "Thank you for your business!", marginX, y);
+
+      doc.save(`${invoice.id}.pdf`);
+      toast.success(`Invoice ${invoice.id} downloaded as PDF`);
+    } catch (err) {
+      toast.error("Could not generate PDF. Please try again.");
+      console.error(err);
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -125,9 +225,12 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
 
       <div className="flex gap-2 print:hidden">
         <button onClick={() => window.print()} className="rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-800">Print</button>
-        <button onClick={() => toast.info("PDF generation is planned for a later step (needs backend rendering).")}
-          className="rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-800">
-          Download PDF
+        <button
+          onClick={handleDownloadPDF}
+          disabled={generatingPdf}
+          className="rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+        >
+          {generatingPdf ? "Generating..." : "Download PDF"}
         </button>
         <button onClick={() => setDialogOpen(true)} className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200">
           Record Payment

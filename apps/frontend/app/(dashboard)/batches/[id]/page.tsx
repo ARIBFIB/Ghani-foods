@@ -118,6 +118,14 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
             Overhead of Rs. {batch.overheadTotal.toLocaleString()} allocated across this batch's output.
           </div>
         )}
+
+        {batch.leftoverSourceBatchId && batch.leftoverKgConsumed && (
+          <div className="mt-2 text-xs text-blue-400">
+            Includes {batch.leftoverKgConsumed} kg of leftover bulk product carried forward from{" "}
+            <Link href={`/batches/${batch.leftoverSourceBatchId}`} className="underline">{batch.leftoverSourceBatchId}</Link>{" "}
+            (FIFO â€” cost blended into this batch's effective cost/kg).
+          </div>
+        )}
       </div>
 
       <div className="flex gap-2">

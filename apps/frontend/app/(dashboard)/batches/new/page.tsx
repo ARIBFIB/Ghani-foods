@@ -33,15 +33,17 @@ export default function NewBatchPage() {
   const [rowError, setRowError] = useState("");
   const [useLeftoverFirst, setUseLeftoverFirst] = useState(false);
   const [leftoverBatchId, setLeftoverBatchId] = useState("");
+  const [leftoverKgUsed, setLeftoverKgUsed] = useState("");
 
   const leftoverBatches = productionBatches.filter((b) => b.leftoverQtyKg > 0);
+  const selectedLeftoverBatch = leftoverBatches.find((b) => b.id === leftoverBatchId);
 
   const addRow = () => setRows((prev) => [...prev, { id: crypto.randomUUID(), rawMaterialId: rawMaterials[0]?.id ?? "", qty: "" }]);
   const removeRow = (id: string) => setRows((prev) => (prev.length > 1 ? prev.filter((r) => r.id !== id) : prev));
   const updateRow = (id: string, patch: Partial<ConsumptionRow>) =>
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
 
-  const estimatedCost = useMemo(() => {
+  const estimatedRawMaterialCost = useMemo(() => {
     return rows.reduce((total, row) => {
       const material = rawMaterials.find((m) => m.id === row.rawMaterialId);
       const qty = Number(row.qty) || 0;
@@ -50,11 +52,25 @@ export default function NewBatchPage() {
     }, 0);
   }, [rows, rawMaterials]);
 
+  const estimatedLeftoverCost = useMemo(() => {
+    if (!useLeftoverFirst || !selectedLeftoverBatch) return 0;
+    const kg = Math.min(Number(leftoverKgUsed) || 0, selectedLeftoverBatch.leftoverQtyKg);
+    return kg * selectedLeftoverBatch.bulkCostPerKg;
+  }, [useLeftoverFirst, selectedLeftoverBatch, leftoverKgUsed]);
+
+  const estimatedTotalCost = estimatedRawMaterialCost + estimatedLeftoverCost;
+
+  const effectiveKgUsedFromLeftover = useMemo(() => {
+    if (!useLeftoverFirst || !selectedLeftoverBatch) return 0;
+    return Math.min(Number(leftoverKgUsed) || 0, selectedLeftoverBatch.leftoverQtyKg);
+  }, [useLeftoverFirst, selectedLeftoverBatch, leftoverKgUsed]);
+
+  const estimatedTotalKg = (Number(outputYield) || 0) + effectiveKgUsedFromLeftover;
+
   const estimatedCostPerKg = useMemo(() => {
-    const yieldKg = Number(outputYield) || 0;
-    if (yieldKg <= 0) return 0;
-    return estimatedCost / yieldKg;
-  }, [estimatedCost, outputYield]);
+    if (estimatedTotalKg <= 0) return 0;
+    return estimatedTotalCost / estimatedTotalKg;
+  }, [estimatedTotalCost, estimatedTotalKg]);
 
   const onSubmit = async (values: BatchFormValues) => {
     setRowError("");
@@ -76,8 +92,35 @@ export default function NewBatchPage() {
       return;
     }
 
-    const newId = createBatch({ consumptions, outputYieldKg: values.outputYieldKg, wastageKg: values.wastageKg });
-    toast.success(`Batch ${newId} created â€” raw material stock deducted`);
+    if (useLeftoverFirst) {
+      if (!leftoverBatchId) {
+        setRowError("Select a leftover batch, or turn off 'Use Leftover From Previous Batch First'");
+        return;
+      }
+      const kg = Number(leftoverKgUsed) || 0;
+      if (kg <= 0) {
+        setRowError("Enter how many kg of leftover to use");
+        return;
+      }
+      if (selectedLeftoverBatch && kg > selectedLeftoverBatch.leftoverQtyKg) {
+        setRowError(`Only ${selectedLeftoverBatch.leftoverQtyKg} kg leftover available in ${selectedLeftoverBatch.id}`);
+        return;
+      }
+    }
+
+    const newId = createBatch({
+      consumptions,
+      outputYieldKg: values.outputYieldKg,
+      wastageKg: values.wastageKg,
+      leftoverBatchId: useLeftoverFirst ? leftoverBatchId : undefined,
+      leftoverKgUsed: useLeftoverFirst ? Number(leftoverKgUsed) || 0 : undefined,
+    });
+
+    if (useLeftoverFirst) {
+      toast.success(`Batch ${newId} created â€” raw material stock deducted and ${leftoverKgUsed} kg leftover from ${leftoverBatchId} consumed`);
+    } else {
+      toast.success(`Batch ${newId} created â€” raw material stock deducted`);
+    }
     router.push(`/batches/${newId}`);
   };
 
@@ -121,11 +164,17 @@ export default function NewBatchPage() {
         <div className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
           <div className="text-xs text-neutral-400">Estimated Batch Cost</div>
           <div className="text-lg font-semibold text-neutral-50 mt-1">
-            Rs. {estimatedCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            Rs. {estimatedTotalCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}
           </div>
-          {Number(outputYield) > 0 && (
+          {estimatedLeftoverCost > 0 && (
+            <div className="text-xs text-neutral-500 mt-1">
+              includes Rs. {estimatedLeftoverCost.toLocaleString(undefined, { maximumFractionDigits: 2 })} carried over from leftover
+            </div>
+          )}
+          {estimatedTotalKg > 0 && (
             <div className="text-xs text-neutral-400 mt-1">
               Est. cost/kg: Rs. {estimatedCostPerKg.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              {" "}(on {estimatedTotalKg} kg total{effectiveKgUsedFromLeftover > 0 ? `, incl. ${effectiveKgUsedFromLeftover} kg leftover` : ""})
             </div>
           )}
         </div>
@@ -148,19 +197,55 @@ export default function NewBatchPage() {
 
       <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-5 space-y-3">
         <label className="flex items-center gap-3 cursor-pointer">
-          <input type="checkbox" checked={useLeftoverFirst} onChange={(e) => setUseLeftoverFirst(e.target.checked)}
-            className="size-4 rounded border-neutral-700 bg-neutral-950" />
+          <input
+            type="checkbox"
+            checked={useLeftoverFirst}
+            onChange={(e) => {
+              setUseLeftoverFirst(e.target.checked);
+              if (!e.target.checked) {
+                setLeftoverBatchId("");
+                setLeftoverKgUsed("");
+              }
+            }}
+            className="size-4 rounded border-neutral-700 bg-neutral-950"
+          />
           <span className="text-sm text-neutral-200">Use Leftover From Previous Batch First</span>
         </label>
 
         {useLeftoverFirst && (
-          <select value={leftoverBatchId} onChange={(e) => setLeftoverBatchId(e.target.value)}
-            className="w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600">
-            <option value="">Select leftover batch...</option>
-            {leftoverBatches.map((b) => (
-              <option key={b.id} value={b.id}>{b.id} â€” {b.leftoverQtyKg} kg leftover</option>
-            ))}
-          </select>
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm text-neutral-400">Leftover Batch</label>
+              <select
+                value={leftoverBatchId}
+                onChange={(e) => { setLeftoverBatchId(e.target.value); setLeftoverKgUsed(""); }}
+                className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600"
+              >
+                <option value="">Select leftover batch...</option>
+                {leftoverBatches.map((b) => (
+                  <option key={b.id} value={b.id}>{b.id} â€” {b.leftoverQtyKg} kg available @ Rs. {b.bulkCostPerKg}/kg</option>
+                ))}
+              </select>
+            </div>
+
+            {selectedLeftoverBatch && (
+              <div>
+                <label className="text-sm text-neutral-400">Leftover Qty to Use (kg)</label>
+                <input
+                  value={leftoverKgUsed}
+                  onChange={(e) => setLeftoverKgUsed(e.target.value)}
+                  type="number"
+                  step="any"
+                  max={selectedLeftoverBatch.leftoverQtyKg}
+                  placeholder={`Up to ${selectedLeftoverBatch.leftoverQtyKg} kg`}
+                  className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600"
+                />
+                {Number(leftoverKgUsed) > selectedLeftoverBatch.leftoverQtyKg && (
+                  <p className="text-xs text-red-400 mt-1">Only {selectedLeftoverBatch.leftoverQtyKg} kg available in this batch</p>
+                )}
+              </div>
+            )}
+          </div>
         )}
       </div>
 

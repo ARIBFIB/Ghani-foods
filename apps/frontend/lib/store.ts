@@ -37,6 +37,8 @@ export type ProductionBatch = {
   bulkCostPerKg: number;
   overheadTotal: number;
   status: "in_progress" | "completed";
+  leftoverSourceBatchId?: string;
+  leftoverKgConsumed?: number;
 };
 
 export type FinishedCarton = {
@@ -203,6 +205,8 @@ type State = {
     consumptions: { rawMaterialId: string; qty: number }[];
     outputYieldKg: number;
     wastageKg: number;
+    leftoverBatchId?: string;
+    leftoverKgUsed?: number;
   }) => string;
   allocateOverhead: (batchId: string, electricity: number, gas: number, rent: number) => void;
 
@@ -282,23 +286,63 @@ export const useStore = create<State>()(
           }),
         })),
 
+      // ------------------------------------------------------------------
+      // FIFO leftover logic (FR-10):
+      // If leftoverBatchId + leftoverKgUsed are provided, that quantity of
+      // bulk product is pulled from the earlier batch's leftover pool BEFORE
+      // being combined with this batch's freshly produced output. The two
+      // are cost-blended so the new batch's effective cost/kg reflects both
+      // the raw-material cost of the new output AND the carried-forward
+      // cost/kg of the reused leftover.
+      // ------------------------------------------------------------------
       createBatch: (input) => {
         const id = `batch-${Date.now()}`;
         set((s) => {
-          let totalCost = 0;
+          let rawMaterialCost = 0;
           const rawMaterials = s.rawMaterials.map((m) => {
             const line = input.consumptions.find((c) => c.rawMaterialId === m.id);
             if (!line) return m;
-            totalCost += line.qty * m.avgUnitCost;
+            rawMaterialCost += line.qty * m.avgUnitCost;
             return { ...m, quantityInStock: Math.max(0, m.quantityInStock - line.qty) };
           });
-          const bulkCostPerKg = input.outputYieldKg > 0 ? totalCost / input.outputYieldKg : 0;
+
+          let productionBatches = s.productionBatches;
+          let leftoverCostContribution = 0;
+          let leftoverKgActuallyUsed = 0;
+
+          if (input.leftoverBatchId && input.leftoverKgUsed && input.leftoverKgUsed > 0) {
+            const sourceBatch = s.productionBatches.find((b) => b.id === input.leftoverBatchId);
+            if (sourceBatch) {
+              // Never consume more than what's actually available (FIFO safety cap)
+              leftoverKgActuallyUsed = Math.min(input.leftoverKgUsed, sourceBatch.leftoverQtyKg);
+              leftoverCostContribution = leftoverKgActuallyUsed * sourceBatch.bulkCostPerKg;
+
+              productionBatches = productionBatches.map((b) =>
+                b.id === input.leftoverBatchId
+                  ? { ...b, leftoverQtyKg: Number((b.leftoverQtyKg - leftoverKgActuallyUsed).toFixed(2)) }
+                  : b
+              );
+            }
+          }
+
+          const totalCost = rawMaterialCost + leftoverCostContribution;
+          const totalKg = input.outputYieldKg + leftoverKgActuallyUsed;
+          const bulkCostPerKg = totalKg > 0 ? totalCost / totalKg : 0;
+
           const newBatch: ProductionBatch = {
-            id, batchDate: today(), outputYieldKg: input.outputYieldKg, wastageKg: input.wastageKg,
-            leftoverQtyKg: input.outputYieldKg, bulkCostPerKg: Number(bulkCostPerKg.toFixed(2)),
-            overheadTotal: 0, status: "in_progress",
+            id,
+            batchDate: today(),
+            outputYieldKg: input.outputYieldKg,
+            wastageKg: input.wastageKg,
+            leftoverQtyKg: Number(totalKg.toFixed(2)),
+            bulkCostPerKg: Number(bulkCostPerKg.toFixed(2)),
+            overheadTotal: 0,
+            status: "in_progress",
+            leftoverSourceBatchId: leftoverKgActuallyUsed > 0 ? input.leftoverBatchId : undefined,
+            leftoverKgConsumed: leftoverKgActuallyUsed > 0 ? Number(leftoverKgActuallyUsed.toFixed(2)) : undefined,
           };
-          return { rawMaterials, productionBatches: [newBatch, ...s.productionBatches] };
+
+          return { rawMaterials, productionBatches: [newBatch, ...productionBatches] };
         });
         return id;
       },
