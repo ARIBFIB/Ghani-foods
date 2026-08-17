@@ -76,6 +76,8 @@ Push-Location $frontendDir
 npm install
 Pop-Location
 
+
+
 Write-Host "`n=== Done ===" -ForegroundColor Cyan
 Write-Host "Next steps:" -ForegroundColor White
 Write-Host "  1. Test locally:  cd apps\frontend && npm run build" -ForegroundColor Gray
