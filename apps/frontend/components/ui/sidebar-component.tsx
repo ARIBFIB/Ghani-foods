@@ -322,6 +322,48 @@ function IconNavigation({ activeSection }: { activeSection: SectionId }) {
   );
 }
 
+
+function MobileSectionNav({ activeSection }: { activeSection: SectionId }) {
+  const router = useRouter();
+
+  const navItems: Array<{ id: SectionId; icon: React.ReactNode; label: string }> = [
+    { id: "dashboard", icon: <Dashboard size={18} />, label: "Dashboard" },
+    { id: "raw-materials", icon: <Folder size={18} />, label: "Raw Materials" },
+    { id: "batches", icon: <Task size={18} />, label: "Batches" },
+    { id: "finished-cartons", icon: <Archive size={18} />, label: "Finished Cartons" },
+    { id: "customers", icon: <UserMultiple size={18} />, label: "Customers" },
+    { id: "invoices", icon: <DocumentAdd size={18} />, label: "Invoices" },
+    { id: "payments", icon: <ChartBar size={18} />, label: "Payments" },
+    { id: "reports", icon: <Analytics size={18} />, label: "Reports" },
+    { id: "settings", icon: <SettingsIcon size={18} />, label: "Settings" },
+  ];
+
+  const goTo = (section: SectionId) => router.push(SECTION_DEFAULT_ROUTE[section]);
+
+  return (
+    <div className="w-full lg:hidden flex flex-col gap-1">
+      <div className="px-2 py-1 text-[14px] text-[var(--text-muted)]">Sections</div>
+      <div className="grid grid-cols-1 gap-1">
+        {navItems.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => goTo(item.id)}
+            className={`flex items-center gap-3 rounded-lg px-4 py-2.5 text-left transition-colors duration-300 ${
+              activeSection === item.id
+                ? "bg-[var(--surface-hover)] text-[var(--foreground)]"
+                : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
+            }`}
+          >
+            <span className="shrink-0">{item.icon}</span>
+            <span className="text-[14px]">{item.label}</span>
+          </button>
+        ))}
+      </div>
+      <div className="h-px w-full bg-[var(--surface-border)] my-2" />
+    </div>
+  );
+}
 function SectionTitle({
   title,
   onToggleCollapse,
@@ -473,6 +515,7 @@ function DetailSidebar({ activeSection, pathname }: { activeSection: SectionId; 
         </button>
 
         <BrandBadge />
+        <MobileSectionNav activeSection={activeSection} />
         <SectionTitle title={content.title} onToggleCollapse={toggleCollapse} isCollapsed={isCollapsed} />
         <div className="w-full lg:hidden">
           <SearchContainer isCollapsed={false} />
