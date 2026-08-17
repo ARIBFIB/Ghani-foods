@@ -1,21 +1,45 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
-import { useStore } from "@/lib/store";
+import { type ColumnDef } from "@tanstack/react-table";
+import { useStore, type ProductionBatch } from "@/lib/store";
+import { SortableTable } from "@/components/ui/sortable-table";
 
 function StatusBadge({ status }: { status: "in_progress" | "completed" }) {
-  const isDone = status === "completed";
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-      isDone ? "bg-green-950 text-green-400 border border-green-900" : "bg-amber-950 text-amber-400 border border-amber-900"
+      status === "completed" ? "bg-green-950 text-green-400 border border-green-900" : "bg-amber-950 text-amber-400 border border-amber-900"
     }`}>
-      {isDone ? "Completed" : "In Progress"}
+      {status === "completed" ? "Completed" : "In Progress"}
     </span>
   );
 }
 
 export default function BatchesPage() {
   const productionBatches = useStore((s) => s.productionBatches);
+
+  const columns = useMemo<ColumnDef<ProductionBatch, unknown>[]>(() => [
+    {
+      accessorKey: "id", header: "Batch ID",
+      cell: ({ row }) => <Link href={`/batches/${row.original.id}`} className="text-neutral-50 hover:underline">{row.original.id}</Link>,
+    },
+    { accessorKey: "batchDate", header: "Date" },
+    { accessorKey: "outputYieldKg", header: "Output Yield (kg)" },
+    { accessorKey: "wastageKg", header: "Wastage (kg)" },
+    { accessorKey: "leftoverQtyKg", header: "Leftover (kg)" },
+    {
+      accessorKey: "bulkCostPerKg", header: "Bulk Cost/Kg",
+      cell: ({ getValue }) => {
+        const v = getValue() as number;
+        return v > 0 ? `Rs. ${v.toLocaleString()}` : "-";
+      },
+    },
+    {
+      id: "status", header: "Status", enableSorting: false,
+      cell: ({ row }) => <StatusBadge status={row.original.status} />,
+    },
+  ], []);
 
   return (
     <div className="space-y-6">
@@ -25,37 +49,7 @@ export default function BatchesPage() {
           + New Batch
         </Link>
       </div>
-
-      <div className="overflow-hidden rounded-xl border border-neutral-800">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-neutral-400">
-              <th className="px-4 py-3 font-medium">Batch ID</th>
-              <th className="px-4 py-3 font-medium">Date</th>
-              <th className="px-4 py-3 font-medium">Output Yield (kg)</th>
-              <th className="px-4 py-3 font-medium">Wastage (kg)</th>
-              <th className="px-4 py-3 font-medium">Leftover (kg)</th>
-              <th className="px-4 py-3 font-medium">Bulk Cost/Kg</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {productionBatches.map((b) => (
-              <tr key={b.id} className="border-b border-neutral-900 last:border-0 hover:bg-neutral-900/60">
-                <td className="px-4 py-3">
-                  <Link href={`/batches/${b.id}`} className="text-neutral-50 hover:underline">{b.id}</Link>
-                </td>
-                <td className="px-4 py-3 text-neutral-300">{b.batchDate}</td>
-                <td className="px-4 py-3 text-neutral-300">{b.outputYieldKg}</td>
-                <td className="px-4 py-3 text-neutral-300">{b.wastageKg}</td>
-                <td className="px-4 py-3 text-neutral-300">{b.leftoverQtyKg}</td>
-                <td className="px-4 py-3 text-neutral-300">{b.bulkCostPerKg > 0 ? `Rs. ${b.bulkCostPerKg.toLocaleString()}` : "-"}</td>
-                <td className="px-4 py-3"><StatusBadge status={b.status} /></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <SortableTable data={productionBatches} columns={columns} globalFilterPlaceholder="Search batches..." />
     </div>
   );
 }

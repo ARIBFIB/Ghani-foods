@@ -5,8 +5,10 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { useStore } from "@/lib/store";
+import { type ColumnDef } from "@tanstack/react-table";
+import { useStore, type RawMaterial } from "@/lib/store";
 import { rawMaterialSchema, type RawMaterialFormValues } from "@/lib/schemas";
+import { SortableTable } from "@/components/ui/sortable-table";
 
 function StatusBadge({ isLow }: { isLow: boolean }) {
   return (
@@ -20,25 +22,17 @@ function StatusBadge({ isLow }: { isLow: boolean }) {
 
 function AddRawMaterialDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const addRawMaterial = useStore((s) => s.addRawMaterial);
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<RawMaterialFormValues>({
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<RawMaterialFormValues>({
     resolver: zodResolver(rawMaterialSchema),
     defaultValues: { name: "", unit: "kg", lowStockThreshold: 50 },
   });
-
   if (!open) return null;
-
   const onSubmit = async (values: RawMaterialFormValues) => {
     addRawMaterial(values);
     toast.success(`Raw material "${values.name}" added`);
     reset();
     onClose();
   };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 p-5 space-y-4">
@@ -64,11 +58,8 @@ function AddRawMaterialDialog({ open, onClose }: { open: boolean; onClose: () =>
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={() => { reset(); onClose(); }} className="rounded-lg px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">
-            Cancel
-          </button>
-          <button type="submit" disabled={isSubmitting}
-            className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200 disabled:opacity-50">
+          <button type="button" onClick={() => { reset(); onClose(); }} className="rounded-lg px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">Cancel</button>
+          <button type="submit" disabled={isSubmitting} className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200 disabled:opacity-50">
             {isSubmitting ? "Saving..." : "Save"}
           </button>
         </div>
@@ -79,14 +70,37 @@ function AddRawMaterialDialog({ open, onClose }: { open: boolean; onClose: () =>
 
 export default function RawMaterialsPage() {
   const items = useStore((s) => s.rawMaterials);
-  const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((m) => m.name.toLowerCase().includes(q));
-  }, [items, search]);
+  const columns = useMemo<ColumnDef<RawMaterial, unknown>[]>(() => [
+    {
+      accessorKey: "name",
+      header: "Name",
+      cell: ({ row }) => (
+        <Link href={`/raw-materials/${row.original.id}`} className="text-neutral-50 hover:underline">
+          {row.original.name}
+        </Link>
+      ),
+    },
+    { accessorKey: "unit", header: "Unit" },
+    {
+      accessorKey: "quantityInStock",
+      header: "Qty in Stock",
+      cell: ({ getValue }) => <span>{getValue() as number}</span>,
+    },
+    {
+      accessorKey: "avgUnitCost",
+      header: "Avg Unit Cost",
+      cell: ({ getValue }) => `Rs. ${(getValue() as number).toLocaleString()}`,
+    },
+    { accessorKey: "lowStockThreshold", header: "Threshold" },
+    {
+      id: "status",
+      header: "Status",
+      cell: ({ row }) => <StatusBadge isLow={row.original.quantityInStock < row.original.lowStockThreshold} />,
+      enableSorting: false,
+    },
+  ], []);
 
   return (
     <div className="space-y-6">
@@ -96,45 +110,7 @@ export default function RawMaterialsPage() {
           + Add Raw Material
         </button>
       </div>
-
-      <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search raw materials..."
-        className="w-full max-w-sm rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 outline-none focus:border-neutral-600" />
-
-      <div className="overflow-hidden rounded-xl border border-neutral-800">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-neutral-400">
-              <th className="px-4 py-3 font-medium">Name</th>
-              <th className="px-4 py-3 font-medium">Unit</th>
-              <th className="px-4 py-3 font-medium">Qty in Stock</th>
-              <th className="px-4 py-3 font-medium">Avg Unit Cost</th>
-              <th className="px-4 py-3 font-medium">Threshold</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((m) => {
-              const isLow = m.quantityInStock < m.lowStockThreshold;
-              return (
-                <tr key={m.id} className="border-b border-neutral-900 last:border-0 hover:bg-neutral-900/60">
-                  <td className="px-4 py-3">
-                    <Link href={`/raw-materials/${m.id}`} className="text-neutral-50 hover:underline">{m.name}</Link>
-                  </td>
-                  <td className="px-4 py-3 text-neutral-300">{m.unit}</td>
-                  <td className="px-4 py-3 text-neutral-300">{m.quantityInStock}</td>
-                  <td className="px-4 py-3 text-neutral-300">Rs. {m.avgUnitCost.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-neutral-300">{m.lowStockThreshold}</td>
-                  <td className="px-4 py-3"><StatusBadge isLow={isLow} /></td>
-                </tr>
-              );
-            })}
-            {filtered.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-neutral-500">No raw materials found.</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
+      <SortableTable data={items} columns={columns} globalFilterPlaceholder="Search raw materials..." />
       <AddRawMaterialDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
     </div>
   );

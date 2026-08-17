@@ -5,8 +5,10 @@ import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { useStore } from "@/lib/store";
+import { type ColumnDef } from "@tanstack/react-table";
+import { useStore, type Customer } from "@/lib/store";
 import { customerSchema, type CustomerFormValues } from "@/lib/schemas";
+import { SortableTable } from "@/components/ui/sortable-table";
 
 function BalanceCell({ balance }: { balance: number }) {
   const owes = balance > 0;
@@ -20,25 +22,16 @@ function BalanceCell({ balance }: { balance: number }) {
 
 function AddCustomerDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const addCustomer = useStore((s) => s.addCustomer);
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<CustomerFormValues>({
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<CustomerFormValues>({
     resolver: zodResolver(customerSchema),
     defaultValues: { name: "", phone: "", openingBalance: 0 },
   });
-
   if (!open) return null;
-
   const onSubmit = async (values: CustomerFormValues) => {
     addCustomer(values);
     toast.success(`Customer "${values.name}" added`);
-    reset();
-    onClose();
+    reset(); onClose();
   };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 p-5 space-y-4">
@@ -65,8 +58,7 @@ function AddCustomerDialog({ open, onClose }: { open: boolean; onClose: () => vo
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" onClick={() => { reset(); onClose(); }} className="rounded-lg px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">Cancel</button>
-          <button type="submit" disabled={isSubmitting}
-            className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200 disabled:opacity-50">
+          <button type="submit" disabled={isSubmitting} className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200 disabled:opacity-50">
             {isSubmitting ? "Saving..." : "Save"}
           </button>
         </div>
@@ -77,14 +69,19 @@ function AddCustomerDialog({ open, onClose }: { open: boolean; onClose: () => vo
 
 export default function CustomersPage() {
   const items = useStore((s) => s.customers);
-  const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((c) => c.name.toLowerCase().includes(q));
-  }, [items, search]);
+  const columns = useMemo<ColumnDef<Customer, unknown>[]>(() => [
+    {
+      accessorKey: "name", header: "Name",
+      cell: ({ row }) => <Link href={`/customers/${row.original.id}`} className="text-neutral-50 hover:underline">{row.original.name}</Link>,
+    },
+    { accessorKey: "phone", header: "Phone" },
+    {
+      accessorKey: "currentBalance", header: "Current Balance",
+      cell: ({ row }) => <BalanceCell balance={row.original.currentBalance} />,
+    },
+  ], []);
 
   return (
     <div className="space-y-6">
@@ -94,36 +91,7 @@ export default function CustomersPage() {
           + Add Customer
         </button>
       </div>
-
-      <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search customers..."
-        className="w-full max-w-sm rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 outline-none focus:border-neutral-600" />
-
-      <div className="overflow-hidden rounded-xl border border-neutral-800">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-neutral-400">
-              <th className="px-4 py-3 font-medium">Name</th>
-              <th className="px-4 py-3 font-medium">Phone</th>
-              <th className="px-4 py-3 font-medium">Current Balance</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((c) => (
-              <tr key={c.id} className="border-b border-neutral-900 last:border-0 hover:bg-neutral-900/60">
-                <td className="px-4 py-3">
-                  <Link href={`/customers/${c.id}`} className="text-neutral-50 hover:underline">{c.name}</Link>
-                </td>
-                <td className="px-4 py-3 text-neutral-300">{c.phone}</td>
-                <td className="px-4 py-3"><BalanceCell balance={c.currentBalance} /></td>
-              </tr>
-            ))}
-            {filtered.length === 0 && (
-              <tr><td colSpan={3} className="px-4 py-8 text-center text-neutral-500">No customers found.</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
+      <SortableTable data={items} columns={columns} globalFilterPlaceholder="Search customers..." />
       <AddCustomerDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
     </div>
   );

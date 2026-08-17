@@ -3,9 +3,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 export type RawMaterial = {
   id: string;
   name: string;
@@ -86,7 +83,7 @@ export type LedgerEntry = {
   id: string;
   customerId: string;
   type: "invoice" | "payment" | "adjustment";
-  amount: number; // positive = debit (customer owes more), negative = credit
+  amount: number;
   runningBalance: number;
   date: string;
   note?: string;
@@ -101,9 +98,14 @@ export type Payment = {
   paidAt: string;
 };
 
-// ---------------------------------------------------------------------------
-// Initial dummy data (same shape/values as the original mock-data files)
-// ---------------------------------------------------------------------------
+export type AppSettings = {
+  businessName: string;
+  address: string;
+  invoiceFooterText: string;
+  defaultProfitMarginPercent: number;
+  lowStockThresholdDefault: number;
+};
+
 const initialRawMaterials: RawMaterial[] = [
   { id: "rm-1", name: "Atta (Flour)", unit: "kg", quantityInStock: 420, avgUnitCost: 145.5, lowStockThreshold: 100 },
   { id: "rm-2", name: "Ghee", unit: "kg", quantityInStock: 65, avgUnitCost: 780, lowStockThreshold: 80 },
@@ -168,11 +170,16 @@ const initialPayments: Payment[] = [
   { id: "pay-2", customerId: "cust-1", customerName: "Al-Madina General Store", amount: 5800, note: "Partial payment", paidAt: "2026-08-16" },
 ];
 
+const initialSettings: AppSettings = {
+  businessName: "GhaniFoods",
+  address: "Mansehra, Khyber Pakhtunkhwa, Pakistan",
+  invoiceFooterText: "Thank you for your business!",
+  defaultProfitMarginPercent: 20,
+  lowStockThresholdDefault: 50,
+};
+
 const today = () => new Date().toISOString().slice(0, 10);
 
-// ---------------------------------------------------------------------------
-// Store
-// ---------------------------------------------------------------------------
 type State = {
   rawMaterials: RawMaterial[];
   receipts: RawMaterialReceipt[];
@@ -184,6 +191,7 @@ type State = {
   invoices: Invoice[];
   ledgerEntries: LedgerEntry[];
   payments: Payment[];
+  settings: AppSettings;
 
   addRawMaterial: (item: { name: string; unit: string; lowStockThreshold: number }) => void;
   recordPurchase: (rawMaterialId: string, qty: number, cost: number) => void;
@@ -214,6 +222,8 @@ type State = {
     customerId: string;
     lines: { itemId: string; qty: number; unitPrice: number }[];
   }) => string;
+
+  updateSettings: (patch: Partial<AppSettings>) => void;
 };
 
 export const useStore = create<State>()(
@@ -229,19 +239,13 @@ export const useStore = create<State>()(
       invoices: initialInvoices,
       ledgerEntries: initialLedger,
       payments: initialPayments,
+      settings: initialSettings,
 
       addRawMaterial: (item) =>
         set((s) => ({
           rawMaterials: [
             ...s.rawMaterials,
-            {
-              id: `rm-${Date.now()}`,
-              name: item.name,
-              unit: item.unit,
-              quantityInStock: 0,
-              avgUnitCost: 0,
-              lowStockThreshold: item.lowStockThreshold,
-            },
+            { id: `rm-${Date.now()}`, name: item.name, unit: item.unit, quantityInStock: 0, avgUnitCost: 0, lowStockThreshold: item.lowStockThreshold },
           ],
         })),
 
@@ -250,9 +254,7 @@ export const useStore = create<State>()(
           const rawMaterials = s.rawMaterials.map((m) => {
             if (m.id !== rawMaterialId) return m;
             const newQty = m.quantityInStock + qty;
-            // Weighted Average Cost formula (FR-2)
-            const newAvgCost =
-              newQty > 0 ? (m.quantityInStock * m.avgUnitCost + qty * cost) / newQty : m.avgUnitCost;
+            const newAvgCost = newQty > 0 ? (m.quantityInStock * m.avgUnitCost + qty * cost) / newQty : m.avgUnitCost;
             return { ...m, quantityInStock: newQty, avgUnitCost: Number(newAvgCost.toFixed(2)) };
           });
           const receipts: RawMaterialReceipt[] = [
@@ -266,13 +268,7 @@ export const useStore = create<State>()(
         set((s) => ({
           packagingMaterials: [
             ...s.packagingMaterials,
-            {
-              id: `pm-${Date.now()}`,
-              name: item.name,
-              unitCost: item.unitCost,
-              stockQty: 0,
-              lowStockThreshold: item.lowStockThreshold,
-            },
+            { id: `pm-${Date.now()}`, name: item.name, unitCost: item.unitCost, stockQty: 0, lowStockThreshold: item.lowStockThreshold },
           ],
         })),
 
@@ -289,7 +285,6 @@ export const useStore = create<State>()(
       createBatch: (input) => {
         const id = `batch-${Date.now()}`;
         set((s) => {
-          // Deduct raw material stock, compute total input cost (FR-6, FR-7)
           let totalCost = 0;
           const rawMaterials = s.rawMaterials.map((m) => {
             const line = input.consumptions.find((c) => c.rawMaterialId === m.id);
@@ -297,20 +292,12 @@ export const useStore = create<State>()(
             totalCost += line.qty * m.avgUnitCost;
             return { ...m, quantityInStock: Math.max(0, m.quantityInStock - line.qty) };
           });
-
           const bulkCostPerKg = input.outputYieldKg > 0 ? totalCost / input.outputYieldKg : 0;
-
           const newBatch: ProductionBatch = {
-            id,
-            batchDate: today(),
-            outputYieldKg: input.outputYieldKg,
-            wastageKg: input.wastageKg,
-            leftoverQtyKg: input.outputYieldKg, // all output starts as leftover until packed
-            bulkCostPerKg: Number(bulkCostPerKg.toFixed(2)),
-            overheadTotal: 0,
-            status: "in_progress",
+            id, batchDate: today(), outputYieldKg: input.outputYieldKg, wastageKg: input.wastageKg,
+            leftoverQtyKg: input.outputYieldKg, bulkCostPerKg: Number(bulkCostPerKg.toFixed(2)),
+            overheadTotal: 0, status: "in_progress",
           };
-
           return { rawMaterials, productionBatches: [newBatch, ...s.productionBatches] };
         });
         return id;
@@ -322,11 +309,7 @@ export const useStore = create<State>()(
             if (b.id !== batchId) return b;
             const overheadTotal = electricity + gas + rent;
             const perKg = b.outputYieldKg > 0 ? overheadTotal / b.outputYieldKg : 0;
-            return {
-              ...b,
-              overheadTotal,
-              bulkCostPerKg: Number((b.bulkCostPerKg + perKg).toFixed(2)),
-            };
+            return { ...b, overheadTotal, bulkCostPerKg: Number((b.bulkCostPerKg + perKg).toFixed(2)) };
           }),
         })),
 
@@ -335,37 +318,21 @@ export const useStore = create<State>()(
           const batch = s.productionBatches.find((b) => b.id === input.batchId);
           const packaging = s.packagingMaterials.find((p) => p.id === input.packagingMaterialId);
           if (!batch) return {};
-
           const bulkCostShare = batch.bulkCostPerKg * input.bulkKgUsed;
           const packagingCostShare = (packaging?.unitCost ?? 0) * input.cartonQty;
           const costPerCarton = input.cartonQty > 0 ? (bulkCostShare + packagingCostShare) / input.cartonQty : 0;
-
           const productionBatches = s.productionBatches.map((b) =>
-            b.id === input.batchId
-              ? { ...b, leftoverQtyKg: Math.max(0, b.leftoverQtyKg - input.bulkKgUsed), status: "completed" as const }
-              : b
+            b.id === input.batchId ? { ...b, leftoverQtyKg: Math.max(0, b.leftoverQtyKg - input.bulkKgUsed), status: "completed" as const } : b
           );
-
           const packagingMaterials = s.packagingMaterials.map((p) =>
-            p.id === input.packagingMaterialId
-              ? { ...p, stockQty: Math.max(0, p.stockQty - input.cartonQty) }
-              : p
+            p.id === input.packagingMaterialId ? { ...p, stockQty: Math.max(0, p.stockQty - input.cartonQty) } : p
           );
-
           const newCarton: FinishedCarton = {
-            id: `fc-${Date.now()}`,
-            name: `${batch.id} Carton - ${input.packetsPerCarton}pk`,
-            sourceBatchId: batch.id,
-            packetsPerCarton: input.packetsPerCarton,
-            costPerCarton: Number(costPerCarton.toFixed(2)),
-            stockQty: input.cartonQty,
+            id: `fc-${Date.now()}`, name: `${batch.id} Carton - ${input.packetsPerCarton}pk`,
+            sourceBatchId: batch.id, packetsPerCarton: input.packetsPerCarton,
+            costPerCarton: Number(costPerCarton.toFixed(2)), stockQty: input.cartonQty,
           };
-
-          return {
-            productionBatches,
-            packagingMaterials,
-            finishedCartons: [...s.finishedCartons, newCarton],
-          };
+          return { productionBatches, packagingMaterials, finishedCartons: [...s.finishedCartons, newCarton] };
         }),
 
       addCustomer: (item) => {
@@ -381,34 +348,15 @@ export const useStore = create<State>()(
           const customer = s.customers.find((c) => c.id === customerId);
           if (!customer) return {};
           const newBalance = customer.currentBalance - amount;
-
           const customers = s.customers.map((c) => (c.id === customerId ? { ...c, currentBalance: newBalance } : c));
-
           const ledgerEntries: LedgerEntry[] = [
             ...s.ledgerEntries,
-            {
-              id: `led-${Date.now()}`,
-              customerId,
-              type: "payment",
-              amount: -amount,
-              runningBalance: newBalance,
-              date: today(),
-              note: note || "Payment received",
-            },
+            { id: `led-${Date.now()}`, customerId, type: "payment", amount: -amount, runningBalance: newBalance, date: today(), note: note || "Payment received" },
           ];
-
           const payments: Payment[] = [
-            {
-              id: `pay-${Date.now()}`,
-              customerId,
-              customerName: customer.name,
-              amount,
-              note: note || "Payment received",
-              paidAt: today(),
-            },
+            { id: `pay-${Date.now()}`, customerId, customerName: customer.name, amount, note: note || "Payment received", paidAt: today() },
             ...s.payments,
           ];
-
           return { customers, ledgerEntries, payments };
         }),
 
@@ -420,70 +368,37 @@ export const useStore = create<State>()(
         set((s) => {
           const customer = s.customers.find((c) => c.id === input.customerId);
           if (!customer) return {};
-
-          // Build line items + deduct finished carton stock (FR-21)
           const items: InvoiceLineRecord[] = [];
           const finishedCartons = s.finishedCartons.map((c) => {
             const line = input.lines.find((l) => l.itemId === c.id);
             if (!line) return c;
-            items.push({
-              itemId: c.id,
-              itemName: c.name,
-              qty: line.qty,
-              unitPrice: line.unitPrice,
-              subtotal: line.qty * line.unitPrice,
-            });
+            items.push({ itemId: c.id, itemName: c.name, qty: line.qty, unitPrice: line.unitPrice, subtotal: line.qty * line.unitPrice });
             return { ...c, stockQty: Math.max(0, c.stockQty - line.qty) };
           });
-
           const totalAmount = items.reduce((sum, l) => sum + l.subtotal, 0);
-
-          // Update CustomerItemPrice memory (FR-20)
           const customerItemPrices = [...s.customerItemPrices];
           for (const line of input.lines) {
-            const idx = customerItemPrices.findIndex(
-              (p) => p.customerId === input.customerId && p.itemId === line.itemId
-            );
+            const idx = customerItemPrices.findIndex((p) => p.customerId === input.customerId && p.itemId === line.itemId);
             if (idx >= 0) customerItemPrices[idx] = { ...customerItemPrices[idx], lastSoldPrice: line.unitPrice };
             else customerItemPrices.push({ customerId: input.customerId, itemId: line.itemId, lastSoldPrice: line.unitPrice });
           }
-
-          // Post debit to ledger + update running balance (FR-23)
           const newBalance = customer.currentBalance + totalAmount;
           const customers = s.customers.map((c) => (c.id === input.customerId ? { ...c, currentBalance: newBalance } : c));
           const ledgerEntries: LedgerEntry[] = [
             ...s.ledgerEntries,
-            {
-              id: `led-${Date.now()}`,
-              customerId: input.customerId,
-              type: "invoice",
-              amount: totalAmount,
-              runningBalance: newBalance,
-              date: today(),
-              note: id,
-            },
+            { id: `led-${Date.now()}`, customerId: input.customerId, type: "invoice", amount: totalAmount, runningBalance: newBalance, date: today(), note: id },
           ];
-
           const newInvoice: Invoice = {
-            id,
-            customerId: input.customerId,
-            customerName: customer.name,
-            invoiceDate: today(),
-            totalAmount,
-            status: "unpaid",
-            items,
+            id, customerId: input.customerId, customerName: customer.name,
+            invoiceDate: today(), totalAmount, status: "unpaid", items,
           };
-
-          return {
-            finishedCartons,
-            customerItemPrices,
-            customers,
-            ledgerEntries,
-            invoices: [newInvoice, ...s.invoices],
-          };
+          return { finishedCartons, customerItemPrices, customers, ledgerEntries, invoices: [newInvoice, ...s.invoices] };
         });
         return id;
       },
+
+      updateSettings: (patch) =>
+        set((s) => ({ settings: { ...s.settings, ...patch } })),
     }),
     { name: "ghanifoods-dummy-data" }
   )

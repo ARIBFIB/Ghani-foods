@@ -4,32 +4,21 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Notification, User as UserIcon, ChevronDown as ChevronDownIcon } from "@carbon/icons-react";
-import { rawMaterials } from "@/lib/mock-data/raw-materials";
-import { packagingMaterials } from "@/lib/mock-data/packaging";
-
-type LowStockAlert = {
-  id: string;
-  name: string;
-  href: string;
-  qty: number;
-  threshold: number;
-};
-
-function getLowStockAlerts(): LowStockAlert[] {
-  const rawAlerts: LowStockAlert[] = rawMaterials
-    .filter((m) => m.quantityInStock < m.lowStockThreshold)
-    .map((m) => ({ id: m.id, name: m.name, href: `/raw-materials/${m.id}`, qty: m.quantityInStock, threshold: m.lowStockThreshold }));
-
-  const packagingAlerts: LowStockAlert[] = packagingMaterials
-    .filter((p) => p.stockQty < p.lowStockThreshold)
-    .map((p) => ({ id: p.id, name: p.name, href: `/packaging`, qty: p.stockQty, threshold: p.lowStockThreshold }));
-
-  return [...rawAlerts, ...packagingAlerts];
-}
+import { useStore } from "@/lib/store";
 
 function NotificationBell() {
   const [open, setOpen] = useState(false);
-  const alerts = getLowStockAlerts();
+  const rawMaterials = useStore((s) => s.rawMaterials);
+  const packagingMaterials = useStore((s) => s.packagingMaterials);
+
+  const alerts = [
+    ...rawMaterials
+      .filter((m) => m.quantityInStock < m.lowStockThreshold)
+      .map((m) => ({ id: m.id, name: m.name, href: `/raw-materials/${m.id}`, qty: m.quantityInStock, threshold: m.lowStockThreshold })),
+    ...packagingMaterials
+      .filter((p) => p.stockQty < p.lowStockThreshold)
+      .map((p) => ({ id: p.id, name: p.name, href: `/packaging`, qty: p.stockQty, threshold: p.lowStockThreshold })),
+  ];
 
   return (
     <div className="relative">
@@ -65,9 +54,7 @@ function NotificationBell() {
                   className="flex items-center justify-between px-4 py-2.5 hover:bg-neutral-800 border-b border-neutral-900 last:border-0"
                 >
                   <span className="text-sm text-neutral-50">{a.name}</span>
-                  <span className="text-xs text-red-400">
-                    {a.qty} / {a.threshold}
-                  </span>
+                  <span className="text-xs text-red-400">{a.qty} / {a.threshold}</span>
                 </Link>
               ))}
             </div>
@@ -81,6 +68,12 @@ function NotificationBell() {
 function UserMenu() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
+
+  const handleLogout = () => {
+    setOpen(false);
+    document.cookie = "ghanifoods-auth=; path=/; max-age=0";
+    router.push("/login");
+  };
 
   return (
     <div className="relative">
@@ -99,20 +92,12 @@ function UserMenu() {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div className="absolute right-0 z-50 mt-2 w-48 rounded-xl border border-neutral-800 bg-neutral-900 shadow-lg overflow-hidden">
-            <Link
-              href="/settings"
-              onClick={() => setOpen(false)}
-              className="block px-4 py-2.5 text-sm text-neutral-200 hover:bg-neutral-800"
-            >
+            <Link href="/settings" onClick={() => setOpen(false)}
+              className="block px-4 py-2.5 text-sm text-neutral-200 hover:bg-neutral-800">
               Settings
             </Link>
-            <button
-              onClick={() => {
-                setOpen(false);
-                router.push("/login");
-              }}
-              className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-neutral-800"
-            >
+            <button onClick={handleLogout}
+              className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-neutral-800">
               Log out
             </button>
           </div>
@@ -125,10 +110,8 @@ function UserMenu() {
 export function Topbar() {
   return (
     <div className="flex items-center justify-end gap-3 border-b border-neutral-800 bg-neutral-950 px-6 py-3 sticky top-0 z-30">
-      <Link
-        href="/invoices/new"
-        className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200"
-      >
+      <Link href="/invoices/new"
+        className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200">
         + New Invoice
       </Link>
       <NotificationBell />

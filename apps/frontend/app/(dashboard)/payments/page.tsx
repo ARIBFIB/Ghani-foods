@@ -1,34 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { useStore } from "@/lib/store";
+import { type ColumnDef } from "@tanstack/react-table";
+import { useStore, type Payment } from "@/lib/store";
 import { paymentSchema, type PaymentFormValues } from "@/lib/schemas";
+import { SortableTable } from "@/components/ui/sortable-table";
 
 function RecordPaymentDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const customers = useStore((s) => s.customers);
   const recordPayment = useStore((s) => s.recordPayment);
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<PaymentFormValues>({
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<PaymentFormValues>({
     resolver: zodResolver(paymentSchema),
     defaultValues: { customerId: customers[0]?.id ?? "", amount: 0, note: "" },
   });
-
   if (!open) return null;
-
   const onSubmit = async (values: PaymentFormValues) => {
     recordPayment(values.customerId, values.amount, values.note ?? "");
     toast.success(`Payment of Rs. ${values.amount.toLocaleString()} recorded`);
-    reset();
-    onClose();
+    reset(); onClose();
   };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 p-5 space-y-4">
@@ -56,8 +49,7 @@ function RecordPaymentDialog({ open, onClose }: { open: boolean; onClose: () => 
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" onClick={() => { reset(); onClose(); }} className="rounded-lg px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">Cancel</button>
-          <button type="submit" disabled={isSubmitting}
-            className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200 disabled:opacity-50">
+          <button type="submit" disabled={isSubmitting} className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200 disabled:opacity-50">
             {isSubmitting ? "Saving..." : "Save"}
           </button>
         </div>
@@ -70,6 +62,16 @@ export default function PaymentsPage() {
   const items = useStore((s) => s.payments);
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  const columns = useMemo<ColumnDef<Payment, unknown>[]>(() => [
+    { accessorKey: "paidAt", header: "Date" },
+    { accessorKey: "customerName", header: "Customer", cell: ({ getValue }) => <span className="text-neutral-50">{getValue() as string}</span> },
+    {
+      accessorKey: "amount", header: "Amount",
+      cell: ({ getValue }) => <span className="text-green-400">Rs. {(getValue() as number).toLocaleString()}</span>,
+    },
+    { accessorKey: "note", header: "Note" },
+  ], []);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -78,30 +80,7 @@ export default function PaymentsPage() {
           + Record Payment
         </button>
       </div>
-
-      <div className="overflow-hidden rounded-xl border border-neutral-800">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-neutral-400">
-              <th className="px-4 py-3 font-medium">Date</th>
-              <th className="px-4 py-3 font-medium">Customer</th>
-              <th className="px-4 py-3 font-medium">Amount</th>
-              <th className="px-4 py-3 font-medium">Note</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((p) => (
-              <tr key={p.id} className="border-b border-neutral-900 last:border-0 hover:bg-neutral-900/60">
-                <td className="px-4 py-3 text-neutral-300">{p.paidAt}</td>
-                <td className="px-4 py-3 text-neutral-50">{p.customerName}</td>
-                <td className="px-4 py-3 text-green-400">Rs. {p.amount.toLocaleString()}</td>
-                <td className="px-4 py-3 text-neutral-300">{p.note}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
+      <SortableTable data={items} columns={columns} globalFilterPlaceholder="Search payments..." />
       <RecordPaymentDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
     </div>
   );

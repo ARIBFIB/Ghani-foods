@@ -1,7 +1,10 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
-import { useStore } from "@/lib/store";
+import { type ColumnDef } from "@tanstack/react-table";
+import { useStore, type Invoice } from "@/lib/store";
+import { SortableTable } from "@/components/ui/sortable-table";
 
 function StatusBadge({ status }: { status: "unpaid" | "partial" | "paid" }) {
   const styles: Record<string, string> = {
@@ -19,6 +22,23 @@ function StatusBadge({ status }: { status: "unpaid" | "partial" | "paid" }) {
 export default function InvoicesPage() {
   const invoices = useStore((s) => s.invoices);
 
+  const columns = useMemo<ColumnDef<Invoice, unknown>[]>(() => [
+    {
+      accessorKey: "id", header: "Invoice #",
+      cell: ({ row }) => <Link href={`/invoices/${row.original.id}`} className="text-neutral-50 hover:underline">{row.original.id}</Link>,
+    },
+    { accessorKey: "customerName", header: "Customer" },
+    { accessorKey: "invoiceDate", header: "Date" },
+    {
+      accessorKey: "totalAmount", header: "Total",
+      cell: ({ getValue }) => `Rs. ${(getValue() as number).toLocaleString()}`,
+    },
+    {
+      accessorKey: "status", header: "Status", enableSorting: false,
+      cell: ({ row }) => <StatusBadge status={row.original.status} />,
+    },
+  ], []);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -27,33 +47,7 @@ export default function InvoicesPage() {
           + New Invoice
         </Link>
       </div>
-
-      <div className="overflow-hidden rounded-xl border border-neutral-800">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-neutral-400">
-              <th className="px-4 py-3 font-medium">Invoice #</th>
-              <th className="px-4 py-3 font-medium">Customer</th>
-              <th className="px-4 py-3 font-medium">Date</th>
-              <th className="px-4 py-3 font-medium">Total</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoices.map((inv) => (
-              <tr key={inv.id} className="border-b border-neutral-900 last:border-0 hover:bg-neutral-900/60">
-                <td className="px-4 py-3">
-                  <Link href={`/invoices/${inv.id}`} className="text-neutral-50 hover:underline">{inv.id}</Link>
-                </td>
-                <td className="px-4 py-3 text-neutral-300">{inv.customerName}</td>
-                <td className="px-4 py-3 text-neutral-300">{inv.invoiceDate}</td>
-                <td className="px-4 py-3 text-neutral-300">Rs. {inv.totalAmount.toLocaleString()}</td>
-                <td className="px-4 py-3"><StatusBadge status={inv.status} /></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <SortableTable data={invoices} columns={columns} globalFilterPlaceholder="Search invoices..." />
     </div>
   );
 }

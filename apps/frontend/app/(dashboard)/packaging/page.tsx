@@ -4,8 +4,10 @@ import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
+import { type ColumnDef } from "@tanstack/react-table";
 import { useStore, type PackagingMaterial } from "@/lib/store";
 import { packagingMaterialSchema, restockSchema, type PackagingMaterialFormValues, type RestockFormValues } from "@/lib/schemas";
+import { SortableTable } from "@/components/ui/sortable-table";
 
 function StatusBadge({ isLow }: { isLow: boolean }) {
   return (
@@ -19,25 +21,16 @@ function StatusBadge({ isLow }: { isLow: boolean }) {
 
 function AddPackagingDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const addPackagingMaterial = useStore((s) => s.addPackagingMaterial);
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<PackagingMaterialFormValues>({
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<PackagingMaterialFormValues>({
     resolver: zodResolver(packagingMaterialSchema),
     defaultValues: { name: "", unitCost: 0, lowStockThreshold: 50 },
   });
-
   if (!open) return null;
-
   const onSubmit = async (values: PackagingMaterialFormValues) => {
     addPackagingMaterial(values);
-    toast.success(`Packaging material "${values.name}" added`);
-    reset();
-    onClose();
+    toast.success(`"${values.name}" added`);
+    reset(); onClose();
   };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 p-5 space-y-4">
@@ -64,8 +57,7 @@ function AddPackagingDialog({ open, onClose }: { open: boolean; onClose: () => v
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" onClick={() => { reset(); onClose(); }} className="rounded-lg px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">Cancel</button>
-          <button type="submit" disabled={isSubmitting}
-            className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200 disabled:opacity-50">
+          <button type="submit" disabled={isSubmitting} className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200 disabled:opacity-50">
             {isSubmitting ? "Saving..." : "Save"}
           </button>
         </div>
@@ -76,22 +68,13 @@ function AddPackagingDialog({ open, onClose }: { open: boolean; onClose: () => v
 
 function RestockDialog({ open, onClose, item }: { open: boolean; onClose: () => void; item: PackagingMaterial | null }) {
   const restockPackaging = useStore((s) => s.restockPackaging);
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<RestockFormValues>({ resolver: zodResolver(restockSchema) });
-
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<RestockFormValues>({ resolver: zodResolver(restockSchema) });
   if (!open || !item) return null;
-
   const onSubmit = async (values: RestockFormValues) => {
     restockPackaging(item.id, values.qty, values.cost ?? 0);
     toast.success(`Restocked ${item.name}`);
-    reset();
-    onClose();
+    reset(); onClose();
   };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 p-5 space-y-4">
@@ -104,16 +87,14 @@ function RestockDialog({ open, onClose, item }: { open: boolean; onClose: () => 
             {errors.qty && <p className="text-xs text-red-400 mt-1">{errors.qty.message}</p>}
           </div>
           <div>
-            <label className="text-sm text-neutral-400">Cost (per unit, optional)</label>
+            <label className="text-sm text-neutral-400">Cost per unit (optional)</label>
             <input {...register("cost")} type="number" step="any"
               className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
-            {errors.cost && <p className="text-xs text-red-400 mt-1">{errors.cost.message}</p>}
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" onClick={() => { reset(); onClose(); }} className="rounded-lg px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">Cancel</button>
-          <button type="submit" disabled={isSubmitting}
-            className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200 disabled:opacity-50">
+          <button type="submit" disabled={isSubmitting} className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200 disabled:opacity-50">
             {isSubmitting ? "Saving..." : "Save"}
           </button>
         </div>
@@ -124,15 +105,28 @@ function RestockDialog({ open, onClose, item }: { open: boolean; onClose: () => 
 
 export default function PackagingPage() {
   const items = useStore((s) => s.packagingMaterials);
-  const [search, setSearch] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [restockTarget, setRestockTarget] = useState<PackagingMaterial | null>(null);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((m) => m.name.toLowerCase().includes(q));
-  }, [items, search]);
+  const columns = useMemo<ColumnDef<PackagingMaterial, unknown>[]>(() => [
+    { accessorKey: "name", header: "Name", cell: ({ getValue }) => <span className="text-neutral-50">{getValue() as string}</span> },
+    { accessorKey: "unitCost", header: "Unit Cost", cell: ({ getValue }) => `Rs. ${(getValue() as number).toLocaleString()}` },
+    { accessorKey: "stockQty", header: "Stock Qty", cell: ({ getValue }) => (getValue() as number).toLocaleString() },
+    { accessorKey: "lowStockThreshold", header: "Threshold", cell: ({ getValue }) => (getValue() as number).toLocaleString() },
+    {
+      id: "status", header: "Status", enableSorting: false,
+      cell: ({ row }) => <StatusBadge isLow={row.original.stockQty < row.original.lowStockThreshold} />,
+    },
+    {
+      id: "action", header: "", enableSorting: false,
+      cell: ({ row }) => (
+        <button onClick={() => setRestockTarget(row.original)}
+          className="rounded-lg border border-neutral-700 px-3 py-1.5 text-xs text-neutral-200 hover:bg-neutral-800">
+          Restock
+        </button>
+      ),
+    },
+  ], []);
 
   return (
     <div className="space-y-6">
@@ -142,47 +136,7 @@ export default function PackagingPage() {
           + Add Packaging Material
         </button>
       </div>
-
-      <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search packaging materials..."
-        className="w-full max-w-sm rounded-lg border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 outline-none focus:border-neutral-600" />
-
-      <div className="overflow-hidden rounded-xl border border-neutral-800">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-neutral-400">
-              <th className="px-4 py-3 font-medium">Name</th>
-              <th className="px-4 py-3 font-medium">Unit Cost</th>
-              <th className="px-4 py-3 font-medium">Stock Qty</th>
-              <th className="px-4 py-3 font-medium">Threshold</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((m) => {
-              const isLow = m.stockQty < m.lowStockThreshold;
-              return (
-                <tr key={m.id} className="border-b border-neutral-900 last:border-0 hover:bg-neutral-900/60">
-                  <td className="px-4 py-3 text-neutral-50">{m.name}</td>
-                  <td className="px-4 py-3 text-neutral-300">Rs. {m.unitCost.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-neutral-300">{m.stockQty.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-neutral-300">{m.lowStockThreshold.toLocaleString()}</td>
-                  <td className="px-4 py-3"><StatusBadge isLow={isLow} /></td>
-                  <td className="px-4 py-3 text-right">
-                    <button onClick={() => setRestockTarget(m)} className="rounded-lg border border-neutral-700 px-3 py-1.5 text-xs text-neutral-200 hover:bg-neutral-800">
-                      Restock
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-            {filtered.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-neutral-500">No packaging materials found.</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
+      <SortableTable data={items} columns={columns} globalFilterPlaceholder="Search packaging..." />
       <AddPackagingDialog open={addOpen} onClose={() => setAddOpen(false)} />
       <RestockDialog open={!!restockTarget} onClose={() => setRestockTarget(null)} item={restockTarget} />
     </div>
