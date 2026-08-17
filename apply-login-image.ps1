@@ -1,3 +1,65 @@
+# apply-login-image.ps1
+# Run from: D:\Rozmarrah-CUST\Saim Ashraf\Nimko\Working\Code\GhaniFoods
+# Usage:    .\apply-login-image.ps1
+#
+# What this does:
+#   1. Creates apps\frontend\public\images\ (if missing)
+#   2. Updates the login page to display the Ghani Nimko product image
+#      on the left panel using next/image
+#
+# BEFORE RUNNING: copy your product photo into:
+#   apps\frontend\public\images\ghani-nimko-bag.png
+# (any image format works - just update the filename below if you use
+#  a different name/extension, e.g. .jpg)
+
+$ErrorActionPreference = "Stop"
+$Root = Get-Location
+$FrontendRoot = Join-Path $Root "apps\frontend"
+
+if (-not (Test-Path $FrontendRoot)) {
+    Write-Host "ERROR: apps\frontend not found under $Root" -ForegroundColor Red
+    Write-Host "Make sure you're running this from the GhaniFoods root folder." -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "=== Adding product image to login page ===" -ForegroundColor Cyan
+
+function Write-Utf8NoBom($Path, $Content) {
+    $dir = Split-Path $Path -Parent
+    if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($Path, $Content, $utf8NoBom)
+    Write-Host "  Updated: $($Path.Substring($Root.Path.Length).TrimStart('\'))" -ForegroundColor Green
+}
+
+# --------------------------------------------------------------------------
+# 1. Make sure public\images exists
+# --------------------------------------------------------------------------
+
+$imagesDir = Join-Path $FrontendRoot "public\images"
+if (-not (Test-Path $imagesDir)) {
+    New-Item -ItemType Directory -Path $imagesDir -Force | Out-Null
+    Write-Host "  Created: apps\frontend\public\images\" -ForegroundColor Green
+} else {
+    Write-Host "  Exists:  apps\frontend\public\images\" -ForegroundColor Gray
+}
+
+$expectedImagePath = Join-Path $imagesDir "ghani-nimko-bag.png"
+if (-not (Test-Path $expectedImagePath)) {
+    Write-Host ""
+    Write-Host "  WARNING: Image not found at:" -ForegroundColor Yellow
+    Write-Host "    $expectedImagePath" -ForegroundColor Yellow
+    Write-Host "  Copy your product photo there (as ghani-nimko-bag.png) before" -ForegroundColor Yellow
+    Write-Host "  running 'npm run dev', otherwise the login page will show a broken image." -ForegroundColor Yellow
+    Write-Host ""
+}
+
+# --------------------------------------------------------------------------
+# 2. Update app/(auth)/login/page.tsx to show the image
+# --------------------------------------------------------------------------
+
+$loginPagePath = Join-Path $FrontendRoot "app\(auth)\login\page.tsx"
+$loginPageContent = @'
 "use client";
 
 import React, { useState } from "react";
@@ -109,3 +171,11 @@ export default function LoginPage() {
     </main>
   );
 }
+'@
+Write-Utf8NoBom $loginPagePath $loginPageContent
+
+Write-Host ""
+Write-Host "=== Done ===" -ForegroundColor Green
+Write-Host "Reminder: place your image at:" -ForegroundColor Yellow
+Write-Host "  apps\frontend\public\images\ghani-nimko-bag.png" -ForegroundColor Yellow
+Write-Host "Then run 'npm run dev' to see it on the login page." -ForegroundColor Yellow
