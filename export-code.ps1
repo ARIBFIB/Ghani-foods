@@ -1,6 +1,15 @@
 # export-code.ps1
 # Run from: D:\Rozmarrah-CUST\Saim Ashraf\Nimko\Working\Code\GhaniFoods
 # Usage: .\export-code.ps1
+#
+# Generates code-export.txt with ALL project code every time you run it.
+# After running, upload code-export.txt as a FILE ATTACHMENT in the chat
+# (do not copy-paste its text - large pastes get truncated).
+#
+# v3: Fixes NUL-byte corruption caused by mixed file encodings (some files
+# saved as UTF-16 get misread as UTF-8 and vice versa). Each file is now
+# read with auto encoding detection, and any leftover NUL/control chars
+# are stripped as a safety net.
 
 $ProjectRoot = Get-Location
 $OutputFile  = Join-Path $ProjectRoot "code-export.txt"
@@ -51,6 +60,8 @@ if (Test-Path $OutputFile) {
     Remove-Item $OutputFile -Force
 }
 
+$builder = New-Object System.Text.StringBuilder
+
 $header = @"
 ==================================================
 GhaniFoods - Full Code Export
@@ -59,7 +70,30 @@ Total Files: $($files.Count)
 ==================================================
 
 "@
-Add-Content -Path $OutputFile -Value $header -Encoding UTF8
+[void]$builder.Append($header)
+
+# Reads a file with automatic encoding detection (handles UTF-8, UTF-8 BOM,
+# UTF-16 LE/BE, etc.) so mixed-encoding files don't produce NUL bytes.
+function Read-FileSmart($path) {
+    try {
+        $bytes = [System.IO.File]::ReadAllBytes($path)
+        if ($bytes.Length -eq 0) { return "" }
+
+        # StreamReader with detectEncodingFromByteOrderMarks=$true auto-detects
+        # BOM-based encodings; defaultEncoding fallback is UTF8.
+        $stream = New-Object System.IO.MemoryStream(,$bytes)
+        $reader = New-Object System.IO.StreamReader($stream, [System.Text.Encoding]::UTF8, $true)
+        $text = $reader.ReadToEnd()
+        $reader.Close()
+
+        # Safety net: strip any stray NUL characters that slipped through
+        $text = $text -replace "`0", ""
+        return $text
+    }
+    catch {
+        return "[Could not read file: $($_.Exception.Message)]"
+    }
+}
 
 $count = 0
 foreach ($file in $files) {
@@ -75,17 +109,20 @@ FILE: $relativePath
 ==================================================
 
 "@
-    Add-Content -Path $OutputFile -Value $separator -Encoding UTF8
+    [void]$builder.Append($separator)
 
-    try {
-        $content = Get-Content -Path $file.FullName -Raw -ErrorAction Stop
-        Add-Content -Path $OutputFile -Value $content -Encoding UTF8
-    }
-    catch {
-        Add-Content -Path $OutputFile -Value "[Could not read file: $($_.Exception.Message)]" -Encoding UTF8
-    }
+    $fileContent = Read-FileSmart $file.FullName
+    [void]$builder.Append($fileContent)
 }
+
+# Write as UTF8 without BOM, single pass (avoids truncation issues from repeated Add-Content calls)
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($OutputFile, $builder.ToString(), $utf8NoBom)
 
 Write-Host "`n=== Export complete ===" -ForegroundColor Green
 Write-Host "Output: $OutputFile" -ForegroundColor Green
 Write-Host "Total files exported: $count" -ForegroundColor Green
+Write-Host "Total size: $([Math]::Round((Get-Item $OutputFile).Length / 1KB, 1)) KB" -ForegroundColor Green
+Write-Host ""
+Write-Host "NEXT STEP: Upload code-export.txt as a FILE ATTACHMENT in the chat." -ForegroundColor Yellow
+Write-Host "Do not copy-paste its contents as text - large pastes get truncated." -ForegroundColor Yellow
