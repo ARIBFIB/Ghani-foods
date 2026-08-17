@@ -3,55 +3,65 @@
 import { use, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { useStore } from "@/lib/store";
+import { overheadSchema, type OverheadFormValues } from "@/lib/schemas";
 
 function OverheadDialog({ open, onClose, batchId }: { open: boolean; onClose: () => void; batchId: string }) {
   const allocateOverhead = useStore((s) => s.allocateOverhead);
-  const [electricity, setElectricity] = useState("");
-  const [gas, setGas] = useState("");
-  const [rent, setRent] = useState("");
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<OverheadFormValues>({
+    resolver: zodResolver(overheadSchema),
+    defaultValues: { electricity: 0, gas: 0, rent: 0 },
+  });
 
   if (!open) return null;
 
-  const handleSave = () => {
-    const e = Number(electricity) || 0;
-    const g = Number(gas) || 0;
-    const r = Number(rent) || 0;
-    allocateOverhead(batchId, e, g, r);
-    toast.success(`Overhead of Rs. ${(e + g + r).toLocaleString()} allocated to ${batchId}`);
-    setElectricity("");
-    setGas("");
-    setRent("");
+  const onSubmit = async (values: OverheadFormValues) => {
+    allocateOverhead(batchId, values.electricity, values.gas, values.rent);
+    toast.success(`Overhead of Rs. ${(values.electricity + values.gas + values.rent).toLocaleString()} allocated to ${batchId}`);
+    reset();
     onClose();
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 p-5 space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 p-5 space-y-4">
         <h2 className="text-lg font-semibold text-neutral-50">Allocate Month-End Overhead</h2>
         <div className="space-y-3">
           <div>
             <label className="text-sm text-neutral-400">Electricity</label>
-            <input value={electricity} onChange={(e) => setElectricity(e.target.value)} type="number"
+            <input {...register("electricity")} type="number" step="any"
               className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+            {errors.electricity && <p className="text-xs text-red-400 mt-1">{errors.electricity.message}</p>}
           </div>
           <div>
             <label className="text-sm text-neutral-400">Gas</label>
-            <input value={gas} onChange={(e) => setGas(e.target.value)} type="number"
+            <input {...register("gas")} type="number" step="any"
               className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+            {errors.gas && <p className="text-xs text-red-400 mt-1">{errors.gas.message}</p>}
           </div>
           <div>
             <label className="text-sm text-neutral-400">Rent</label>
-            <input value={rent} onChange={(e) => setRent(e.target.value)} type="number"
+            <input {...register("rent")} type="number" step="any"
               className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+            {errors.rent && <p className="text-xs text-red-400 mt-1">{errors.rent.message}</p>}
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">Cancel</button>
-          <button onClick={handleSave} className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200">Save</button>
+          <button type="button" onClick={() => { reset(); onClose(); }} className="rounded-lg px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">Cancel</button>
+          <button type="submit" disabled={isSubmitting}
+            className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200 disabled:opacity-50">
+            {isSubmitting ? "Saving..." : "Save"}
+          </button>
         </div>
-      </div>
+      </form>
     </div>
   );
 }

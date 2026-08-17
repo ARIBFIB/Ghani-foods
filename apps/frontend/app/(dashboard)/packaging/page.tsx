@@ -1,8 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { useStore, type PackagingMaterial } from "@/lib/store";
+import { packagingMaterialSchema, restockSchema, type PackagingMaterialFormValues, type RestockFormValues } from "@/lib/schemas";
 
 function StatusBadge({ isLow }: { isLow: boolean }) {
   return (
@@ -16,90 +19,105 @@ function StatusBadge({ isLow }: { isLow: boolean }) {
 
 function AddPackagingDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const addPackagingMaterial = useStore((s) => s.addPackagingMaterial);
-  const [name, setName] = useState("");
-  const [unitCost, setUnitCost] = useState("");
-  const [threshold, setThreshold] = useState("50");
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<PackagingMaterialFormValues>({
+    resolver: zodResolver(packagingMaterialSchema),
+    defaultValues: { name: "", unitCost: 0, lowStockThreshold: 50 },
+  });
 
   if (!open) return null;
 
-  const handleSave = () => {
-    if (!name.trim()) return;
-    addPackagingMaterial({ name: name.trim(), unitCost: Number(unitCost) || 0, lowStockThreshold: Number(threshold) || 0 });
-    toast.success(`Packaging material "${name.trim()}" added`);
-    setName("");
-    setUnitCost("");
-    setThreshold("50");
+  const onSubmit = async (values: PackagingMaterialFormValues) => {
+    addPackagingMaterial(values);
+    toast.success(`Packaging material "${values.name}" added`);
+    reset();
     onClose();
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 p-5 space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 p-5 space-y-4">
         <h2 className="text-lg font-semibold text-neutral-50">Add Packaging Material</h2>
         <div className="space-y-3">
           <div>
             <label className="text-sm text-neutral-400">Name</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Carton Box (Large)"
+            <input {...register("name")} placeholder="e.g. Carton Box (Large)"
               className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+            {errors.name && <p className="text-xs text-red-400 mt-1">{errors.name.message}</p>}
           </div>
           <div>
             <label className="text-sm text-neutral-400">Unit Cost</label>
-            <input value={unitCost} onChange={(e) => setUnitCost(e.target.value)} type="number"
+            <input {...register("unitCost")} type="number" step="any"
               className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+            {errors.unitCost && <p className="text-xs text-red-400 mt-1">{errors.unitCost.message}</p>}
           </div>
           <div>
             <label className="text-sm text-neutral-400">Low Stock Threshold</label>
-            <input value={threshold} onChange={(e) => setThreshold(e.target.value)} type="number"
+            <input {...register("lowStockThreshold")} type="number"
               className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+            {errors.lowStockThreshold && <p className="text-xs text-red-400 mt-1">{errors.lowStockThreshold.message}</p>}
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">Cancel</button>
-          <button onClick={handleSave} className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200">Save</button>
+          <button type="button" onClick={() => { reset(); onClose(); }} className="rounded-lg px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">Cancel</button>
+          <button type="submit" disabled={isSubmitting}
+            className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200 disabled:opacity-50">
+            {isSubmitting ? "Saving..." : "Save"}
+          </button>
         </div>
-      </div>
+      </form>
     </div>
   );
 }
 
 function RestockDialog({ open, onClose, item }: { open: boolean; onClose: () => void; item: PackagingMaterial | null }) {
   const restockPackaging = useStore((s) => s.restockPackaging);
-  const [qty, setQty] = useState("");
-  const [cost, setCost] = useState("");
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<RestockFormValues>({ resolver: zodResolver(restockSchema) });
 
   if (!open || !item) return null;
 
-  const handleSave = () => {
-    const q = Number(qty);
-    if (!q) return;
-    restockPackaging(item.id, q, Number(cost) || 0);
+  const onSubmit = async (values: RestockFormValues) => {
+    restockPackaging(item.id, values.qty, values.cost ?? 0);
     toast.success(`Restocked ${item.name}`);
-    setQty("");
-    setCost("");
+    reset();
     onClose();
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 p-5 space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 p-5 space-y-4">
         <h2 className="text-lg font-semibold text-neutral-50">Restock: {item.name}</h2>
         <div className="space-y-3">
           <div>
             <label className="text-sm text-neutral-400">Quantity to Add</label>
-            <input value={qty} onChange={(e) => setQty(e.target.value)} type="number"
+            <input {...register("qty")} type="number" step="any"
               className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+            {errors.qty && <p className="text-xs text-red-400 mt-1">{errors.qty.message}</p>}
           </div>
           <div>
             <label className="text-sm text-neutral-400">Cost (per unit, optional)</label>
-            <input value={cost} onChange={(e) => setCost(e.target.value)} type="number"
+            <input {...register("cost")} type="number" step="any"
               className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+            {errors.cost && <p className="text-xs text-red-400 mt-1">{errors.cost.message}</p>}
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">Cancel</button>
-          <button onClick={handleSave} className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200">Save</button>
+          <button type="button" onClick={() => { reset(); onClose(); }} className="rounded-lg px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">Cancel</button>
+          <button type="submit" disabled={isSubmitting}
+            className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200 disabled:opacity-50">
+            {isSubmitting ? "Saving..." : "Save"}
+          </button>
         </div>
-      </div>
+      </form>
     </div>
   );
 }

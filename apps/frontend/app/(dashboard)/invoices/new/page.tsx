@@ -2,8 +2,11 @@
 
 import { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { useStore } from "@/lib/store";
+import { invoiceHeaderSchema, type InvoiceHeaderFormValues } from "@/lib/schemas";
 
 type InvoiceLine = { id: string; itemId: string; qty: string; unitPrice: string };
 
@@ -17,11 +20,22 @@ function NewInvoiceForm() {
   const lastSoldPrice = useStore((s) => s.lastSoldPrice);
   const createInvoice = useStore((s) => s.createInvoice);
 
-  const [customerId, setCustomerId] = useState(preselectedCustomerId || customers[0]?.id || "");
-  const [margin, setMargin] = useState("20");
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<InvoiceHeaderFormValues>({
+    resolver: zodResolver(invoiceHeaderSchema),
+    defaultValues: { customerId: preselectedCustomerId || customers[0]?.id || "", margin: 20 },
+  });
+  const customerId = watch("customerId");
+  const margin = watch("margin");
+
   const [lines, setLines] = useState<InvoiceLine[]>([
     { id: crypto.randomUUID(), itemId: finishedCartons[0]?.id ?? "", qty: "1", unitPrice: "" },
   ]);
+  const [lineError, setLineError] = useState("");
 
   const addLine = () => setLines((prev) => [...prev, { id: crypto.randomUUID(), itemId: finishedCartons[0]?.id ?? "", qty: "1", unitPrice: "" }]);
   const removeLine = (id: string) => setLines((prev) => (prev.length > 1 ? prev.filter((l) => l.id !== id) : prev));
@@ -38,30 +52,31 @@ function NewInvoiceForm() {
 
   const total = useMemo(() => lines.reduce((sum, l) => sum + (Number(l.qty) || 0) * (Number(l.unitPrice) || 0), 0), [lines]);
 
-  const handleSave = () => {
-    if (!customerId) {
-      toast.error("Select a customer first");
-      return;
-    }
+  const onSubmit = async (values: InvoiceHeaderFormValues) => {
+    setLineError("");
     const parsedLines = lines
       .filter((l) => l.itemId && Number(l.qty) > 0)
       .map((l) => ({ itemId: l.itemId, qty: Number(l.qty), unitPrice: Number(l.unitPrice) || 0 }));
 
     if (parsedLines.length === 0) {
-      toast.error("Add at least one invoice item");
+      setLineError("Add at least one invoice item with a quantity greater than 0");
       return;
     }
-
     const insufficient = parsedLines.find((l) => {
       const c = finishedCartons.find((fc) => fc.id === l.itemId);
       return c && l.qty > c.stockQty;
     });
     if (insufficient) {
-      toast.error("Not enough finished carton stock for one of the items");
+      setLineError("Not enough finished carton stock for one of the items");
+      return;
+    }
+    const invalidPrice = parsedLines.find((l) => l.unitPrice <= 0);
+    if (invalidPrice) {
+      setLineError("Every line needs a unit price greater than 0");
       return;
     }
 
-    const newId = createInvoice({ customerId, lines: parsedLines });
+    const newId = createInvoice({ customerId: values.customerId, lines: parsedLines });
     toast.success(`Invoice ${newId} created â€” stock deducted, ledger updated`);
     router.push(`/invoices/${newId}`);
   };
@@ -69,16 +84,17 @@ function NewInvoiceForm() {
   const selectedCustomer = customers.find((c) => c.id === customerId);
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-3xl">
       <h1 className="text-xl font-semibold text-neutral-50">New Invoice</h1>
 
       <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-5 space-y-4">
         <div>
           <label className="text-sm text-neutral-400">Customer</label>
-          <select value={customerId} onChange={(e) => setCustomerId(e.target.value)}
+          <select {...register("customerId")}
             className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600">
             {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
+          {errors.customerId && <p className="text-xs text-red-400 mt-1">{errors.customerId.message}</p>}
           {selectedCustomer && (
             <p className="text-xs text-neutral-500 mt-1">
               Current balance: Rs. {Math.abs(selectedCustomer.currentBalance).toLocaleString()}{" "}
@@ -89,15 +105,16 @@ function NewInvoiceForm() {
 
         <div>
           <label className="text-sm text-neutral-400">Margin % (used for items with no price history)</label>
-          <input value={margin} onChange={(e) => setMargin(e.target.value)} type="number"
+          <input {...register("margin")} type="number" step="any"
             className="mt-1 w-40 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+          {errors.margin && <p className="text-xs text-red-400 mt-1">{errors.margin.message}</p>}
         </div>
       </div>
 
       <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-5 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-neutral-200">Invoice Items</h2>
-          <button onClick={addLine} className="rounded-lg border border-neutral-700 px-3 py-1.5 text-xs text-neutral-200 hover:bg-neutral-800">+ Add Item</button>
+          <button type="button" onClick={addLine} className="rounded-lg border border-neutral-700 px-3 py-1.5 text-xs text-neutral-200 hover:bg-neutral-800">+ Add Item</button>
         </div>
 
         <div className="space-y-3">
@@ -115,7 +132,7 @@ function NewInvoiceForm() {
                     className="w-20 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
                   <input value={line.unitPrice} onChange={(e) => updateLine(line.id, { unitPrice: e.target.value })} type="number" placeholder="Unit Price"
                     className="w-28 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
-                  <button onClick={() => removeLine(line.id)} className="rounded-lg border border-neutral-800 px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800">-</button>
+                  <button type="button" onClick={() => removeLine(line.id)} className="rounded-lg border border-neutral-800 px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800">-</button>
                 </div>
                 <div className="flex gap-2">
                   {memorized !== undefined && (
@@ -132,6 +149,7 @@ function NewInvoiceForm() {
               </div>
             );
           })}
+          {lineError && <p className="text-xs text-red-400">{lineError}</p>}
         </div>
       </div>
 
@@ -141,10 +159,13 @@ function NewInvoiceForm() {
       </div>
 
       <div className="flex justify-end gap-2">
-        <button onClick={() => router.push("/invoices")} className="rounded-lg px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">Cancel</button>
-        <button onClick={handleSave} className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200">Save & Generate Invoice</button>
+        <button type="button" onClick={() => router.push("/invoices")} className="rounded-lg px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">Cancel</button>
+        <button type="submit" disabled={isSubmitting}
+          className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200 disabled:opacity-50">
+          {isSubmitting ? "Saving..." : "Save & Generate Invoice"}
+        </button>
       </div>
-    </div>
+    </form>
   );
 }
 

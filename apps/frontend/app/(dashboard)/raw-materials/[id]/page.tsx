@@ -2,48 +2,56 @@
 
 import { use, useMemo, useState } from "react";
 import Link from "next/link";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { useStore } from "@/lib/store";
+import { purchaseSchema, type PurchaseFormValues } from "@/lib/schemas";
 
 function RecordPurchaseDialog({ open, onClose, materialId }: { open: boolean; onClose: () => void; materialId: string }) {
   const recordPurchase = useStore((s) => s.recordPurchase);
-  const [qty, setQty] = useState("");
-  const [cost, setCost] = useState("");
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<PurchaseFormValues>({ resolver: zodResolver(purchaseSchema) });
 
   if (!open) return null;
 
-  const handleSave = () => {
-    const q = Number(qty);
-    const c = Number(cost);
-    if (!q || !c) return;
-    recordPurchase(materialId, q, c);
+  const onSubmit = async (values: PurchaseFormValues) => {
+    recordPurchase(materialId, values.qty, values.cost);
     toast.success("Purchase recorded â€” average cost updated");
-    setQty("");
-    setCost("");
+    reset();
     onClose();
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 p-5 space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 p-5 space-y-4">
         <h2 className="text-lg font-semibold text-neutral-50">Record Purchase</h2>
         <div className="space-y-3">
           <div>
             <label className="text-sm text-neutral-400">Quantity</label>
-            <input value={qty} onChange={(e) => setQty(e.target.value)} type="number"
+            <input {...register("qty")} type="number" step="any"
               className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+            {errors.qty && <p className="text-xs text-red-400 mt-1">{errors.qty.message}</p>}
           </div>
           <div>
             <label className="text-sm text-neutral-400">Purchase Cost (per unit)</label>
-            <input value={cost} onChange={(e) => setCost(e.target.value)} type="number"
+            <input {...register("cost")} type="number" step="any"
               className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+            {errors.cost && <p className="text-xs text-red-400 mt-1">{errors.cost.message}</p>}
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">Cancel</button>
-          <button onClick={handleSave} className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200">Save</button>
+          <button type="button" onClick={() => { reset(); onClose(); }} className="rounded-lg px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">Cancel</button>
+          <button type="submit" disabled={isSubmitting}
+            className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200 disabled:opacity-50">
+            {isSubmitting ? "Saving..." : "Save"}
+          </button>
         </div>
-      </div>
+      </form>
     </div>
   );
 }
@@ -54,10 +62,7 @@ export default function RawMaterialDetailPage({ params }: { params: Promise<{ id
   const allReceipts = useStore((s) => s.receipts);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const receipts = useMemo(
-    () => allReceipts.filter((r) => r.rawMaterialId === id),
-    [allReceipts, id]
-  );
+  const receipts = useMemo(() => allReceipts.filter((r) => r.rawMaterialId === id), [allReceipts, id]);
 
   if (!material) {
     return (
@@ -105,9 +110,7 @@ export default function RawMaterialDetailPage({ params }: { params: Promise<{ id
           </div>
           <div>
             <div className="text-neutral-400 text-xs">Stock Value</div>
-            <div className="text-lg font-semibold text-neutral-50 mt-1">
-              Rs. {(material.quantityInStock * material.avgUnitCost).toLocaleString()}
-            </div>
+            <div className="text-lg font-semibold text-neutral-50 mt-1">Rs. {(material.quantityInStock * material.avgUnitCost).toLocaleString()}</div>
           </div>
         </div>
       </div>

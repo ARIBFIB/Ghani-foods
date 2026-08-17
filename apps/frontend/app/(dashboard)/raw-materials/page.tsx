@@ -2,8 +2,11 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { useStore } from "@/lib/store";
+import { rawMaterialSchema, type RawMaterialFormValues } from "@/lib/schemas";
 
 function StatusBadge({ isLow }: { isLow: boolean }) {
   return (
@@ -17,48 +20,59 @@ function StatusBadge({ isLow }: { isLow: boolean }) {
 
 function AddRawMaterialDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const addRawMaterial = useStore((s) => s.addRawMaterial);
-  const [name, setName] = useState("");
-  const [unit, setUnit] = useState("kg");
-  const [threshold, setThreshold] = useState("50");
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<RawMaterialFormValues>({
+    resolver: zodResolver(rawMaterialSchema),
+    defaultValues: { name: "", unit: "kg", lowStockThreshold: 50 },
+  });
 
   if (!open) return null;
 
-  const handleSave = () => {
-    if (!name.trim()) return;
-    addRawMaterial({ name: name.trim(), unit, lowStockThreshold: Number(threshold) || 0 });
-    toast.success(`Raw material "${name.trim()}" added`);
-    setName("");
-    setUnit("kg");
-    setThreshold("50");
+  const onSubmit = async (values: RawMaterialFormValues) => {
+    addRawMaterial(values);
+    toast.success(`Raw material "${values.name}" added`);
+    reset();
     onClose();
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 p-5 space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 p-5 space-y-4">
         <h2 className="text-lg font-semibold text-neutral-50">Add Raw Material</h2>
         <div className="space-y-3">
           <div>
             <label className="text-sm text-neutral-400">Name</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Atta (Flour)"
+            <input {...register("name")} placeholder="e.g. Atta (Flour)"
               className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+            {errors.name && <p className="text-xs text-red-400 mt-1">{errors.name.message}</p>}
           </div>
           <div>
             <label className="text-sm text-neutral-400">Unit of Purchase</label>
-            <input value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="kg, litre, etc."
+            <input {...register("unit")} placeholder="kg, litre, etc."
               className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+            {errors.unit && <p className="text-xs text-red-400 mt-1">{errors.unit.message}</p>}
           </div>
           <div>
             <label className="text-sm text-neutral-400">Low Stock Threshold</label>
-            <input value={threshold} onChange={(e) => setThreshold(e.target.value)} type="number"
+            <input {...register("lowStockThreshold")} type="number"
               className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+            {errors.lowStockThreshold && <p className="text-xs text-red-400 mt-1">{errors.lowStockThreshold.message}</p>}
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">Cancel</button>
-          <button onClick={handleSave} className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200">Save</button>
+          <button type="button" onClick={() => { reset(); onClose(); }} className="rounded-lg px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">
+            Cancel
+          </button>
+          <button type="submit" disabled={isSubmitting}
+            className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200 disabled:opacity-50">
+            {isSubmitting ? "Saving..." : "Save"}
+          </button>
         </div>
-      </div>
+      </form>
     </div>
   );
 }
