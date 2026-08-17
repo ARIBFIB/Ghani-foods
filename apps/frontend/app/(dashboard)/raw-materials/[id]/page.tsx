@@ -27,8 +27,8 @@ function RecordPurchaseDialog({ open, onClose, materialId }: { open: boolean; on
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-sm rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5 space-y-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-sm rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5 space-y-4 max-h-[90vh] overflow-y-auto">
         <h2 className="text-lg font-semibold text-[var(--foreground)]">Record Purchase</h2>
         <div className="space-y-3">
           <div>
@@ -122,7 +122,7 @@ export default function RawMaterialDetailPage({ params }: { params: Promise<{ id
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-[var(--surface-border)]">
+      <div className="overflow-x-auto rounded-xl border border-[var(--surface-border)]">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-[var(--surface-border)] bg-[var(--surface)] text-left text-[var(--text-muted)]">

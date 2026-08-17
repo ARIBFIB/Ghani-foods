@@ -49,8 +49,8 @@ export function SortableTable<T>({
         />
       )}
 
-      <div className="overflow-hidden rounded-xl border border-[var(--surface-border)]">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-xl border border-[var(--surface-border)]">
+        <table className="w-full min-w-[640px] text-sm">
           <thead>
             {table.getHeaderGroups().map((hg) => (
               <tr key={hg.id} className="border-b border-[var(--surface-border)] bg-[var(--surface)] text-left text-[var(--text-muted)]">

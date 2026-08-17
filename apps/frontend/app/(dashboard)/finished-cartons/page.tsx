@@ -56,7 +56,7 @@ function NewPackingRunDialog({ open, onClose }: { open: boolean; onClose: () => 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-4">
       <div className="w-full max-w-md rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5 space-y-4">
         <h2 className="text-lg font-semibold text-[var(--foreground)]">New Packing Run â€” Step {step} of 3</h2>
 
@@ -156,7 +156,7 @@ export default function FinishedCartonsPage() {
       </div>
 
       {tab === "ready" ? (
-        <div className="overflow-hidden rounded-xl border border-[var(--surface-border)]">
+        <div className="overflow-x-auto rounded-xl border border-[var(--surface-border)]">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--surface-border)] bg-[var(--surface)] text-left text-[var(--text-muted)]">
@@ -181,7 +181,7 @@ export default function FinishedCartonsPage() {
           </table>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-[var(--surface-border)]">
+        <div className="overflow-x-auto rounded-xl border border-[var(--surface-border)]">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--surface-border)] bg-[var(--surface)] text-left text-[var(--text-muted)]">

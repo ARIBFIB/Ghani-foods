@@ -2,6 +2,8 @@
 
 import React, { useState } from "react";
 import { GhaniLogo } from "./ghani-logo";
+import { useSidebar } from "@/lib/sidebar-context";
+import { Close as CloseIcon } from "@carbon/icons-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -306,7 +308,7 @@ function IconNavigation({ activeSection }: { activeSection: SectionId }) {
   const goTo = (section: SectionId) => router.push(SECTION_DEFAULT_ROUTE[section]);
 
   return (
-    <aside className="bg-[var(--background)] flex flex-col gap-2 items-center p-4 w-16 h-screen border-r border-[var(--surface-border)]">
+    <aside className="hidden lg:flex bg-[var(--background)] flex-col gap-2 items-center p-4 w-16 h-screen border-r border-[var(--surface-border)]">
       <div className="mb-2 size-10 flex items-center justify-center">
         <div className="size-7">
           <InterfacesLogoSquare />
@@ -455,13 +457,36 @@ function DetailSidebar({ activeSection, pathname }: { activeSection: SectionId; 
 
   const toggleCollapse = () => setIsCollapsed((s) => !s);
 
+  const { isOpen, close } = useSidebar();
+
   return (
-    <aside
-      className={`bg-[var(--background)] flex flex-col gap-4 items-start p-4 transition-all duration-500 h-screen border-r border-[var(--surface-border)] ${
-        isCollapsed ? "w-16 min-w-16 !px-0 justify-center" : "w-72"
-      }`}
-      style={{ transitionTimingFunction: softSpringEasing }}
-    >
+    <>
+      {/* Mobile backdrop */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/60 lg:hidden"
+          onClick={close}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside
+        className={`bg-[var(--background)] flex flex-col gap-4 items-start p-4 transition-all duration-300 h-screen border-r border-[var(--surface-border)]
+          fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw]
+          ${isOpen ? "translate-x-0" : "-translate-x-full"}
+          lg:static lg:z-auto lg:translate-x-0 lg:transition-[width] lg:duration-500
+          ${isCollapsed ? "lg:w-16 lg:min-w-16 lg:!px-0 lg:justify-center" : "lg:w-72"}
+        `}
+        style={{ transitionTimingFunction: softSpringEasing }}
+      >
+        <button
+          type="button"
+          onClick={close}
+          aria-label="Close menu"
+          className="lg:hidden absolute top-4 right-4 flex items-center justify-center size-8 rounded-lg hover:bg-[var(--surface-hover)] text-[var(--text-muted)]"
+        >
+          <CloseIcon size={18} />
+        </button>
       {!isCollapsed && <BrandBadge />}
       <SectionTitle title={content.title} onToggleCollapse={toggleCollapse} isCollapsed={isCollapsed} />
       {!isCollapsed && <SearchContainer isCollapsed={isCollapsed} />}
@@ -483,7 +508,8 @@ function DetailSidebar({ activeSection, pathname }: { activeSection: SectionId; 
           </div>
         </div>
       )}
-    </aside>
+      </aside>
+    </>
   );
 }
 

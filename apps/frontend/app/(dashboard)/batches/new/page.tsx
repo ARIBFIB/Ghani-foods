@@ -141,7 +141,7 @@ export default function NewBatchPage() {
             const material = rawMaterials.find((m) => m.id === row.rawMaterialId);
             return (
               <div key={row.id} className="space-y-1">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <select value={row.rawMaterialId} onChange={(e) => updateRow(row.id, { rawMaterialId: e.target.value })}
                     className="flex-1 rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]">
                     {rawMaterials.map((m) => (
@@ -149,7 +149,7 @@ export default function NewBatchPage() {
                     ))}
                   </select>
                   <input value={row.qty} onChange={(e) => updateRow(row.id, { qty: e.target.value })} type="number" placeholder="Qty"
-                    className="w-28 rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
+                    className="w-full sm:w-28 rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
                   <button type="button" onClick={() => removeRow(row.id)} className="rounded-lg border border-[var(--surface-border)] px-3 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-hover)]">-</button>
                 </div>
                 {material && Number(row.qty) > material.quantityInStock && (

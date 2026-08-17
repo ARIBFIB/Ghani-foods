@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { Notification, User as UserIcon, ChevronDown as ChevronDownIcon } from "@carbon/icons-react";
 import { useStore } from "@/lib/store";
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
+import { useSidebar } from "@/lib/sidebar-context";
+import { Menu as MenuIcon } from "@carbon/icons-react";
 
 function NotificationBell() {
   const [open, setOpen] = useState(false);

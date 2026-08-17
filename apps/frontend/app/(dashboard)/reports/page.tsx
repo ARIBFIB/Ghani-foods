@@ -85,7 +85,7 @@ export default function ReportsPage() {
     <div className="space-y-6">
       <h1 className="text-xl font-semibold text-[var(--foreground)]">Reports and Analytics</h1>
 
-      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-4">
+      <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-end gap-3 rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-4">
         <div>
           <label className="text-xs text-[var(--text-muted)]">From</label>
           <input value={from} onChange={(e) => setFrom(e.target.value)} type="date"
