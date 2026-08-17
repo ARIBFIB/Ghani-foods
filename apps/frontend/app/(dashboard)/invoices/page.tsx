@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { invoices } from "@/lib/mock-data/invoices";
+import { useStore } from "@/lib/store";
 
 function StatusBadge({ status }: { status: "unpaid" | "partial" | "paid" }) {
   const styles: Record<string, string> = {
@@ -17,14 +17,13 @@ function StatusBadge({ status }: { status: "unpaid" | "partial" | "paid" }) {
 }
 
 export default function InvoicesPage() {
+  const invoices = useStore((s) => s.invoices);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-neutral-50">Invoices</h1>
-        <Link
-          href="/invoices/new"
-          className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200"
-        >
+        <Link href="/invoices/new" className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200">
           + New Invoice
         </Link>
       </div>
@@ -44,16 +43,12 @@ export default function InvoicesPage() {
             {invoices.map((inv) => (
               <tr key={inv.id} className="border-b border-neutral-900 last:border-0 hover:bg-neutral-900/60">
                 <td className="px-4 py-3">
-                  <Link href={`/invoices/${inv.id}`} className="text-neutral-50 hover:underline">
-                    {inv.id}
-                  </Link>
+                  <Link href={`/invoices/${inv.id}`} className="text-neutral-50 hover:underline">{inv.id}</Link>
                 </td>
                 <td className="px-4 py-3 text-neutral-300">{inv.customerName}</td>
                 <td className="px-4 py-3 text-neutral-300">{inv.invoiceDate}</td>
                 <td className="px-4 py-3 text-neutral-300">Rs. {inv.totalAmount.toLocaleString()}</td>
-                <td className="px-4 py-3">
-                  <StatusBadge status={inv.status} />
-                </td>
+                <td className="px-4 py-3"><StatusBadge status={inv.status} /></td>
               </tr>
             ))}
           </tbody>

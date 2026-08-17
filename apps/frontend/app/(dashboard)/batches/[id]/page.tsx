@@ -3,17 +3,11 @@
 import { use, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { productionBatches } from "@/lib/mock-data/batches";
+import { toast } from "sonner";
+import { useStore } from "@/lib/store";
 
-function OverheadDialog({
-  open,
-  onClose,
-  onSave,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onSave: (electricity: number, gas: number, rent: number) => void;
-}) {
+function OverheadDialog({ open, onClose, batchId }: { open: boolean; onClose: () => void; batchId: string }) {
+  const allocateOverhead = useStore((s) => s.allocateOverhead);
   const [electricity, setElectricity] = useState("");
   const [gas, setGas] = useState("");
   const [rent, setRent] = useState("");
@@ -21,7 +15,11 @@ function OverheadDialog({
   if (!open) return null;
 
   const handleSave = () => {
-    onSave(Number(electricity) || 0, Number(gas) || 0, Number(rent) || 0);
+    const e = Number(electricity) || 0;
+    const g = Number(gas) || 0;
+    const r = Number(rent) || 0;
+    allocateOverhead(batchId, e, g, r);
+    toast.success(`Overhead of Rs. ${(e + g + r).toLocaleString()} allocated to ${batchId}`);
     setElectricity("");
     setGas("");
     setRent("");
@@ -35,42 +33,23 @@ function OverheadDialog({
         <div className="space-y-3">
           <div>
             <label className="text-sm text-neutral-400">Electricity</label>
-            <input
-              value={electricity}
-              onChange={(e) => setElectricity(e.target.value)}
-              type="number"
-              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600"
-            />
+            <input value={electricity} onChange={(e) => setElectricity(e.target.value)} type="number"
+              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
           </div>
           <div>
             <label className="text-sm text-neutral-400">Gas</label>
-            <input
-              value={gas}
-              onChange={(e) => setGas(e.target.value)}
-              type="number"
-              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600"
-            />
+            <input value={gas} onChange={(e) => setGas(e.target.value)} type="number"
+              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
           </div>
           <div>
             <label className="text-sm text-neutral-400">Rent</label>
-            <input
-              value={rent}
-              onChange={(e) => setRent(e.target.value)}
-              type="number"
-              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600"
-            />
+            <input value={rent} onChange={(e) => setRent(e.target.value)} type="number"
+              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200"
-          >
-            Save
-          </button>
+          <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">Cancel</button>
+          <button onClick={handleSave} className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200">Save</button>
         </div>
       </div>
     </div>
@@ -80,32 +59,22 @@ function OverheadDialog({
 export default function BatchDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const batch = productionBatches.find((b) => b.id === id);
+  const batch = useStore((s) => s.productionBatches.find((b) => b.id === id));
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [overheadTotal, setOverheadTotal] = useState(0);
 
   if (!batch) {
     return (
       <div className="space-y-4">
-        <Link href="/batches" className="text-sm text-neutral-400 hover:underline">
-          &larr; Back to Batches
-        </Link>
+        <Link href="/batches" className="text-sm text-neutral-400 hover:underline">&larr; Back to Batches</Link>
         <p className="text-neutral-400">Batch not found.</p>
       </div>
     );
   }
 
-  const adjustedCostPerKg =
-    overheadTotal > 0 && batch.outputYieldKg > 0
-      ? batch.bulkCostPerKg + overheadTotal / batch.outputYieldKg
-      : batch.bulkCostPerKg;
-
   return (
     <div className="space-y-6">
       <div className="text-sm text-neutral-400">
-        <Link href="/batches" className="hover:underline text-neutral-300">
-          Batches
-        </Link>{" "}
+        <Link href="/batches" className="hover:underline text-neutral-300">Batches</Link>{" "}
         / <span className="text-neutral-50">{batch.id}</span>
       </div>
 
@@ -129,38 +98,28 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
           <div>
             <div className="text-neutral-400 text-xs">Effective Cost/Kg</div>
             <div className="text-lg font-semibold text-neutral-50 mt-1">
-              Rs. {adjustedCostPerKg.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              Rs. {batch.bulkCostPerKg.toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </div>
           </div>
         </div>
 
-        {overheadTotal > 0 && (
+        {batch.overheadTotal > 0 && (
           <div className="mt-4 text-xs text-amber-400">
-            Overhead of Rs. {overheadTotal.toLocaleString()} allocated across this batch's output.
+            Overhead of Rs. {batch.overheadTotal.toLocaleString()} allocated across this batch's output.
           </div>
         )}
       </div>
 
       <div className="flex gap-2">
-        <button
-          onClick={() => setDialogOpen(true)}
-          className="rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-800"
-        >
+        <button onClick={() => setDialogOpen(true)} className="rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-800">
           Allocate Month-End Overhead
         </button>
-        <button
-          onClick={() => router.push(`/finished-cartons?batchId=${batch.id}`)}
-          className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200"
-        >
+        <button onClick={() => router.push(`/finished-cartons?batchId=${batch.id}`)} className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200">
           Send to Packaging
         </button>
       </div>
 
-      <OverheadDialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        onSave={(electricity, gas, rent) => setOverheadTotal(electricity + gas + rent)}
-      />
+      <OverheadDialog open={dialogOpen} onClose={() => setDialogOpen(false)} batchId={batch.id} />
     </div>
   );
 }

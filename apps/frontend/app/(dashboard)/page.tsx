@@ -3,10 +3,8 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { dashboardKpis as kpis } from "@/lib/mock-data/kpis";
-import { rawMaterials as initialRawMaterials, type RawMaterial } from "@/lib/mock-data/raw-materials";
-import { packagingMaterials } from "@/lib/mock-data/packaging";
-import { invoices } from "@/lib/mock-data/invoices";
+import { toast } from "sonner";
+import { useStore } from "@/lib/store";
 
 function KpiCard({ label, value }: { label: string; value: string | number }) {
   return (
@@ -30,15 +28,8 @@ function StatusBadge({ status }: { status: "unpaid" | "partial" | "paid" }) {
   );
 }
 
-function AddRawMaterialDialog({
-  open,
-  onClose,
-  onAdd,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onAdd: (item: RawMaterial) => void;
-}) {
+function AddRawMaterialDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const addRawMaterial = useStore((s) => s.addRawMaterial);
   const [name, setName] = useState("");
   const [unit, setUnit] = useState("kg");
   const [threshold, setThreshold] = useState("50");
@@ -47,14 +38,8 @@ function AddRawMaterialDialog({
 
   const handleSave = () => {
     if (!name.trim()) return;
-    onAdd({
-      id: `rm-${Date.now()}`,
-      name: name.trim(),
-      unit,
-      quantityInStock: 0,
-      avgUnitCost: 0,
-      lowStockThreshold: Number(threshold) || 0,
-    });
+    addRawMaterial({ name: name.trim(), unit, lowStockThreshold: Number(threshold) || 0 });
+    toast.success(`Raw material "${name.trim()}" added`);
     setName("");
     setUnit("kg");
     setThreshold("50");
@@ -68,41 +53,23 @@ function AddRawMaterialDialog({
         <div className="space-y-3">
           <div>
             <label className="text-sm text-neutral-400">Name</label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Atta (Flour)"
-              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600"
-            />
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Atta (Flour)"
+              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
           </div>
           <div>
             <label className="text-sm text-neutral-400">Unit of Purchase</label>
-            <input
-              value={unit}
-              onChange={(e) => setUnit(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600"
-            />
+            <input value={unit} onChange={(e) => setUnit(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
           </div>
           <div>
             <label className="text-sm text-neutral-400">Low Stock Threshold</label>
-            <input
-              value={threshold}
-              onChange={(e) => setThreshold(e.target.value)}
-              type="number"
-              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600"
-            />
+            <input value={threshold} onChange={(e) => setThreshold(e.target.value)} type="number"
+              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200"
-          >
-            Save
-          </button>
+          <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">Cancel</button>
+          <button onClick={handleSave} className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200">Save</button>
         </div>
       </div>
     </div>
@@ -111,7 +78,11 @@ function AddRawMaterialDialog({
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [rawMaterials, setRawMaterials] = useState<RawMaterial[]>(initialRawMaterials);
+  const rawMaterials = useStore((s) => s.rawMaterials);
+  const packagingMaterials = useStore((s) => s.packagingMaterials);
+  const invoices = useStore((s) => s.invoices);
+  const finishedCartons = useStore((s) => s.finishedCartons);
+  const customers = useStore((s) => s.customers);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const lowStockItems = useMemo(() => {
@@ -122,7 +93,14 @@ export default function DashboardPage() {
       .filter((p) => p.stockQty < p.lowStockThreshold)
       .map((p) => ({ id: p.id, name: p.name, href: `/packaging`, qty: p.stockQty, threshold: p.lowStockThreshold }));
     return [...rawAlerts, ...packagingAlerts];
-  }, [rawMaterials]);
+  }, [rawMaterials, packagingMaterials]);
+
+  const kpis = useMemo(() => {
+    const totalRawMaterialValue = rawMaterials.reduce((sum, m) => sum + m.quantityInStock * m.avgUnitCost, 0);
+    const finishedCartonsReady = finishedCartons.reduce((sum, c) => sum + c.stockQty, 0);
+    const totalReceivables = customers.reduce((sum, c) => sum + Math.max(0, c.currentBalance), 0);
+    return { totalRawMaterialValue, finishedCartonsReady, totalReceivables };
+  }, [rawMaterials, finishedCartons, customers]);
 
   const recentInvoices = invoices.slice(0, 5);
 
@@ -133,29 +111,20 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard label="Total Raw Material Value" value={`Rs. ${kpis.totalRawMaterialValue.toLocaleString()}`} />
-        <KpiCard label="Batches This Month" value={kpis.batchesThisMonth} />
+        <KpiCard label="Total Raw Material Value" value={`Rs. ${kpis.totalRawMaterialValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} />
+        <KpiCard label="Batches This Month" value={6} />
         <KpiCard label="Finished Cartons Ready" value={kpis.finishedCartonsReady} />
         <KpiCard label="Total Receivables" value={`Rs. ${kpis.totalReceivables.toLocaleString()}`} />
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => setDialogOpen(true)}
-          className="rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-800"
-        >
+        <button onClick={() => setDialogOpen(true)} className="rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-800">
           + Add Raw Material
         </button>
-        <button
-          onClick={() => router.push("/batches/new")}
-          className="rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-800"
-        >
+        <button onClick={() => router.push("/batches/new")} className="rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-800">
           + New Batch
         </button>
-        <button
-          onClick={() => router.push("/invoices/new")}
-          className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200"
-        >
+        <button onClick={() => router.push("/invoices/new")} className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200">
           + New Invoice
         </button>
       </div>
@@ -170,15 +139,9 @@ export default function DashboardPage() {
               <div className="px-4 py-6 text-center text-sm text-neutral-500">All stock levels are healthy.</div>
             )}
             {lowStockItems.map((item) => (
-              <Link
-                key={item.id}
-                href={item.href}
-                className="flex items-center justify-between px-4 py-3 hover:bg-neutral-800/60"
-              >
+              <Link key={item.id} href={item.href} className="flex items-center justify-between px-4 py-3 hover:bg-neutral-800/60">
                 <span className="text-sm text-neutral-50">{item.name}</span>
-                <span className="text-xs text-red-400">
-                  {item.qty} / {item.threshold}
-                </span>
+                <span className="text-xs text-red-400">{item.qty} / {item.threshold}</span>
               </Link>
             ))}
           </div>
@@ -187,24 +150,18 @@ export default function DashboardPage() {
         <div className="rounded-xl border border-neutral-800 bg-neutral-900 overflow-hidden">
           <div className="px-4 py-3 border-b border-neutral-800 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-neutral-200">Recent Invoices</h2>
-            <Link href="/invoices" className="text-xs text-neutral-400 hover:text-neutral-200 hover:underline">
-              View all
-            </Link>
+            <Link href="/invoices" className="text-xs text-neutral-400 hover:text-neutral-200 hover:underline">View all</Link>
           </div>
           <table className="w-full text-sm">
             <tbody>
               {recentInvoices.map((inv) => (
                 <tr key={inv.id} className="border-b border-neutral-900 last:border-0">
                   <td className="px-4 py-3">
-                    <Link href={`/invoices/${inv.id}`} className="text-neutral-50 hover:underline">
-                      {inv.id}
-                    </Link>
+                    <Link href={`/invoices/${inv.id}`} className="text-neutral-50 hover:underline">{inv.id}</Link>
                   </td>
                   <td className="px-4 py-3 text-neutral-300">{inv.customerName}</td>
                   <td className="px-4 py-3 text-neutral-300">Rs. {inv.totalAmount.toLocaleString()}</td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={inv.status} />
-                  </td>
+                  <td className="px-4 py-3"><StatusBadge status={inv.status} /></td>
                 </tr>
               ))}
             </tbody>
@@ -212,11 +169,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <AddRawMaterialDialog
-        open={dialogOpen}
-        onClose={() => setDialogOpen(false)}
-        onAdd={(item) => setRawMaterials((prev) => [...prev, item])}
-      />
+      <AddRawMaterialDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
     </div>
   );
 }
