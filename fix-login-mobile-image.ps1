@@ -1,3 +1,43 @@
+# fix-login-mobile-image.ps1
+# Run from: D:\Rozmarrah-CUST\Saim Ashraf\Nimko\Working\Code\GhaniFoods
+# Usage:    .\fix-login-mobile-image.ps1
+#
+# What this does:
+#   1. Shows the Nimko product image on mobile too - as a compact top
+#      banner (fixed height, rounded corners, gradient overlay with logo)
+#      instead of being fully hidden below `lg`.
+#   2. Keeps the existing full split-screen desktop layout unchanged.
+#   3. Fixes spacing/sizing so the whole page doesn't look cramped or
+#      overflow on small screens: toggle button repositioned so it never
+#      overlaps the banner, form padding/max-width adjusted, heading and
+#      helper text sizes scale down on mobile.
+
+$ErrorActionPreference = "Stop"
+$Root = Get-Location
+$FrontendRoot = Join-Path $Root "apps\frontend"
+
+if (-not (Test-Path $FrontendRoot)) {
+    Write-Host "ERROR: apps\frontend not found under $Root" -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "=== Fixing login page mobile image + responsive layout ===" -ForegroundColor Cyan
+
+function Write-Utf8NoBom($Path, $Content) {
+    $dir = Split-Path $Path -Parent
+    if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($Path, $Content, $utf8NoBom)
+    Write-Host "  Updated: $($Path.Substring($Root.Path.Length).TrimStart('\'))" -ForegroundColor Green
+}
+
+$loginPagePath = Join-Path $FrontendRoot "app\(auth)\login\page.tsx"
+if (-not (Test-Path $loginPagePath)) {
+    Write-Host "ERROR: login page not found at $loginPagePath" -ForegroundColor Red
+    exit 1
+}
+
+$loginPageContent = @'
 "use client";
 
 import React, { useState } from "react";
@@ -137,3 +177,17 @@ export default function LoginPage() {
     </main>
   );
 }
+'@
+Write-Utf8NoBom $loginPagePath $loginPageContent
+
+Write-Host ""
+Write-Host "=== Done ===" -ForegroundColor Green
+Write-Host "  Mobile (below lg): image now shows as a 40/48-height top banner" -ForegroundColor Gray
+Write-Host "    with logo overlay, followed by the form below it" -ForegroundColor Gray
+Write-Host "  Desktop (lg+): unchanged full split-screen layout" -ForegroundColor Gray
+Write-Host "  Theme toggle repositioned to never overlap the mobile banner" -ForegroundColor Gray
+Write-Host "  Input heights, heading sizes, spacing all scale properly on mobile" -ForegroundColor Gray
+Write-Host ""
+Write-Host "Verify locally:" -ForegroundColor Cyan
+Write-Host "  cd apps\frontend && npm run dev" -ForegroundColor Gray
+Write-Host "Then check at 375px/390px width - image banner + form should both be visible and well-spaced." -ForegroundColor Gray
