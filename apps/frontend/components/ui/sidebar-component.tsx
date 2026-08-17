@@ -526,7 +526,7 @@ function DetailSidebar({ activeSection }: { activeSection: string }) {
     >
       {!isCollapsed && <BrandBadge />}
       <SectionTitle title={content.title} onToggleCollapse={toggleCollapse} isCollapsed={isCollapsed} />
-      <SearchContainer isCollapsed={isCollapsed} />
+      {!isCollapsed && <SearchContainer isCollapsed={isCollapsed} />}
 
       <div
         className={`flex flex-col w-full overflow-y-auto transition-all duration-500 ${
