@@ -1,3 +1,32 @@
+# fix-sidebar-navigation.ps1
+# Run from: D:\Rozmarrah-CUST\Saim Ashraf\Nimko\Working\Code\GhaniFoods
+# Usage: .\fix-sidebar-navigation.ps1
+#
+# Fixes: sidebar icon clicks weren't changing the URL, and clicking menu
+# links (plain <a> tags) caused a full page reload that reset the sidebar's
+# active section back to "Dashboard" even though the URL was correct.
+#
+# Fix: sidebar's active section is now derived from the real route
+# (usePathname), and all internal links use next/link so navigation is
+# client-side (no reload, no state reset).
+
+$ErrorActionPreference = "Stop"
+$Root = Get-Location
+$Frontend = Join-Path $Root "apps\frontend"
+
+function Write-CodeFile {
+    param([string]$RelativePath, [string]$Content)
+    $fullPath = Join-Path $Frontend $RelativePath
+    $dir = Split-Path $fullPath -Parent
+    if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($fullPath, $Content, $utf8NoBom)
+    Write-Host "  wrote $RelativePath" -ForegroundColor Green
+}
+
+Write-Host "=== Fixing sidebar navigation ===" -ForegroundColor Cyan
+
+Write-CodeFile "components\ui\sidebar-component.tsx" @'
 "use client";
 
 import React, { useState } from "react";
@@ -499,3 +528,12 @@ export function AppSidebar() {
 }
 
 export default AppSidebar;
+'@
+
+Write-Host "`n=== Done ===" -ForegroundColor Cyan
+Write-Host "Sidebar now derives its active section from the real URL (usePathname)" -ForegroundColor Green
+Write-Host "and uses next/link everywhere, so:" -ForegroundColor Green
+Write-Host "  - Clicking a left icon actually navigates (router.push) to that section." -ForegroundColor Yellow
+Write-Host "  - Clicking a detail-menu link (e.g. All Raw Materials) no longer reloads" -ForegroundColor Yellow
+Write-Host "    the page, so the sidebar stays in sync with the URL." -ForegroundColor Yellow
+Write-Host "  - Browser back/forward also keeps the sidebar correct." -ForegroundColor Yellow
