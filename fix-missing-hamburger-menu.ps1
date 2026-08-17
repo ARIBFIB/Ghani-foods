@@ -715,6 +715,7 @@ export default AppSidebar;
 '@
 Write-Utf8NoBom $sidebarPath $sidebarContent
 
+
 Write-Host ""
 Write-Host "=== Done ===" -ForegroundColor Green
 Write-Host "  Topbar rewritten - hamburger button is guaranteed present now" -ForegroundColor Gray
