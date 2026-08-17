@@ -1,0 +1,813 @@
+﻿==================================================
+GhaniFoods - Full Code Export
+Generated: 2026-08-17 21:23:25
+Total Files: 14
+==================================================
+
+
+==================================================
+FILE: export-code.ps1
+==================================================
+
+# export-code.ps1
+# Run from: D:\Rozmarrah-CUST\Saim Ashraf\Nimko\Working\Code\GhaniFoods
+# Usage: .\export-code.ps1
+
+$ProjectRoot = Get-Location
+$OutputFile  = Join-Path $ProjectRoot "code-export.txt"
+
+# Folders/paths to completely skip
+$ExcludeDirs = @(
+    "node_modules",
+    ".next",
+    ".git",
+    ".vercel",
+    "dist",
+    "build",
+    "coverage",
+    ".turbo"
+)
+
+# File extensions considered "code" (edit as needed)
+$IncludeExtensions = @(
+    ".ts", ".tsx", ".js", ".jsx",
+    ".json", ".css", ".mjs", ".cjs",
+    ".md", ".ps1", ".env.example"
+)
+
+# Specific filenames to always exclude even if extension matches
+$ExcludeFiles = @(
+    "package-lock.json",
+    "yarn.lock",
+    "pnpm-lock.yaml",
+    "code-export.txt"
+)
+
+Write-Host "=== Exporting GhaniFoods Code ===" -ForegroundColor Cyan
+
+# Build exclude-dir regex pattern (matches any path containing \<dir>\ )
+$excludePattern = ($ExcludeDirs | ForEach-Object { [Regex]::Escape("\$_\") }) -join "|"
+
+$files = Get-ChildItem -Path $ProjectRoot -Recurse -File | Where-Object {
+    $relativePath = $_.FullName.Substring($ProjectRoot.Path.Length)
+    $extOk   = $IncludeExtensions -contains $_.Extension.ToLower()
+    $notExcludedDir  = -not ($relativePath -match $excludePattern)
+    $notExcludedFile = -not ($ExcludeFiles -contains $_.Name)
+    $extOk -and $notExcludedDir -and $notExcludedFile
+}
+
+Write-Host "Found $($files.Count) files to export." -ForegroundColor Yellow
+
+if (Test-Path $OutputFile) {
+    Remove-Item $OutputFile -Force
+}
+
+$header = @"
+==================================================
+GhaniFoods - Full Code Export
+Generated: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+Total Files: $($files.Count)
+==================================================
+
+"@
+Add-Content -Path $OutputFile -Value $header -Encoding UTF8
+
+$count = 0
+foreach ($file in $files) {
+    $count++
+    $relativePath = $file.FullName.Substring($ProjectRoot.Path.Length).TrimStart('\')
+
+    Write-Host "  [$count/$($files.Count)] $relativePath" -ForegroundColor Gray
+
+    $separator = @"
+
+==================================================
+FILE: $relativePath
+==================================================
+
+"@
+    Add-Content -Path $OutputFile -Value $separator -Encoding UTF8
+
+    try {
+        $content = Get-Content -Path $file.FullName -Raw -ErrorAction Stop
+        Add-Content -Path $OutputFile -Value $content -Encoding UTF8
+    }
+    catch {
+        Add-Content -Path $OutputFile -Value "[Could not read file: $($_.Exception.Message)]" -Encoding UTF8
+    }
+}
+
+Write-Host "`n=== Export complete ===" -ForegroundColor Green
+Write-Host "Output: $OutputFile" -ForegroundColor Green
+Write-Host "Total files exported: $count" -ForegroundColor Green
+
+==================================================
+FILE: package.json
+==================================================
+
+{
+  "dependencies": {
+    "@ant-design/icons": "^6.3.2",
+    "@ant-design/nextjs-registry": "^1.3.0",
+    "@hookform/resolvers": "^5.9.1",
+    "@tanstack/react-query": "^5.101.4",
+    "@tanstack/react-table": "^9.1.2",
+    "antd": "^6.6.1",
+    "dayjs": "^1.11.23",
+    "react-hook-form": "^7.85.0",
+    "recharts": "^3.10.1",
+    "zod": "^4.4.3"
+  }
+}
+
+
+==================================================
+FILE: setup-ghanifoods-frontend.ps1
+==================================================
+
+<#
+========================================================================
+ GhaniFoods - Frontend Setup Script
+ Run from: D:\Rozmarrah-CUST\Saim Ashraf\Nimko\Working\Code\GhaniFoods>
+   PS> .\setup-ghanifoods-frontend.ps1
+
+ What this does:
+   1. Scaffolds a Next.js 15 (App Router) + TypeScript project
+   2. Installs Ant Design + supporting frontend libraries
+   3. Creates the full routing/folder structure from the Frontend Spec
+   4. Drops in dummy/mock data (no backend/DB calls yet)
+   5. Writes a base Ant Design token/theme config
+
+ Notes:
+   - No Supabase / backend calls in this pass. Everything reads from
+     /lib/mock-data/*.ts so pages render instantly with fake data.
+   - Uses Write-FileB64 pattern to avoid PowerShell mangling special
+     characters (quotes, backticks, unicode) inside .tsx/.ts files.
+========================================================================
+#>
+
+$ErrorActionPreference = "Stop"
+$ProjectName = "GhaniFoods"
+$Root = $PSScriptRoot
+
+function Write-FileB64 {
+    param(
+        [string]$RelativePath,
+        [string]$Content
+    )
+    $full = Join-Path $Root $RelativePath
+    $dir = Split-Path $full -Parent
+    if (-not (Test-Path $dir)) {
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    }
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($Content)
+    [System.IO.File]::WriteAllBytes($full, $bytes)
+    Write-Host "  + $RelativePath" -ForegroundColor DarkGray
+}
+
+Write-Host "=== GhaniFoods Frontend Setup ===" -ForegroundColor Cyan
+
+# ---------------------------------------------------------------------
+# 1. Scaffold Next.js app (skipped if already exists)
+# ---------------------------------------------------------------------
+if (-not (Test-Path (Join-Path $Root "package.json"))) {
+    Write-Host "`n[1/5] Creating Next.js 15 app..." -ForegroundColor Yellow
+    npx --yes create-next-app@latest . `
+        --typescript --tailwind --eslint --app `
+        --src-dir=false --import-alias "@/*" --use-npm --turbopack
+} else {
+    Write-Host "`n[1/5] package.json already exists, skipping create-next-app." -ForegroundColor Yellow
+}
+
+# ---------------------------------------------------------------------
+# 2. Install dependencies
+# ---------------------------------------------------------------------
+Write-Host "`n[2/5] Installing dependencies (Ant Design + libs)..." -ForegroundColor Yellow
+npm install antd @ant-design/icons @ant-design/nextjs-registry `
+    @tanstack/react-table @tanstack/react-query `
+    react-hook-form zod @hookform/resolvers `
+    recharts dayjs
+
+Write-Host "  Dependencies installed." -ForegroundColor Green
+
+# ---------------------------------------------------------------------
+# 3. Folder structure (route groups per Frontend Spec)
+# ---------------------------------------------------------------------
+Write-Host "`n[3/5] Creating folder structure..." -ForegroundColor Yellow
+$folders = @(
+    "app\(auth)\login",
+    "app\(dashboard)",
+    "app\(dashboard)\raw-materials\[id]",
+    "app\(dashboard)\packaging",
+    "app\(dashboard)\batches\new",
+    "app\(dashboard)\batches\[id]",
+    "app\(dashboard)\finished-cartons",
+    "app\(dashboard)\customers\[id]",
+    "app\(dashboard)\invoices\new",
+    "app\(dashboard)\invoices\[id]",
+    "app\(dashboard)\payments",
+    "app\(dashboard)\reports",
+    "app\(dashboard)\settings",
+    "components\layout",
+    "components\shared",
+    "lib\mock-data",
+    "lib\theme",
+    "lib\types"
+)
+foreach ($f in $folders) {
+    $p = Join-Path $Root $f
+    if (-not (Test-Path $p)) {
+        New-Item -ItemType Directory -Path $p -Force | Out-Null
+    }
+}
+Write-Host "  Folders created." -ForegroundColor Green
+
+# ---------------------------------------------------------------------
+# 4. Ant Design theme tokens
+# ---------------------------------------------------------------------
+Write-Host "`n[4/5] Writing Ant Design theme tokens..." -ForegroundColor Yellow
+
+$themeTs = @'
+// lib/theme/tokens.ts
+// GhaniFoods design tokens - single source of truth for Ant Design ConfigProvider
+
+export const colorTokens = {
+  colorPrimary: "#1F4E79",     // deep blue - primary actions, headers
+  colorSuccess: "#2E7D32",     // stock OK / paid
+  colorWarning: "#C77700",     // low stock / partial payment
+  colorError: "#B3261E",       // out of stock / overdue balance
+  colorInfo: "#0958D9",
+  colorTextBase: "#1A1A1A",
+  colorBgLayout: "#F5F6F8",
+  colorBgContainer: "#FFFFFF",
+  colorBorder: "#E3E6EA",
+};
+
+export const typographyTokens = {
+  fontFamily: "'Inter', 'Segoe UI', -apple-system, sans-serif",
+  fontFamilyMono: "'IBM Plex Mono', 'Courier New', monospace",
+  fontSizeBase: 14,
+  fontSizeHeading1: 30,
+  fontSizeHeading2: 24,
+  fontSizeHeading3: 18,
+};
+
+export const radiusTokens = {
+  borderRadius: 8,
+  borderRadiusLG: 12,
+  borderRadiusSM: 6,
+};
+
+export const spacingTokens = {
+  paddingContentHorizontal: 24,
+  paddingContentVertical: 16,
+  marginXS: 8,
+  marginSM: 12,
+  marginMD: 16,
+  marginLG: 24,
+};
+
+// Domain-specific semantic colors (not part of AntD token API,
+// used directly in components e.g. balance badges, status pills)
+export const semanticTokens = {
+  balanceOwes: "#B3261E",
+  balanceCredit: "#2E7D32",
+  statusReady: "#2E7D32",
+  statusLeftover: "#C77700",
+  statusLow: "#B3261E",
+  statusPaid: "#2E7D32",
+  statusUnpaid: "#B3261E",
+  statusPartial: "#C77700",
+};
+
+export const antdThemeConfig = {
+  token: {
+    ...colorTokens,
+    ...typographyTokens,
+    ...radiusTokens,
+    ...spacingTokens,
+  },
+  components: {
+    Table: { headerBg: "#1F4E79", headerColor: "#FFFFFF" },
+    Card: { borderRadiusLG: 12 },
+    Button: { borderRadius: 8, controlHeight: 38 },
+  },
+};
+'@
+Write-FileB64 "lib\theme\tokens.ts" $themeTs
+
+$providerTsx = @'
+// components/layout/AntdThemeProvider.tsx
+"use client";
+
+import { ConfigProvider } from "antd";
+import { AntdRegistry } from "@ant-design/nextjs-registry";
+import { antdThemeConfig } from "@/lib/theme/tokens";
+
+export default function AntdThemeProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <AntdRegistry>
+      <ConfigProvider theme={antdThemeConfig}>{children}</ConfigProvider>
+    </AntdRegistry>
+  );
+}
+'@
+Write-FileB64 "components\layout\AntdThemeProvider.tsx" $providerTsx
+
+# ---------------------------------------------------------------------
+# 5. Dummy / mock data
+# ---------------------------------------------------------------------
+Write-Host "`n[5/5] Writing dummy data..." -ForegroundColor Yellow
+
+$rawMaterials = @'
+// lib/mock-data/raw-materials.ts
+export type RawMaterial = {
+  id: string;
+  name: string;
+  unit: string;
+  quantityInStock: number;
+  avgUnitCost: number;
+  lowStockThreshold: number;
+};
+
+export const rawMaterials: RawMaterial[] = [
+  { id: "rm-1", name: "Atta (Flour)", unit: "kg", quantityInStock: 420, avgUnitCost: 145.5, lowStockThreshold: 100 },
+  { id: "rm-2", name: "Ghee", unit: "kg", quantityInStock: 65, avgUnitCost: 780, lowStockThreshold: 80 },
+  { id: "rm-3", name: "Salt", unit: "kg", quantityInStock: 210, avgUnitCost: 28, lowStockThreshold: 50 },
+  { id: "rm-4", name: "Spice Mix", unit: "kg", quantityInStock: 34, avgUnitCost: 620, lowStockThreshold: 40 },
+];
+'@
+Write-FileB64 "lib\mock-data\raw-materials.ts" $rawMaterials
+
+$packaging = @'
+// lib/mock-data/packaging.ts
+export type PackagingMaterial = {
+  id: string;
+  name: string;
+  unitCost: number;
+  stockQty: number;
+  lowStockThreshold: number;
+};
+
+export const packagingMaterials: PackagingMaterial[] = [
+  { id: "pm-1", name: "Carton Box (Large)", unitCost: 45, stockQty: 320, lowStockThreshold: 100 },
+  { id: "pm-2", name: "Shopper Bag", unitCost: 3.5, stockQty: 2400, lowStockThreshold: 500 },
+  { id: "pm-3", name: "Dabbe (Tin)", unitCost: 22, stockQty: 150, lowStockThreshold: 60 },
+];
+'@
+Write-FileB64 "lib\mock-data\packaging.ts" $packaging
+
+$batches = @'
+// lib/mock-data/batches.ts
+export type ProductionBatch = {
+  id: string;
+  batchDate: string;
+  outputYieldKg: number;
+  wastageKg: number;
+  leftoverQtyKg: number;
+  bulkCostPerKg: number;
+  status: "in_progress" | "completed";
+};
+
+export const productionBatches: ProductionBatch[] = [
+  { id: "batch-1", batchDate: "2026-08-10", outputYieldKg: 500, wastageKg: 8, leftoverQtyKg: 40, bulkCostPerKg: 210.75, status: "completed" },
+  { id: "batch-2", batchDate: "2026-08-13", outputYieldKg: 480, wastageKg: 5, leftoverQtyKg: 480, bulkCostPerKg: 205.3, status: "completed" },
+  { id: "batch-3", batchDate: "2026-08-16", outputYieldKg: 300, wastageKg: 0, leftoverQtyKg: 0, bulkCostPerKg: 0, status: "in_progress" },
+];
+'@
+Write-FileB64 "lib\mock-data\batches.ts" $batches
+
+$cartons = @'
+// lib/mock-data/finished-cartons.ts
+export type FinishedCarton = {
+  id: string;
+  name: string;
+  sourceBatchId: string;
+  packetsPerCarton: number;
+  costPerCarton: number;
+  stockQty: number;
+};
+
+export const finishedCartons: FinishedCarton[] = [
+  { id: "fc-1", name: "Nimko Carton - 24pk", sourceBatchId: "batch-1", packetsPerCarton: 24, costPerCarton: 610, stockQty: 85 },
+  { id: "fc-2", name: "Nimko Carton - 48pk", sourceBatchId: "batch-2", packetsPerCarton: 48, costPerCarton: 1150, stockQty: 42 },
+];
+'@
+Write-FileB64 "lib\mock-data\finished-cartons.ts" $cartons
+
+$customers = @'
+// lib/mock-data/customers.ts
+export type Customer = {
+  id: string;
+  name: string;
+  phone: string;
+  currentBalance: number;
+};
+
+export const customers: Customer[] = [
+  { id: "cust-1", name: "Al-Madina General Store", phone: "0300-1234567", currentBalance: 12500 },
+  { id: "cust-2", name: "Bilal Traders", phone: "0333-9988776", currentBalance: -2000 },
+  { id: "cust-3", name: "Rehman Wholesale", phone: "0345-1122334", currentBalance: 0 },
+];
+'@
+Write-FileB64 "lib\mock-data\customers.ts" $customers
+
+$invoices = @'
+// lib/mock-data/invoices.ts
+export type Invoice = {
+  id: string;
+  customerId: string;
+  customerName: string;
+  invoiceDate: string;
+  totalAmount: number;
+  status: "unpaid" | "partial" | "paid";
+};
+
+export const invoices: Invoice[] = [
+  { id: "inv-1001", customerId: "cust-1", customerName: "Al-Madina General Store", invoiceDate: "2026-08-15", totalAmount: 18300, status: "partial" },
+  { id: "inv-1002", customerId: "cust-2", customerName: "Bilal Traders", invoiceDate: "2026-08-14", totalAmount: 9200, status: "paid" },
+  { id: "inv-1003", customerId: "cust-3", customerName: "Rehman Wholesale", invoiceDate: "2026-08-12", totalAmount: 4600, status: "unpaid" },
+];
+'@
+Write-FileB64 "lib\mock-data\invoices.ts" $invoices
+
+$payments = @'
+// lib/mock-data/payments.ts
+export type Payment = {
+  id: string;
+  customerId: string;
+  customerName: string;
+  amount: number;
+  note: string;
+  paidAt: string;
+};
+
+export const payments: Payment[] = [
+  { id: "pay-1", customerId: "cust-2", customerName: "Bilal Traders", amount: 9200, note: "Full settlement inv-1002", paidAt: "2026-08-15" },
+  { id: "pay-2", customerId: "cust-1", customerName: "Al-Madina General Store", amount: 5800, note: "Partial payment", paidAt: "2026-08-16" },
+];
+'@
+Write-FileB64 "lib\mock-data\payments.ts" $payments
+
+$kpis = @'
+// lib/mock-data/kpis.ts
+export const dashboardKpis = {
+  totalRawMaterialValue: 128450,
+  batchesThisMonth: 6,
+  finishedCartonsReady: 127,
+  totalReceivables: 15900,
+};
+'@
+Write-FileB64 "lib\mock-data\kpis.ts" $kpis
+
+# Sample dashboard page wired to mock data + Ant Design
+$dashboardPage = @'
+// app/(dashboard)/page.tsx
+import { Card, Col, Row, Statistic, Table, Tag } from "antd";
+import { dashboardKpis } from "@/lib/mock-data/kpis";
+import { invoices } from "@/lib/mock-data/invoices";
+
+export default function DashboardPage() {
+  const recent = invoices.slice(0, 5);
+
+  return (
+    <div style={{ padding: 24 }}>
+      <Row gutter={16}>
+        <Col span={6}>
+          <Card><Statistic title="Raw Material Value" value={dashboardKpis.totalRawMaterialValue} prefix="Rs." /></Card>
+        </Col>
+        <Col span={6}>
+          <Card><Statistic title="Batches This Month" value={dashboardKpis.batchesThisMonth} /></Card>
+        </Col>
+        <Col span={6}>
+          <Card><Statistic title="Finished Cartons Ready" value={dashboardKpis.finishedCartonsReady} /></Card>
+        </Col>
+        <Col span={6}>
+          <Card><Statistic title="Total Receivables" value={dashboardKpis.totalReceivables} prefix="Rs." /></Card>
+        </Col>
+      </Row>
+
+      <Card title="Recent Invoices" style={{ marginTop: 24 }}>
+        <Table
+          rowKey="id"
+          dataSource={recent}
+          pagination={false}
+          columns={[
+            { title: "Invoice #", dataIndex: "id" },
+            { title: "Customer", dataIndex: "customerName" },
+            { title: "Date", dataIndex: "invoiceDate" },
+            { title: "Total", dataIndex: "totalAmount", render: (v: number) => `Rs. ${v.toLocaleString()}` },
+            {
+              title: "Status",
+              dataIndex: "status",
+              render: (s: string) => {
+                const color = s === "paid" ? "green" : s === "partial" ? "orange" : "red";
+                return <Tag color={color}>{s.toUpperCase()}</Tag>;
+              },
+            },
+          ]}
+        />
+      </Card>
+    </div>
+  );
+}
+'@
+Write-FileB64 "app\(dashboard)\page.tsx" $dashboardPage
+
+Write-Host "`n=== Setup complete ===" -ForegroundColor Cyan
+Write-Host "Next steps:" -ForegroundColor White
+Write-Host "  1. Wrap app/layout.tsx children with <AntdThemeProvider>" -ForegroundColor Gray
+Write-Host "  2. npm run dev" -ForegroundColor Gray
+Write-Host "  3. Open http://localhost:3000" -ForegroundColor Gray
+
+==================================================
+FILE: app\(dashboard)\page.tsx
+==================================================
+
+// app/(dashboard)/page.tsx
+import { Card, Col, Row, Statistic, Table, Tag } from "antd";
+import { dashboardKpis } from "@/lib/mock-data/kpis";
+import { invoices } from "@/lib/mock-data/invoices";
+
+export default function DashboardPage() {
+  const recent = invoices.slice(0, 5);
+
+  return (
+    <div style={{ padding: 24 }}>
+      <Row gutter={16}>
+        <Col span={6}>
+          <Card><Statistic title="Raw Material Value" value={dashboardKpis.totalRawMaterialValue} prefix="Rs." /></Card>
+        </Col>
+        <Col span={6}>
+          <Card><Statistic title="Batches This Month" value={dashboardKpis.batchesThisMonth} /></Card>
+        </Col>
+        <Col span={6}>
+          <Card><Statistic title="Finished Cartons Ready" value={dashboardKpis.finishedCartonsReady} /></Card>
+        </Col>
+        <Col span={6}>
+          <Card><Statistic title="Total Receivables" value={dashboardKpis.totalReceivables} prefix="Rs." /></Card>
+        </Col>
+      </Row>
+
+      <Card title="Recent Invoices" style={{ marginTop: 24 }}>
+        <Table
+          rowKey="id"
+          dataSource={recent}
+          pagination={false}
+          columns={[
+            { title: "Invoice #", dataIndex: "id" },
+            { title: "Customer", dataIndex: "customerName" },
+            { title: "Date", dataIndex: "invoiceDate" },
+            { title: "Total", dataIndex: "totalAmount", render: (v: number) => `Rs. ${v.toLocaleString()}` },
+            {
+              title: "Status",
+              dataIndex: "status",
+              render: (s: string) => {
+                const color = s === "paid" ? "green" : s === "partial" ? "orange" : "red";
+                return <Tag color={color}>{s.toUpperCase()}</Tag>;
+              },
+            },
+          ]}
+        />
+      </Card>
+    </div>
+  );
+}
+
+==================================================
+FILE: components\layout\AntdThemeProvider.tsx
+==================================================
+
+// components/layout/AntdThemeProvider.tsx
+"use client";
+
+import { ConfigProvider } from "antd";
+import { AntdRegistry } from "@ant-design/nextjs-registry";
+import { antdThemeConfig } from "@/lib/theme/tokens";
+
+export default function AntdThemeProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <AntdRegistry>
+      <ConfigProvider theme={antdThemeConfig}>{children}</ConfigProvider>
+    </AntdRegistry>
+  );
+}
+
+==================================================
+FILE: lib\mock-data\batches.ts
+==================================================
+
+// lib/mock-data/batches.ts
+export type ProductionBatch = {
+  id: string;
+  batchDate: string;
+  outputYieldKg: number;
+  wastageKg: number;
+  leftoverQtyKg: number;
+  bulkCostPerKg: number;
+  status: "in_progress" | "completed";
+};
+
+export const productionBatches: ProductionBatch[] = [
+  { id: "batch-1", batchDate: "2026-08-10", outputYieldKg: 500, wastageKg: 8, leftoverQtyKg: 40, bulkCostPerKg: 210.75, status: "completed" },
+  { id: "batch-2", batchDate: "2026-08-13", outputYieldKg: 480, wastageKg: 5, leftoverQtyKg: 480, bulkCostPerKg: 205.3, status: "completed" },
+  { id: "batch-3", batchDate: "2026-08-16", outputYieldKg: 300, wastageKg: 0, leftoverQtyKg: 0, bulkCostPerKg: 0, status: "in_progress" },
+];
+
+==================================================
+FILE: lib\mock-data\customers.ts
+==================================================
+
+// lib/mock-data/customers.ts
+export type Customer = {
+  id: string;
+  name: string;
+  phone: string;
+  currentBalance: number;
+};
+
+export const customers: Customer[] = [
+  { id: "cust-1", name: "Al-Madina General Store", phone: "0300-1234567", currentBalance: 12500 },
+  { id: "cust-2", name: "Bilal Traders", phone: "0333-9988776", currentBalance: -2000 },
+  { id: "cust-3", name: "Rehman Wholesale", phone: "0345-1122334", currentBalance: 0 },
+];
+
+==================================================
+FILE: lib\mock-data\finished-cartons.ts
+==================================================
+
+// lib/mock-data/finished-cartons.ts
+export type FinishedCarton = {
+  id: string;
+  name: string;
+  sourceBatchId: string;
+  packetsPerCarton: number;
+  costPerCarton: number;
+  stockQty: number;
+};
+
+export const finishedCartons: FinishedCarton[] = [
+  { id: "fc-1", name: "Nimko Carton - 24pk", sourceBatchId: "batch-1", packetsPerCarton: 24, costPerCarton: 610, stockQty: 85 },
+  { id: "fc-2", name: "Nimko Carton - 48pk", sourceBatchId: "batch-2", packetsPerCarton: 48, costPerCarton: 1150, stockQty: 42 },
+];
+
+==================================================
+FILE: lib\mock-data\invoices.ts
+==================================================
+
+// lib/mock-data/invoices.ts
+export type Invoice = {
+  id: string;
+  customerId: string;
+  customerName: string;
+  invoiceDate: string;
+  totalAmount: number;
+  status: "unpaid" | "partial" | "paid";
+};
+
+export const invoices: Invoice[] = [
+  { id: "inv-1001", customerId: "cust-1", customerName: "Al-Madina General Store", invoiceDate: "2026-08-15", totalAmount: 18300, status: "partial" },
+  { id: "inv-1002", customerId: "cust-2", customerName: "Bilal Traders", invoiceDate: "2026-08-14", totalAmount: 9200, status: "paid" },
+  { id: "inv-1003", customerId: "cust-3", customerName: "Rehman Wholesale", invoiceDate: "2026-08-12", totalAmount: 4600, status: "unpaid" },
+];
+
+==================================================
+FILE: lib\mock-data\kpis.ts
+==================================================
+
+// lib/mock-data/kpis.ts
+export const dashboardKpis = {
+  totalRawMaterialValue: 128450,
+  batchesThisMonth: 6,
+  finishedCartonsReady: 127,
+  totalReceivables: 15900,
+};
+
+==================================================
+FILE: lib\mock-data\packaging.ts
+==================================================
+
+// lib/mock-data/packaging.ts
+export type PackagingMaterial = {
+  id: string;
+  name: string;
+  unitCost: number;
+  stockQty: number;
+  lowStockThreshold: number;
+};
+
+export const packagingMaterials: PackagingMaterial[] = [
+  { id: "pm-1", name: "Carton Box (Large)", unitCost: 45, stockQty: 320, lowStockThreshold: 100 },
+  { id: "pm-2", name: "Shopper Bag", unitCost: 3.5, stockQty: 2400, lowStockThreshold: 500 },
+  { id: "pm-3", name: "Dabbe (Tin)", unitCost: 22, stockQty: 150, lowStockThreshold: 60 },
+];
+
+==================================================
+FILE: lib\mock-data\payments.ts
+==================================================
+
+// lib/mock-data/payments.ts
+export type Payment = {
+  id: string;
+  customerId: string;
+  customerName: string;
+  amount: number;
+  note: string;
+  paidAt: string;
+};
+
+export const payments: Payment[] = [
+  { id: "pay-1", customerId: "cust-2", customerName: "Bilal Traders", amount: 9200, note: "Full settlement inv-1002", paidAt: "2026-08-15" },
+  { id: "pay-2", customerId: "cust-1", customerName: "Al-Madina General Store", amount: 5800, note: "Partial payment", paidAt: "2026-08-16" },
+];
+
+==================================================
+FILE: lib\mock-data\raw-materials.ts
+==================================================
+
+// lib/mock-data/raw-materials.ts
+export type RawMaterial = {
+  id: string;
+  name: string;
+  unit: string;
+  quantityInStock: number;
+  avgUnitCost: number;
+  lowStockThreshold: number;
+};
+
+export const rawMaterials: RawMaterial[] = [
+  { id: "rm-1", name: "Atta (Flour)", unit: "kg", quantityInStock: 420, avgUnitCost: 145.5, lowStockThreshold: 100 },
+  { id: "rm-2", name: "Ghee", unit: "kg", quantityInStock: 65, avgUnitCost: 780, lowStockThreshold: 80 },
+  { id: "rm-3", name: "Salt", unit: "kg", quantityInStock: 210, avgUnitCost: 28, lowStockThreshold: 50 },
+  { id: "rm-4", name: "Spice Mix", unit: "kg", quantityInStock: 34, avgUnitCost: 620, lowStockThreshold: 40 },
+];
+
+==================================================
+FILE: lib\theme\tokens.ts
+==================================================
+
+// lib/theme/tokens.ts
+// GhaniFoods design tokens - single source of truth for Ant Design ConfigProvider
+
+export const colorTokens = {
+  colorPrimary: "#1F4E79",     // deep blue - primary actions, headers
+  colorSuccess: "#2E7D32",     // stock OK / paid
+  colorWarning: "#C77700",     // low stock / partial payment
+  colorError: "#B3261E",       // out of stock / overdue balance
+  colorInfo: "#0958D9",
+  colorTextBase: "#1A1A1A",
+  colorBgLayout: "#F5F6F8",
+  colorBgContainer: "#FFFFFF",
+  colorBorder: "#E3E6EA",
+};
+
+export const typographyTokens = {
+  fontFamily: "'Inter', 'Segoe UI', -apple-system, sans-serif",
+  fontFamilyMono: "'IBM Plex Mono', 'Courier New', monospace",
+  fontSizeBase: 14,
+  fontSizeHeading1: 30,
+  fontSizeHeading2: 24,
+  fontSizeHeading3: 18,
+};
+
+export const radiusTokens = {
+  borderRadius: 8,
+  borderRadiusLG: 12,
+  borderRadiusSM: 6,
+};
+
+export const spacingTokens = {
+  paddingContentHorizontal: 24,
+  paddingContentVertical: 16,
+  marginXS: 8,
+  marginSM: 12,
+  marginMD: 16,
+  marginLG: 24,
+};
+
+// Domain-specific semantic colors (not part of AntD token API,
+// used directly in components e.g. balance badges, status pills)
+export const semanticTokens = {
+  balanceOwes: "#B3261E",
+  balanceCredit: "#2E7D32",
+  statusReady: "#2E7D32",
+  statusLeftover: "#C77700",
+  statusLow: "#B3261E",
+  statusPaid: "#2E7D32",
+  statusUnpaid: "#B3261E",
+  statusPartial: "#C77700",
+};
+
+export const antdThemeConfig = {
+  token: {
+    ...colorTokens,
+    ...typographyTokens,
+    ...radiusTokens,
+    ...spacingTokens,
+  },
+  components: {
+    Table: { headerBg: "#1F4E79", headerColor: "#FFFFFF" },
+    Card: { borderRadiusLG: 12 },
+    Button: { borderRadius: 8, controlHeight: 38 },
+  },
+};
