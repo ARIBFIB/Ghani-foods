@@ -32,30 +32,30 @@ function OverheadDialog({ open, onClose, batchId }: { open: boolean; onClose: ()
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 p-5 space-y-4">
-        <h2 className="text-lg font-semibold text-neutral-50">Allocate Month-End Overhead</h2>
+      <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-sm rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5 space-y-4">
+        <h2 className="text-lg font-semibold text-[var(--foreground)]">Allocate Month-End Overhead</h2>
         <div className="space-y-3">
           <div>
-            <label className="text-sm text-neutral-400">Electricity</label>
+            <label className="text-sm text-[var(--text-muted)]">Electricity</label>
             <input {...register("electricity")} type="number" step="any"
-              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+              className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
             {errors.electricity && <p className="text-xs text-red-400 mt-1">{errors.electricity.message}</p>}
           </div>
           <div>
-            <label className="text-sm text-neutral-400">Gas</label>
+            <label className="text-sm text-[var(--text-muted)]">Gas</label>
             <input {...register("gas")} type="number" step="any"
-              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+              className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
             {errors.gas && <p className="text-xs text-red-400 mt-1">{errors.gas.message}</p>}
           </div>
           <div>
-            <label className="text-sm text-neutral-400">Rent</label>
+            <label className="text-sm text-[var(--text-muted)]">Rent</label>
             <input {...register("rent")} type="number" step="any"
-              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+              className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
             {errors.rent && <p className="text-xs text-red-400 mt-1">{errors.rent.message}</p>}
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={() => { reset(); onClose(); }} className="rounded-lg px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">Cancel</button>
+          <button type="button" onClick={() => { reset(); onClose(); }} className="rounded-lg px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]">Cancel</button>
           <button type="submit" disabled={isSubmitting}
             className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200 disabled:opacity-50">
             {isSubmitting ? "Saving..." : "Save"}
@@ -75,39 +75,39 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
   if (!batch) {
     return (
       <div className="space-y-4">
-        <Link href="/batches" className="text-sm text-neutral-400 hover:underline">&larr; Back to Batches</Link>
-        <p className="text-neutral-400">Batch not found.</p>
+        <Link href="/batches" className="text-sm text-[var(--text-muted)] hover:underline">&larr; Back to Batches</Link>
+        <p className="text-[var(--text-muted)]">Batch not found.</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="text-sm text-neutral-400">
-        <Link href="/batches" className="hover:underline text-neutral-300">Batches</Link>{" "}
-        / <span className="text-neutral-50">{batch.id}</span>
+      <div className="text-sm text-[var(--text-muted)]">
+        <Link href="/batches" className="hover:underline text-[var(--text-secondary)]">Batches</Link>{" "}
+        / <span className="text-[var(--foreground)]">{batch.id}</span>
       </div>
 
-      <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-5">
-        <h1 className="text-xl font-semibold text-neutral-50">{batch.id}</h1>
-        <p className="text-sm text-neutral-400 mt-1">Batch Date: {batch.batchDate}</p>
+      <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5">
+        <h1 className="text-xl font-semibold text-[var(--foreground)]">{batch.id}</h1>
+        <p className="text-sm text-[var(--text-muted)] mt-1">Batch Date: {batch.batchDate}</p>
 
         <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div>
-            <div className="text-neutral-400 text-xs">Output Yield</div>
-            <div className="text-lg font-semibold text-neutral-50 mt-1">{batch.outputYieldKg} kg</div>
+            <div className="text-[var(--text-muted)] text-xs">Output Yield</div>
+            <div className="text-lg font-semibold text-[var(--foreground)] mt-1">{batch.outputYieldKg} kg</div>
           </div>
           <div>
-            <div className="text-neutral-400 text-xs">Wastage</div>
-            <div className="text-lg font-semibold text-neutral-50 mt-1">{batch.wastageKg} kg</div>
+            <div className="text-[var(--text-muted)] text-xs">Wastage</div>
+            <div className="text-lg font-semibold text-[var(--foreground)] mt-1">{batch.wastageKg} kg</div>
           </div>
           <div>
-            <div className="text-neutral-400 text-xs">Leftover Remaining</div>
-            <div className="text-lg font-semibold text-neutral-50 mt-1">{batch.leftoverQtyKg} kg</div>
+            <div className="text-[var(--text-muted)] text-xs">Leftover Remaining</div>
+            <div className="text-lg font-semibold text-[var(--foreground)] mt-1">{batch.leftoverQtyKg} kg</div>
           </div>
           <div>
-            <div className="text-neutral-400 text-xs">Effective Cost/Kg</div>
-            <div className="text-lg font-semibold text-neutral-50 mt-1">
+            <div className="text-[var(--text-muted)] text-xs">Effective Cost/Kg</div>
+            <div className="text-lg font-semibold text-[var(--foreground)] mt-1">
               Rs. {batch.bulkCostPerKg.toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </div>
           </div>
@@ -129,7 +129,7 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
       </div>
 
       <div className="flex gap-2">
-        <button onClick={() => setDialogOpen(true)} className="rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-800">
+        <button onClick={() => setDialogOpen(true)} className="rounded-lg border border-[var(--surface-border-strong)] px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)]">
           Allocate Month-End Overhead
         </button>
         <button onClick={() => router.push(`/finished-cartons?batchId=${batch.id}`)} className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200">

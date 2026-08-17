@@ -24,31 +24,31 @@ function RecordPaymentDialog({ open, onClose }: { open: boolean; onClose: () => 
   };
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 p-5 space-y-4">
-        <h2 className="text-lg font-semibold text-neutral-50">Record Payment</h2>
+      <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-sm rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5 space-y-4">
+        <h2 className="text-lg font-semibold text-[var(--foreground)]">Record Payment</h2>
         <div className="space-y-3">
           <div>
-            <label className="text-sm text-neutral-400">Customer</label>
+            <label className="text-sm text-[var(--text-muted)]">Customer</label>
             <select {...register("customerId")}
-              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600">
+              className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]">
               {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
             {errors.customerId && <p className="text-xs text-red-400 mt-1">{errors.customerId.message}</p>}
           </div>
           <div>
-            <label className="text-sm text-neutral-400">Amount</label>
+            <label className="text-sm text-[var(--text-muted)]">Amount</label>
             <input {...register("amount")} type="number" step="any"
-              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+              className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
             {errors.amount && <p className="text-xs text-red-400 mt-1">{errors.amount.message}</p>}
           </div>
           <div>
-            <label className="text-sm text-neutral-400">Note</label>
+            <label className="text-sm text-[var(--text-muted)]">Note</label>
             <input {...register("note")}
-              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+              className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={() => { reset(); onClose(); }} className="rounded-lg px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">Cancel</button>
+          <button type="button" onClick={() => { reset(); onClose(); }} className="rounded-lg px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]">Cancel</button>
           <button type="submit" disabled={isSubmitting} className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200 disabled:opacity-50">
             {isSubmitting ? "Saving..." : "Save"}
           </button>
@@ -64,7 +64,7 @@ export default function PaymentsPage() {
 
   const columns = useMemo<ColumnDef<Payment, unknown>[]>(() => [
     { accessorKey: "paidAt", header: "Date" },
-    { accessorKey: "customerName", header: "Customer", cell: ({ getValue }) => <span className="text-neutral-50">{getValue() as string}</span> },
+    { accessorKey: "customerName", header: "Customer", cell: ({ getValue }) => <span className="text-[var(--foreground)]">{getValue() as string}</span> },
     {
       accessorKey: "amount", header: "Amount",
       cell: ({ getValue }) => <span className="text-green-400">Rs. {(getValue() as number).toLocaleString()}</span>,
@@ -75,7 +75,7 @@ export default function PaymentsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-neutral-50">Payments</h1>
+        <h1 className="text-xl font-semibold text-[var(--foreground)]">Payments</h1>
         <button onClick={() => setDialogOpen(true)} className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200">
           + Record Payment
         </button>

@@ -126,12 +126,12 @@ export default function NewBatchPage() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-3xl">
-      <h1 className="text-xl font-semibold text-neutral-50">New Production Batch</h1>
+      <h1 className="text-xl font-semibold text-[var(--foreground)]">New Production Batch</h1>
 
-      <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-5 space-y-4">
+      <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-neutral-200">Raw Material Consumption</h2>
-          <button type="button" onClick={addRow} className="rounded-lg border border-neutral-700 px-3 py-1.5 text-xs text-neutral-200 hover:bg-neutral-800">
+          <h2 className="text-sm font-semibold text-[var(--foreground)]">Raw Material Consumption</h2>
+          <button type="button" onClick={addRow} className="rounded-lg border border-[var(--surface-border-strong)] px-3 py-1.5 text-xs text-[var(--foreground)] hover:bg-[var(--surface-hover)]">
             + Add Material Row
           </button>
         </div>
@@ -143,14 +143,14 @@ export default function NewBatchPage() {
               <div key={row.id} className="space-y-1">
                 <div className="flex items-center gap-2">
                   <select value={row.rawMaterialId} onChange={(e) => updateRow(row.id, { rawMaterialId: e.target.value })}
-                    className="flex-1 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600">
+                    className="flex-1 rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]">
                     {rawMaterials.map((m) => (
                       <option key={m.id} value={m.id}>{m.name} ({m.unit}) â€” {m.quantityInStock} in stock</option>
                     ))}
                   </select>
                   <input value={row.qty} onChange={(e) => updateRow(row.id, { qty: e.target.value })} type="number" placeholder="Qty"
-                    className="w-28 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
-                  <button type="button" onClick={() => removeRow(row.id)} className="rounded-lg border border-neutral-800 px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800">-</button>
+                    className="w-28 rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
+                  <button type="button" onClick={() => removeRow(row.id)} className="rounded-lg border border-[var(--surface-border)] px-3 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-hover)]">-</button>
                 </div>
                 {material && Number(row.qty) > material.quantityInStock && (
                   <p className="text-xs text-red-400">Only {material.quantityInStock} {material.unit} available</p>
@@ -161,18 +161,18 @@ export default function NewBatchPage() {
           {rowError && <p className="text-xs text-red-400">{rowError}</p>}
         </div>
 
-        <div className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
-          <div className="text-xs text-neutral-400">Estimated Batch Cost</div>
-          <div className="text-lg font-semibold text-neutral-50 mt-1">
+        <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--background)] p-4">
+          <div className="text-xs text-[var(--text-muted)]">Estimated Batch Cost</div>
+          <div className="text-lg font-semibold text-[var(--foreground)] mt-1">
             Rs. {estimatedTotalCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}
           </div>
           {estimatedLeftoverCost > 0 && (
-            <div className="text-xs text-neutral-500 mt-1">
+            <div className="text-xs text-[var(--foreground)]0 mt-1">
               includes Rs. {estimatedLeftoverCost.toLocaleString(undefined, { maximumFractionDigits: 2 })} carried over from leftover
             </div>
           )}
           {estimatedTotalKg > 0 && (
-            <div className="text-xs text-neutral-400 mt-1">
+            <div className="text-xs text-[var(--text-muted)] mt-1">
               Est. cost/kg: Rs. {estimatedCostPerKg.toLocaleString(undefined, { maximumFractionDigits: 2 })}
               {" "}(on {estimatedTotalKg} kg total{effectiveKgUsedFromLeftover > 0 ? `, incl. ${effectiveKgUsedFromLeftover} kg leftover` : ""})
             </div>
@@ -180,22 +180,22 @@ export default function NewBatchPage() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="text-sm text-neutral-400">Output Yield (kg)</label>
+          <label className="text-sm text-[var(--text-muted)]">Output Yield (kg)</label>
           <input {...register("outputYieldKg")} type="number" step="any"
-            className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+            className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
           {errors.outputYieldKg && <p className="text-xs text-red-400 mt-1">{errors.outputYieldKg.message}</p>}
         </div>
         <div>
-          <label className="text-sm text-neutral-400">Wastage (kg)</label>
+          <label className="text-sm text-[var(--text-muted)]">Wastage (kg)</label>
           <input {...register("wastageKg")} type="number" step="any"
-            className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+            className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
           {errors.wastageKg && <p className="text-xs text-red-400 mt-1">{errors.wastageKg.message}</p>}
         </div>
       </div>
 
-      <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-5 space-y-3">
+      <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5 space-y-3">
         <label className="flex items-center gap-3 cursor-pointer">
           <input
             type="checkbox"
@@ -207,19 +207,19 @@ export default function NewBatchPage() {
                 setLeftoverKgUsed("");
               }
             }}
-            className="size-4 rounded border-neutral-700 bg-neutral-950"
+            className="size-4 rounded border-[var(--surface-border-strong)] bg-[var(--background)]"
           />
-          <span className="text-sm text-neutral-200">Use Leftover From Previous Batch First</span>
+          <span className="text-sm text-[var(--foreground)]">Use Leftover From Previous Batch First</span>
         </label>
 
         {useLeftoverFirst && (
           <div className="space-y-3">
             <div>
-              <label className="text-sm text-neutral-400">Leftover Batch</label>
+              <label className="text-sm text-[var(--text-muted)]">Leftover Batch</label>
               <select
                 value={leftoverBatchId}
                 onChange={(e) => { setLeftoverBatchId(e.target.value); setLeftoverKgUsed(""); }}
-                className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600"
+                className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]"
               >
                 <option value="">Select leftover batch...</option>
                 {leftoverBatches.map((b) => (
@@ -230,7 +230,7 @@ export default function NewBatchPage() {
 
             {selectedLeftoverBatch && (
               <div>
-                <label className="text-sm text-neutral-400">Leftover Qty to Use (kg)</label>
+                <label className="text-sm text-[var(--text-muted)]">Leftover Qty to Use (kg)</label>
                 <input
                   value={leftoverKgUsed}
                   onChange={(e) => setLeftoverKgUsed(e.target.value)}
@@ -238,7 +238,7 @@ export default function NewBatchPage() {
                   step="any"
                   max={selectedLeftoverBatch.leftoverQtyKg}
                   placeholder={`Up to ${selectedLeftoverBatch.leftoverQtyKg} kg`}
-                  className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600"
+                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]"
                 />
                 {Number(leftoverKgUsed) > selectedLeftoverBatch.leftoverQtyKg && (
                   <p className="text-xs text-red-400 mt-1">Only {selectedLeftoverBatch.leftoverQtyKg} kg available in this batch</p>
@@ -250,7 +250,7 @@ export default function NewBatchPage() {
       </div>
 
       <div className="flex justify-end gap-2">
-        <button type="button" onClick={() => router.push("/batches")} className="rounded-lg px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">Cancel</button>
+        <button type="button" onClick={() => router.push("/batches")} className="rounded-lg px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]">Cancel</button>
         <button type="submit" disabled={isSubmitting}
           className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200 disabled:opacity-50">
           {isSubmitting ? "Saving..." : "Save Batch"}

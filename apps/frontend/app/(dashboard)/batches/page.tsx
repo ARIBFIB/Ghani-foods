@@ -22,7 +22,7 @@ export default function BatchesPage() {
   const columns = useMemo<ColumnDef<ProductionBatch, unknown>[]>(() => [
     {
       accessorKey: "id", header: "Batch ID",
-      cell: ({ row }) => <Link href={`/batches/${row.original.id}`} className="text-neutral-50 hover:underline">{row.original.id}</Link>,
+      cell: ({ row }) => <Link href={`/batches/${row.original.id}`} className="text-[var(--foreground)] hover:underline">{row.original.id}</Link>,
     },
     { accessorKey: "batchDate", header: "Date" },
     { accessorKey: "outputYieldKg", header: "Output Yield (kg)" },
@@ -44,7 +44,7 @@ export default function BatchesPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-neutral-50">Production Batches</h1>
+        <h1 className="text-xl font-semibold text-[var(--foreground)]">Production Batches</h1>
         <Link href="/batches/new" className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200">
           + New Batch
         </Link>

@@ -83,26 +83,26 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-neutral-50">Reports and Analytics</h1>
+      <h1 className="text-xl font-semibold text-[var(--foreground)]">Reports and Analytics</h1>
 
-      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-neutral-800 bg-neutral-900 p-4">
+      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-4">
         <div>
-          <label className="text-xs text-neutral-400">From</label>
+          <label className="text-xs text-[var(--text-muted)]">From</label>
           <input value={from} onChange={(e) => setFrom(e.target.value)} type="date"
-            className="mt-1 block rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+            className="mt-1 block rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
         </div>
         <div>
-          <label className="text-xs text-neutral-400">To</label>
+          <label className="text-xs text-[var(--text-muted)]">To</label>
           <input value={to} onChange={(e) => setTo(e.target.value)} type="date"
-            className="mt-1 block rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+            className="mt-1 block rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
         </div>
       </div>
 
-      <div className="flex gap-2 border-b border-neutral-800">
+      <div className="flex gap-2 border-b border-[var(--surface-border)]">
         {(["inventory", "yield", "pnl"] as const).map((key) => (
           <button key={key} onClick={() => setTab(key)}
             className={`px-4 py-2 text-sm font-medium border-b-2 capitalize ${
-              tab === key ? "border-neutral-50 text-neutral-50" : "border-transparent text-neutral-400"
+              tab === key ? "border-neutral-50 text-[var(--foreground)]" : "border-transparent text-[var(--text-muted)]"
             }`}>
             {key === "yield" ? "Production Yield" : key === "pnl" ? "P and L" : "Inventory Movement"}
           </button>
@@ -113,12 +113,12 @@ export default function ReportsPage() {
         <div className="space-y-4">
           <div className="flex justify-end">
             <button onClick={handleInventoryExport}
-              className="rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-800">
+              className="rounded-lg border border-[var(--surface-border-strong)] px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)]">
               Export CSV
             </button>
           </div>
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-5">
-            <h2 className="text-sm font-semibold text-neutral-200 mb-4">Stock vs Threshold</h2>
+          <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5">
+            <h2 className="text-sm font-semibold text-[var(--foreground)] mb-4">Stock vs Threshold</h2>
             <ResponsiveContainer width="100%" height={320}>
               <BarChart data={inventoryData} margin={{ top: 5, right: 20, left: 0, bottom: 60 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
@@ -133,13 +133,13 @@ export default function ReportsPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
-              <div className="text-xs text-neutral-400">Finished Cartons Ready</div>
-              <div className="text-2xl font-semibold text-neutral-50 mt-1">{cartonsReady}</div>
+            <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-4">
+              <div className="text-xs text-[var(--text-muted)]">Finished Cartons Ready</div>
+              <div className="text-2xl font-semibold text-[var(--foreground)] mt-1">{cartonsReady}</div>
             </div>
-            <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
-              <div className="text-xs text-neutral-400">Finished Stock Value (at cost)</div>
-              <div className="text-2xl font-semibold text-neutral-50 mt-1">Rs. {cartonsValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+            <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-4">
+              <div className="text-xs text-[var(--text-muted)]">Finished Stock Value (at cost)</div>
+              <div className="text-2xl font-semibold text-[var(--foreground)] mt-1">Rs. {cartonsValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
             </div>
           </div>
         </div>
@@ -149,12 +149,12 @@ export default function ReportsPage() {
         <div className="space-y-4">
           <div className="flex justify-end">
             <button onClick={handleYieldExport}
-              className="rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-800">
+              className="rounded-lg border border-[var(--surface-border-strong)] px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)]">
               Export CSV
             </button>
           </div>
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-5">
-            <h2 className="text-sm font-semibold text-neutral-200 mb-4">Output Yield, Wastage and Leftover per Batch</h2>
+          <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5">
+            <h2 className="text-sm font-semibold text-[var(--foreground)] mb-4">Output Yield, Wastage and Leftover per Batch</h2>
             <ResponsiveContainer width="100%" height={320}>
               <BarChart data={yieldData} margin={{ top: 5, right: 20, left: 0, bottom: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
@@ -175,22 +175,22 @@ export default function ReportsPage() {
         <div className="space-y-4">
           <div className="flex justify-end">
             <button onClick={handlePnlExport}
-              className="rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-800">
+              className="rounded-lg border border-[var(--surface-border-strong)] px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)]">
               Export CSV
             </button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
-              <div className="text-xs text-neutral-400">Total Revenue</div>
-              <div className="text-2xl font-semibold text-neutral-50 mt-1">Rs. {pnl.totalRevenue.toLocaleString()}</div>
+            <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-4">
+              <div className="text-xs text-[var(--text-muted)]">Total Revenue</div>
+              <div className="text-2xl font-semibold text-[var(--foreground)] mt-1">Rs. {pnl.totalRevenue.toLocaleString()}</div>
             </div>
-            <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
-              <div className="text-xs text-neutral-400">Est. Production Cost</div>
-              <div className="text-2xl font-semibold text-neutral-50 mt-1">Rs. {pnl.totalCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+            <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-4">
+              <div className="text-xs text-[var(--text-muted)]">Est. Production Cost</div>
+              <div className="text-2xl font-semibold text-[var(--foreground)] mt-1">Rs. {pnl.totalCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
             </div>
-            <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
-              <div className="text-xs text-neutral-400">Est. Gross Profit</div>
+            <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-4">
+              <div className="text-xs text-[var(--text-muted)]">Est. Gross Profit</div>
               <div className={`text-2xl font-semibold mt-1 ${pnl.grossProfit >= 0 ? "text-green-400" : "text-red-400"}`}>
                 Rs. {pnl.grossProfit.toLocaleString(undefined, { maximumFractionDigits: 0 })}
               </div>
@@ -198,8 +198,8 @@ export default function ReportsPage() {
           </div>
 
           {pnl.lineData.length > 0 && (
-            <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-5">
-              <h2 className="text-sm font-semibold text-neutral-200 mb-4">Revenue Over Time (selected period)</h2>
+            <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5">
+              <h2 className="text-sm font-semibold text-[var(--foreground)] mb-4">Revenue Over Time (selected period)</h2>
               <ResponsiveContainer width="100%" height={280}>
                 <LineChart data={pnl.lineData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
@@ -213,7 +213,7 @@ export default function ReportsPage() {
           )}
 
           {pnl.lineData.length === 0 && (
-            <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-8 text-center text-neutral-500 text-sm">
+            <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-8 text-center text-[var(--foreground)]0 text-sm">
               No invoices in the selected date range.
             </div>
           )}

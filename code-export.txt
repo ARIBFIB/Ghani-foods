@@ -1,9 +1,473 @@
 ==================================================
 GhaniFoods - Full Code Export
-Generated: 2026-08-18 01:29:05
-Total Files: 54
+Generated: 2026-08-18 02:37:02
+Total Files: 58
 ==================================================
 
+==================================================
+FILE: apply-theme-toggle.ps1
+==================================================
+# apply-theme-toggle.ps1
+# Run from: D:\Rozmarrah-CUST\Saim Ashraf\Nimko\Working\Code\GhaniFoods
+# Usage:    .\apply-theme-toggle.ps1
+#
+# What this does:
+#   1. Adds "framer-motion" dependency (lucide-react is already installed)
+#   2. Creates components/ui/animated-theme-toggler.tsx
+#   3. Adds a no-flash theme-init script in app/layout.tsx (reads
+#      localStorage "theme" or falls back to system preference, and sets
+#      the "dark" class on <html> BEFORE paint)
+#   4. Rewrites globals.css with light + dark CSS variables
+#   5. Updates the dashboard shell (layout, sidebar, topbar) to use those
+#      CSS variables instead of hardcoded neutral-950/800 classes, and
+#      adds the toggler button to the topbar
+#
+# NOTE ON SCOPE:
+#   This wires up the THEMING SYSTEM and the SHELL (sidebar/topbar/layout).
+#   The 17 individual pages (raw-materials, batches, invoices, etc.) still
+#   use hardcoded dark classes (bg-neutral-950, text-neutral-50, etc.) and
+#   will look the same in both light and dark mode until those files are
+#   converted too. That's a bigger follow-up pass across ~17 files - let
+#   me know if you want that done next.
+
+$ErrorActionPreference = "Stop"
+$Root = Get-Location
+$FrontendRoot = Join-Path $Root "apps\frontend"
+
+if (-not (Test-Path $FrontendRoot)) {
+    Write-Host "ERROR: apps\frontend not found under $Root" -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "=== Adding light/dark theme toggle ===" -ForegroundColor Cyan
+
+function Write-Utf8NoBom($Path, $Content) {
+    $dir = Split-Path $Path -Parent
+    if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($Path, $Content, $utf8NoBom)
+    Write-Host "  Updated: $($Path.Substring($Root.Path.Length).TrimStart('\'))" -ForegroundColor Green
+}
+
+# --------------------------------------------------------------------------
+# 1. package.json - add framer-motion
+# --------------------------------------------------------------------------
+
+$pkgPath = Join-Path $FrontendRoot "package.json"
+$text = [System.IO.File]::ReadAllText($pkgPath, [System.Text.Encoding]::UTF8)
+$pkgJson = $text | ConvertFrom-Json
+
+if (-not ($pkgJson.dependencies.PSObject.Properties.Name -contains "framer-motion")) {
+    $pkgJson.dependencies | Add-Member -MemberType NoteProperty -Name "framer-motion" -Value "^11.11.17"
+    Write-Host "  Added dependency: framer-motion" -ForegroundColor Green
+} else {
+    Write-Host "  framer-motion already present" -ForegroundColor Gray
+}
+
+$outText = $pkgJson | ConvertTo-Json -Depth 10
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($pkgPath, $outText, $utf8NoBom)
+Write-Host "  Updated: apps\frontend\package.json" -ForegroundColor Green
+
+# --------------------------------------------------------------------------
+# 2. components/ui/animated-theme-toggler.tsx
+# --------------------------------------------------------------------------
+
+$togglerPath = Join-Path $FrontendRoot "components\ui\animated-theme-toggler.tsx"
+$togglerContent = @'
+"use client"
+
+import { useEffect, useRef, useState, useCallback } from "react"
+import { flushSync } from "react-dom"
+
+import { Moon, Sun } from "lucide-react"
+
+import { motion, AnimatePresence } from "framer-motion"
+
+import { cn } from "@/lib/utils"
+
+type AnimatedThemeTogglerProps = {
+  className?: string
+}
+
+export const AnimatedThemeToggler = ({ className }: AnimatedThemeTogglerProps) => {
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const [darkMode, setDarkMode] = useState(() =>
+    typeof window !== "undefined"
+      ? document.documentElement.classList.contains("dark")
+      : false
+  )
+
+  useEffect(() => {
+    const syncTheme = () =>
+      setDarkMode(document.documentElement.classList.contains("dark"))
+
+    const observer = new MutationObserver(syncTheme)
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    })
+    return () => observer.disconnect()
+  }, [])
+
+  const onToggle = useCallback(async () => {
+    if (!buttonRef.current) return
+
+    const applyToggle = () => {
+      const toggled = !darkMode
+      setDarkMode(toggled)
+      document.documentElement.classList.toggle("dark", toggled)
+      localStorage.setItem("theme", toggled ? "dark" : "light")
+    }
+
+    // Not all browsers support View Transitions - fall back gracefully.
+    if (typeof document.startViewTransition !== "function") {
+      applyToggle()
+      return
+    }
+
+    await document.startViewTransition(() => {
+      flushSync(applyToggle)
+    }).ready
+
+    const { left, top, width, height } = buttonRef.current.getBoundingClientRect()
+    const centerX = left + width / 2
+    const centerY = top + height / 2
+    const maxDistance = Math.hypot(
+      Math.max(centerX, window.innerWidth - centerX),
+      Math.max(centerY, window.innerHeight - centerY)
+    )
+
+    document.documentElement.animate(
+      {
+        clipPath: [
+          `circle(0px at ${centerX}px ${centerY}px)`,
+          `circle(${maxDistance}px at ${centerX}px ${centerY}px)`,
+        ],
+      },
+      {
+        duration: 700,
+        easing: "ease-in-out",
+        pseudoElement: "::view-transition-new(root)",
+      }
+    )
+  }, [darkMode])
+
+  return (
+    <button
+      ref={buttonRef}
+      onClick={onToggle}
+      aria-label="Switch theme"
+      className={cn(
+        "flex items-center justify-center p-2 rounded-full outline-none focus:outline-none active:outline-none focus:ring-0 cursor-pointer hover:bg-neutral-800/60 transition-colors",
+        className
+      )}
+      type="button"
+    >
+      <AnimatePresence mode="wait" initial={false}>
+        {darkMode ? (
+          <motion.span
+            key="sun-icon"
+            initial={{ opacity: 0, scale: 0.55, rotate: 25 }}
+            animate={{ opacity: 1, scale: 1, rotate: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.33 }}
+            className="text-neutral-200"
+          >
+            <Sun size={18} />
+          </motion.span>
+        ) : (
+          <motion.span
+            key="moon-icon"
+            initial={{ opacity: 0, scale: 0.55, rotate: -25 }}
+            animate={{ opacity: 1, scale: 1, rotate: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.33 }}
+            className="text-neutral-700"
+          >
+            <Moon size={18} />
+          </motion.span>
+        )}
+      </AnimatePresence>
+    </button>
+  )
+}
+'@
+Write-Utf8NoBom $togglerPath $togglerContent
+
+# --------------------------------------------------------------------------
+# 3. globals.css - light + dark CSS variables
+# --------------------------------------------------------------------------
+
+$globalsCssPath = Join-Path $FrontendRoot "app\globals.css"
+$globalsCssContent = @'
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --surface: #f5f6f8;
+  --surface-border: #e3e6ea;
+}
+
+.dark {
+  --background: #0a0a0a;
+  --foreground: #f5f5f5;
+  --surface: #171717;
+  --surface-border: #262626;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+'@
+Write-Utf8NoBom $globalsCssPath $globalsCssContent
+
+# --------------------------------------------------------------------------
+# 4. app/layout.tsx - no-flash theme init script
+# --------------------------------------------------------------------------
+
+$rootLayoutPath = Join-Path $FrontendRoot "app\layout.tsx"
+$rootLayoutContent = @'
+import type { Metadata } from "next";
+import "./globals.css";
+import { Toaster } from "sonner";
+
+export const metadata: Metadata = {
+  title: "GhaniFoods",
+  description: "Nimko / Snack Foods Production & Distribution System",
+};
+
+// Runs before paint to avoid a light/dark flash on load. Reads the saved
+// preference from localStorage, falling back to the OS-level preference.
+const themeInitScript = `
+(function () {
+  try {
+    var stored = localStorage.getItem("theme");
+    var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    var dark = stored ? stored === "dark" : prefersDark;
+    document.documentElement.classList.toggle("dark", dark);
+  } catch (e) {}
+})();
+`;
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
+      <body>
+        {children}
+        <Toaster theme="system" position="top-right" richColors />
+      </body>
+    </html>
+  );
+}
+'@
+Write-Utf8NoBom $rootLayoutPath $rootLayoutContent
+
+# --------------------------------------------------------------------------
+# 5. Dashboard shell layout - use CSS variables instead of hardcoded dark
+# --------------------------------------------------------------------------
+
+$dashboardLayoutPath = Join-Path $FrontendRoot "app\(dashboard)\layout.tsx"
+$dashboardLayoutContent = @'
+import type { ReactNode } from "react";
+import { AppSidebar } from "@/components/ui/sidebar-component";
+import { Topbar } from "@/components/ui/topbar";
+
+export default function DashboardLayout({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex min-h-screen bg-[var(--background)]">
+      <AppSidebar />
+      <div className="flex-1 flex flex-col min-w-0">
+        <Topbar />
+        <main className="flex-1 p-6 overflow-y-auto text-[var(--foreground)]">{children}</main>
+      </div>
+    </div>
+  );
+}
+'@
+Write-Utf8NoBom $dashboardLayoutPath $dashboardLayoutContent
+
+# --------------------------------------------------------------------------
+# 6. Topbar - add the toggler button
+# --------------------------------------------------------------------------
+
+$topbarPath = Join-Path $FrontendRoot "components\ui\topbar.tsx"
+$topbarContent = @'
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Notification, User as UserIcon, ChevronDown as ChevronDownIcon } from "@carbon/icons-react";
+import { useStore } from "@/lib/store";
+import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
+
+function NotificationBell() {
+  const [open, setOpen] = useState(false);
+  const rawMaterials = useStore((s) => s.rawMaterials);
+  const packagingMaterials = useStore((s) => s.packagingMaterials);
+
+  const alerts = [
+    ...rawMaterials
+      .filter((m) => m.quantityInStock < m.lowStockThreshold)
+      .map((m) => ({ id: m.id, name: m.name, href: `/raw-materials/${m.id}`, qty: m.quantityInStock, threshold: m.lowStockThreshold })),
+    ...packagingMaterials
+      .filter((p) => p.stockQty < p.lowStockThreshold)
+      .map((p) => ({ id: p.id, name: p.name, href: `/packaging`, qty: p.stockQty, threshold: p.lowStockThreshold })),
+  ];
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="relative flex items-center justify-center size-9 rounded-lg hover:bg-neutral-800 text-neutral-300"
+        aria-label="Notifications"
+      >
+        <Notification size={18} />
+        {alerts.length > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center size-4 rounded-full bg-red-500 text-[10px] font-semibold text-white">
+            {alerts.length}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 z-50 mt-2 w-72 rounded-xl border border-neutral-800 bg-neutral-900 shadow-lg overflow-hidden">
+            <div className="px-4 py-3 border-b border-neutral-800 text-sm font-medium text-neutral-200">
+              Low Stock Alerts
+            </div>
+            <div className="max-h-72 overflow-y-auto">
+              {alerts.length === 0 && (
+                <div className="px-4 py-6 text-center text-sm text-neutral-500">All stock levels are healthy.</div>
+              )}
+              {alerts.map((a) => (
+                <Link
+                  key={a.id}
+                  href={a.href}
+                  onClick={() => setOpen(false)}
+                  className="flex items-center justify-between px-4 py-2.5 hover:bg-neutral-800 border-b border-neutral-900 last:border-0"
+                >
+                  <span className="text-sm text-neutral-50">{a.name}</span>
+                  <span className="text-xs text-red-400">{a.qty} / {a.threshold}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function UserMenu() {
+  const [open, setOpen] = useState(false);
+  const router = useRouter();
+
+  const handleLogout = () => {
+    setOpen(false);
+    document.cookie = "ghanifoods-auth=; path=/; max-age=0";
+    router.push("/login");
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-1.5 rounded-lg px-1.5 py-1 hover:bg-neutral-800"
+        aria-label="User menu"
+      >
+        <div className="flex items-center justify-center size-8 rounded-full bg-neutral-800 border border-neutral-700">
+          <UserIcon size={16} className="text-neutral-200" />
+        </div>
+        <ChevronDownIcon size={14} className="text-neutral-400" />
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 z-50 mt-2 w-48 rounded-xl border border-neutral-800 bg-neutral-900 shadow-lg overflow-hidden">
+            <Link href="/settings" onClick={() => setOpen(false)}
+              className="block px-4 py-2.5 text-sm text-neutral-200 hover:bg-neutral-800">
+              Settings
+            </Link>
+            <button onClick={handleLogout}
+              className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-neutral-800">
+              Log out
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+export function Topbar() {
+  return (
+    <div className="flex items-center justify-end gap-3 border-b border-neutral-800 bg-neutral-950 px-6 py-3 sticky top-0 z-30">
+      <Link href="/invoices/new"
+        className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200">
+        + New Invoice
+      </Link>
+      <AnimatedThemeToggler />
+      <NotificationBell />
+      <UserMenu />
+    </div>
+  );
+}
+
+export default Topbar;
+'@
+Write-Utf8NoBom $topbarPath $topbarContent
+
+# --------------------------------------------------------------------------
+# 7. Install dependencies
+# --------------------------------------------------------------------------
+
+Write-Host ""
+Write-Host "=== Installing dependencies ===" -ForegroundColor Cyan
+Push-Location $FrontendRoot
+try {
+    npm install
+} finally {
+    Pop-Location
+}
+
+Write-Host ""
+Write-Host "=== Done ===" -ForegroundColor Green
+Write-Host "Added:" -ForegroundColor Green
+Write-Host "  - components/ui/animated-theme-toggler.tsx" -ForegroundColor Gray
+Write-Host "  - Toggle button now sits in the topbar (next to '+ New Invoice')" -ForegroundColor Gray
+Write-Host "  - No-flash theme init script in app/layout.tsx" -ForegroundColor Gray
+Write-Host "  - Light/dark CSS variables in globals.css" -ForegroundColor Gray
+Write-Host ""
+Write-Host "SCOPE NOTE:" -ForegroundColor Yellow
+Write-Host "  The sidebar/topbar/root shell now respects light/dark mode." -ForegroundColor Yellow
+Write-Host "  The 17 individual pages (raw-materials, batches, invoices, etc.)" -ForegroundColor Yellow
+Write-Host "  still use hardcoded dark classes (bg-neutral-950 etc.) and will" -ForegroundColor Yellow
+Write-Host "  look the same in both modes until those files are converted too." -ForegroundColor Yellow
+Write-Host "  Ask if you want that follow-up pass done." -ForegroundColor Yellow
+Write-Host ""
+Write-Host "Verify locally:" -ForegroundColor Cyan
+Write-Host "  npm run dev" -ForegroundColor Gray
 ==================================================
 FILE: export-code.ps1
 ==================================================
@@ -136,6 +600,112 @@ Write-Host ""
 Write-Host "NEXT STEP: Upload code-export.txt as a FILE ATTACHMENT in the chat." -ForegroundColor Yellow
 Write-Host "Do not copy-paste its contents as text - large pastes get truncated." -ForegroundColor Yellow
 ==================================================
+FILE: fix-zod-resolver-types.ps1
+==================================================
+# fix-zod-resolver-types.ps1
+# Run from: D:\Rozmarrah-CUST\Saim Ashraf\Nimko\Working\Code\GhaniFoods
+# Usage:    .\fix-zod-resolver-types.ps1
+#
+# Fixes the build error:
+#   Type error: Type 'Resolver<{ electricity: unknown; gas: unknown;
+#   rent: unknown; }, any, ...>' is not assignable to type
+#   'Resolver<{ electricity: number; gas: number; rent: number; }, ...>'.
+#     Type 'unknown' is not assignable to type 'number'.
+#
+# Root cause: package.json has "zod": "^4.4.3". In Zod v4, schemas built
+# with z.coerce.number() (and similar coercions) have an "input" type of
+# `unknown` and an "output" type of `number`. @hookform/resolvers'
+# zodResolver() infers the form's input type from the schema, but
+# useForm<FormValues>() in this project only declares a single (output)
+# type. That mismatch (unknown vs number) is exactly what TypeScript is
+# rejecting here - and it affects EVERY form in this project that uses
+# z.coerce.number()/z.coerce (overheadSchema, batchSchema, purchaseSchema,
+# restockSchema, customerSchema, paymentSchema, invoiceHeaderSchema,
+# rawMaterialSchema, packagingMaterialSchema, and the inline settings
+# schema in app/(dashboard)/settings/page.tsx).
+#
+# Rather than rewriting every useForm<...> call with separate input/output
+# generics, this script pins "zod" back to the widely-used v3.23.x line,
+# where z.coerce schemas do not have this split-generic behavior and
+# @hookform/resolvers' zodResolver() works with a single generic exactly
+# the way this project's forms are written.
+
+$ErrorActionPreference = "Stop"
+$Root = Get-Location
+$FrontendRoot = Join-Path $Root "apps\frontend"
+$pkgPath = Join-Path $FrontendRoot "package.json"
+
+if (-not (Test-Path $pkgPath)) {
+    Write-Host "ERROR: $pkgPath not found." -ForegroundColor Red
+    Write-Host "Make sure you're running this from the GhaniFoods root folder." -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "=== Fixing Zod v4 / @hookform/resolvers type mismatch ===" -ForegroundColor Cyan
+
+$text = [System.IO.File]::ReadAllText($pkgPath, [System.Text.Encoding]::UTF8)
+$pkgJson = $text | ConvertFrom-Json
+
+$targetZodVersion = "^3.23.8"
+$currentZod = $pkgJson.dependencies."zod"
+
+if ($null -eq $currentZod) {
+    Write-Host "  'zod' not found in dependencies - adding it at $targetZodVersion" -ForegroundColor Yellow
+    $pkgJson.dependencies | Add-Member -MemberType NoteProperty -Name "zod" -Value $targetZodVersion
+} else {
+    Write-Host "  Current: zod $currentZod" -ForegroundColor Gray
+    $pkgJson.dependencies."zod" = $targetZodVersion
+    Write-Host "  Pinned:  zod $targetZodVersion (v3 - avoids the coerce input/output generic split)" -ForegroundColor Green
+}
+
+# Write back as clean UTF-8 WITHOUT BOM
+$outText = $pkgJson | ConvertTo-Json -Depth 10
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($pkgPath, $outText, $utf8NoBom)
+
+Write-Host "  Updated: apps\frontend\package.json" -ForegroundColor Green
+
+# --------------------------------------------------------------------------
+# Reinstall so the lockfile / node_modules actually reflect zod v3
+# --------------------------------------------------------------------------
+
+Write-Host ""
+Write-Host "=== Reinstalling dependencies ===" -ForegroundColor Cyan
+Push-Location $FrontendRoot
+try {
+    npm install
+} finally {
+    Pop-Location
+}
+
+Write-Host ""
+Write-Host "=== Verifying local build ===" -ForegroundColor Cyan
+Push-Location $FrontendRoot
+$buildFailed = $false
+try {
+    npm run build
+    if ($LASTEXITCODE -ne 0) { $buildFailed = $true }
+} catch {
+    $buildFailed = $true
+} finally {
+    Pop-Location
+}
+
+Write-Host ""
+if ($buildFailed) {
+    Write-Host "Local build FAILED - do not push yet. Check the errors above." -ForegroundColor Red
+    Write-Host "If a NEW/different error shows up now, share that build log and we'll fix the next one." -ForegroundColor Yellow
+} else {
+    Write-Host "Local build succeeded." -ForegroundColor Green
+    Write-Host ""
+    Write-Host "Next steps:" -ForegroundColor Cyan
+    Write-Host "  git add -A" -ForegroundColor Gray
+    Write-Host "  git commit -m `"fix: pin zod to v3 to resolve @hookform/resolvers type mismatch`"" -ForegroundColor Gray
+    Write-Host "  git push origin main" -ForegroundColor Gray
+    Write-Host ""
+    Write-Host "Vercel will auto-redeploy on push." -ForegroundColor Gray
+}
+==================================================
 FILE: package.json
 ==================================================
 {
@@ -181,6 +751,301 @@ Backend:  http://localhost:4000
 ## Build
   npm run build# Ghani-foods
 
+==================================================
+FILE: upload-image-to-cloudinary.ps1
+==================================================
+# upload-image-to-cloudinary.ps1
+# Run from: D:\Rozmarrah-CUST\Saim Ashraf\Nimko\Working\Code\GhaniFoods
+# Usage:    .\upload-image-to-cloudinary.ps1
+#
+# What this does:
+#   1. Uploads apps\frontend\public\images\ghani-nimko-bag.png to your
+#      Cloudinary account (cloud name: dr9dwesyo) using a SIGNED upload
+#      (so it works even though upload presets aren't configured).
+#   2. Updates the login page to load the image from Cloudinary instead
+#      of the local /public folder - so it works on Vercel without you
+#      having to commit a binary image file to git.
+#   3. Whitelists res.cloudinary.com in next.config so next/image is
+#      allowed to optimize/serve it.
+#
+# IMPORTANT SECURITY NOTE:
+#   Do NOT hardcode your API secret into this script or commit it to git.
+#   This script reads your credentials from environment variables you set
+#   in THIS PowerShell session only (they disappear when you close the
+#   window). Set them right before running this script:
+#
+#     $env:CLOUDINARY_CLOUD_NAME = "dr9dwesyo"
+#     $env:CLOUDINARY_API_KEY    = "482531422298962"
+#     $env:CLOUDINARY_API_SECRET = "PASTE_YOUR_SECRET_HERE"
+#     .\upload-image-to-cloudinary.ps1
+#
+#   Also: since your API secret was pasted into a chat earlier, go to
+#   Cloudinary Dashboard -> Settings -> API Keys -> regenerate/rotate
+#   that key after you're done here, and use the NEW secret going forward.
+
+$ErrorActionPreference = "Stop"
+$Root = Get-Location
+$FrontendRoot = Join-Path $Root "apps\frontend"
+
+if (-not (Test-Path $FrontendRoot)) {
+    Write-Host "ERROR: apps\frontend not found under $Root" -ForegroundColor Red
+    Write-Host "Make sure you're running this from the GhaniFoods root folder." -ForegroundColor Red
+    exit 1
+}
+
+$CloudName  = $env:CLOUDINARY_CLOUD_NAME
+$ApiKey     = $env:CLOUDINARY_API_KEY
+$ApiSecret  = $env:CLOUDINARY_API_SECRET
+
+if (-not $CloudName -or -not $ApiKey -or -not $ApiSecret) {
+    Write-Host "ERROR: Missing Cloudinary credentials." -ForegroundColor Red
+    Write-Host ""
+    Write-Host "Set these environment variables first, then re-run this script:" -ForegroundColor Yellow
+    Write-Host '  $env:CLOUDINARY_CLOUD_NAME = "dr9dwesyo"' -ForegroundColor Gray
+    Write-Host '  $env:CLOUDINARY_API_KEY    = "482531422298962"' -ForegroundColor Gray
+    Write-Host '  $env:CLOUDINARY_API_SECRET = "your-secret-here"' -ForegroundColor Gray
+    Write-Host "  .\upload-image-to-cloudinary.ps1" -ForegroundColor Gray
+    exit 1
+}
+
+$imagePath = Join-Path $FrontendRoot "public\images\ghani-nimko-bag.png"
+if (-not (Test-Path $imagePath)) {
+    Write-Host "ERROR: Image not found at $imagePath" -ForegroundColor Red
+    Write-Host "Place your product photo there (named ghani-nimko-bag.png) and re-run." -ForegroundColor Yellow
+    exit 1
+}
+
+Write-Host "=== Uploading image to Cloudinary ===" -ForegroundColor Cyan
+
+# --------------------------------------------------------------------------
+# Build a SIGNED upload request (Cloudinary requires all extra params to be
+# included in the signature, sorted alphabetically, then SHA1-hashed with
+# the api_secret appended).
+# --------------------------------------------------------------------------
+
+$publicId  = "ghani-nimko-bag"
+$folder    = "ghanifoods"
+$timestamp = [int][double]::Parse((Get-Date -UFormat %s))
+
+# Params that will be signed - MUST be sorted alphabetically by key
+$paramsToSign = [ordered]@{
+    folder    = $folder
+    public_id = $publicId
+    timestamp = $timestamp
+}
+
+$sortedKeys = $paramsToSign.Keys | Sort-Object
+$stringToSign = ($sortedKeys | ForEach-Object { "$($_)=$($paramsToSign[$_])" }) -join "&"
+$stringToSign = "$stringToSign$ApiSecret"
+
+$sha1 = [System.Security.Cryptography.SHA1]::Create()
+$hashBytes = $sha1.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($stringToSign))
+$signature = -join ($hashBytes | ForEach-Object { $_.ToString("x2") })
+
+Write-Host "  Cloud name: $CloudName" -ForegroundColor Gray
+Write-Host "  Public ID:  $folder/$publicId" -ForegroundColor Gray
+
+# --------------------------------------------------------------------------
+# Perform the multipart upload via curl (bundled with Windows 10/11)
+# --------------------------------------------------------------------------
+
+$uploadUrl = "https://api.cloudinary.com/v1_1/$CloudName/image/upload"
+
+$response = curl.exe -s -X POST $uploadUrl `
+    -F "file=@$imagePath" `
+    -F "api_key=$ApiKey" `
+    -F "timestamp=$timestamp" `
+    -F "signature=$signature" `
+    -F "public_id=$publicId" `
+    -F "folder=$folder"
+
+$json = $response | ConvertFrom-Json
+
+if (-not $json.secure_url) {
+    Write-Host "ERROR: Upload failed. Cloudinary response:" -ForegroundColor Red
+    Write-Host $response -ForegroundColor Red
+    exit 1
+}
+
+$secureUrl = $json.secure_url
+Write-Host "  Uploaded successfully:" -ForegroundColor Green
+Write-Host "  $secureUrl" -ForegroundColor Green
+
+# --------------------------------------------------------------------------
+# Update login page to use the Cloudinary URL
+# --------------------------------------------------------------------------
+
+function Write-Utf8NoBom($Path, $Content) {
+    $dir = Split-Path $Path -Parent
+    if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($Path, $Content, $utf8NoBom)
+    Write-Host "  Updated: $($Path.Substring($Root.Path.Length).TrimStart('\'))" -ForegroundColor Green
+}
+
+$loginPagePath = Join-Path $FrontendRoot "app\(auth)\login\page.tsx"
+
+$loginPageContent = @"
+"use client";
+
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { AtSignIcon, LockIcon, Grid2x2PlusIcon } from "lucide-react";
+
+const LOGIN_IMAGE_URL = "$secureUrl";
+
+export default function LoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !password.trim()) {
+      setError("Please enter both email and password.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    document.cookie = "ghanifoods-auth=1; path=/; max-age=86400";
+    router.push("/");
+  };
+
+  return (
+    <main className="relative md:h-screen md:overflow-hidden lg:grid lg:grid-cols-2">
+      <div className="bg-neutral-900 relative hidden h-full flex-col border-r border-neutral-800 lg:flex overflow-hidden">
+        <Image
+          src={LOGIN_IMAGE_URL}
+          alt="Ghani Food - Nimko"
+          fill
+          priority
+          sizes="50vw"
+          className="object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/40" />
+
+        <div className="relative z-10 flex items-center gap-2 text-neutral-50 p-10">
+          <Grid2x2PlusIcon className="size-6" />
+          <p className="text-xl font-semibold">GhaniFoods</p>
+        </div>
+
+        <div className="relative z-10 mt-auto p-10">
+          <blockquote className="space-y-2">
+            <p className="text-xl text-neutral-100">
+              Real-time visibility into raw materials, batches, and customer
+              ledgers - all in one place.
+            </p>
+            <footer className="font-mono text-sm font-semibold text-neutral-300">
+              ~ GhaniFoods Production Team
+            </footer>
+          </blockquote>
+        </div>
+      </div>
+
+      <div className="relative flex min-h-screen flex-col justify-center p-4 bg-black">
+        <div className="mx-auto w-full max-w-sm space-y-4">
+          <div className="flex items-center gap-2 lg:hidden text-neutral-50">
+            <Grid2x2PlusIcon className="size-6" />
+            <p className="text-xl font-semibold">GhaniFoods</p>
+          </div>
+
+          <div className="flex flex-col space-y-1">
+            <h1 className="text-2xl font-bold tracking-wide text-neutral-50">Sign in to GhaniFoods</h1>
+            <p className="text-neutral-400 text-base">Enter your credentials to access the dashboard.</p>
+          </div>
+
+          <form className="space-y-3" onSubmit={handleSubmit}>
+            <div className="relative">
+              <input
+                type="email"
+                placeholder="you@ghanifoods.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full h-10 rounded-md border border-neutral-800 bg-neutral-900 ps-9 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 outline-none focus:border-neutral-600"
+              />
+              <AtSignIcon className="absolute left-3 top-3 size-4 text-neutral-500 pointer-events-none" />
+            </div>
+
+            <div className="relative">
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full h-10 rounded-md border border-neutral-800 bg-neutral-900 ps-9 px-3 py-2 text-sm text-neutral-50 placeholder:text-neutral-500 outline-none focus:border-neutral-600"
+              />
+              <LockIcon className="absolute left-3 top-3 size-4 text-neutral-500 pointer-events-none" />
+            </div>
+
+            {error && <p className="text-red-400 text-sm">{error}</p>}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-11 rounded-md bg-neutral-50 text-sm font-medium text-neutral-950 hover:bg-neutral-200 disabled:opacity-50"
+            >
+              {loading ? "Signing in..." : "Sign In"}
+            </button>
+          </form>
+
+          <p className="text-neutral-500 mt-8 text-sm">
+            Demo build - any email / password combination signs you in.
+          </p>
+        </div>
+      </div>
+    </main>
+  );
+}
+"@
+Write-Utf8NoBom $loginPagePath $loginPageContent
+
+# --------------------------------------------------------------------------
+# Whitelist res.cloudinary.com in next.config so next/image can serve it
+# --------------------------------------------------------------------------
+
+$nextConfigMjs = Join-Path $FrontendRoot "next.config.mjs"
+$nextConfigJs  = Join-Path $FrontendRoot "next.config.js"
+$nextConfigTs  = Join-Path $FrontendRoot "next.config.ts"
+
+$existingConfig = @($nextConfigMjs, $nextConfigJs, $nextConfigTs) | Where-Object { Test-Path $_ } | Select-Object -First 1
+$configPath = if ($existingConfig) { $existingConfig } else { $nextConfigMjs }
+
+$nextConfigContent = @'
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+        pathname: "/**",
+      },
+    ],
+  },
+};
+
+export default nextConfig;
+'@
+Write-Utf8NoBom $configPath $nextConfigContent
+
+Write-Host ""
+Write-Host "=== Done ===" -ForegroundColor Green
+Write-Host "Image is now hosted on Cloudinary:" -ForegroundColor Green
+Write-Host "  $secureUrl" -ForegroundColor Green
+Write-Host ""
+Write-Host "SECURITY REMINDER:" -ForegroundColor Yellow
+Write-Host "  Since your API secret was shared in chat earlier, rotate it now at:" -ForegroundColor Yellow
+Write-Host "  Cloudinary Dashboard -> Settings -> API Keys -> Generate New API Key" -ForegroundColor Yellow
+Write-Host "  (or regenerate the existing 'Root' key)" -ForegroundColor Yellow
+Write-Host ""
+Write-Host "Next steps:" -ForegroundColor Cyan
+Write-Host "  cd apps\frontend && npm run build   (verify it still builds)" -ForegroundColor Gray
+Write-Host "  git add -A" -ForegroundColor Gray
+Write-Host "  git commit -m `"feat: serve login page image from Cloudinary`"" -ForegroundColor Gray
+Write-Host "  git push origin main" -ForegroundColor Gray
 ==================================================
 FILE: apps\backend\package.json
 ==================================================
@@ -471,56 +1336,70 @@ FILE: apps\frontend\next-env.d.ts
 // see https://nextjs.org/docs/app/api-reference/config/typescript for more information.
 
 ==================================================
+FILE: apps\frontend\next.config.mjs
+==================================================
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+        pathname: "/**",
+      },
+    ],
+  },
+};
+
+export default nextConfig;
+==================================================
 FILE: apps\frontend\package.json
 ==================================================
 {
-    "name": "ghanifoods-frontend",
-    "version": "0.1.0",
-    "private": true,
-    "scripts": {
-        "dev": "next dev --turbopack",
-        "build": "next build --turbopack",
-        "start": "next start",
-        "lint": "next lint"
-    },
-    "dependencies": {
-        "@ant-design/icons": "^6.3.2",
-        "@ant-design/nextjs-registry": "^1.3.0",
-        "@carbon/icons-react": "^11.86.0",
-        "@hookform/resolvers": "^5.9.1",
-        "@radix-ui/react-slot": "^1.1.0",
-        "@tailwindcss/postcss": "^4.3.3",
-        "@tanstack/react-query": "^5.101.4",
-        "@tanstack/react-table": "^9.1.2",
-        "antd": "^6.6.1",
-        "autoprefixer": "^10.4.20",
-        "class-variance-authority": "^0.7.1",
-        "clsx": "^2.1.1",
-        "dayjs": "^1.11.23",
-        "framer-motion": "^11.11.17",
-        "lucide-react": "^0.460.0",
-        "next": "^15.4.0",
-        "postcss": "^8.4.47",
-        "react": "^19.0.0",
-        "react-dom": "^19.0.0",
-        "react-hook-form": "^7.85.0",
-        "recharts": "^3.10.1",
-        "sonner": "^2.0.8",
-        "tailwind-merge": "^2.5.4",
-        "tailwindcss": "^4.3.3",
-        "zod": "^4.4.3",
-        "zustand": "^5.0.15"
-    },
-    "devDependencies": {
-        "@types/node": "^22.7.5",
-        "@types/react": "^19.0.0",
-        "@types/react-dom": "^19.0.0",
-        "eslint": "^9.15.0",
-        "eslint-config-next": "^15.4.0",
-        "typescript": "^5.6.3"
-    }
+    "name":  "ghanifoods-frontend",
+    "version":  "0.1.0",
+    "private":  true,
+    "scripts":  {
+                    "dev":  "next dev --turbopack",
+                    "build":  "next build --turbopack",
+                    "start":  "next start",
+                    "lint":  "next lint"
+                },
+    "dependencies":  {
+                         "@carbon/icons-react":  "^11.86.0",
+                         "@hookform/resolvers":  "^5.9.1",
+                         "@radix-ui/react-slot":  "^1.1.0",
+                         "@tailwindcss/postcss":  "^4.3.3",
+                         "@tanstack/react-query":  "^5.101.4",
+                         "@tanstack/react-table":  "^8.20.5",
+                         "autoprefixer":  "^10.4.20",
+                         "class-variance-authority":  "^0.7.1",
+                         "clsx":  "^2.1.1",
+                         "dayjs":  "^1.11.23",
+                         "framer-motion":  "^11.11.17",
+                         "lucide-react":  "^0.460.0",
+                         "next":  "^15.4.0",
+                         "postcss":  "^8.4.47",
+                         "react":  "^19.0.0",
+                         "react-dom":  "^19.0.0",
+                         "react-hook-form":  "^7.85.0",
+                         "recharts":  "^3.10.1",
+                         "sonner":  "^2.0.8",
+                         "tailwind-merge":  "^2.5.4",
+                         "tailwindcss":  "^4.3.3",
+                         "zod":  "^3.23.8",
+                         "zustand":  "^5.0.15",
+                         "jspdf":  "^2.5.2"
+                     },
+    "devDependencies":  {
+                            "@types/node":  "^22.7.5",
+                            "@types/react":  "^19.0.0",
+                            "@types/react-dom":  "^19.0.0",
+                            "eslint":  "^9.15.0",
+                            "eslint-config-next":  "^15.4.0",
+                            "typescript":  "^5.6.3"
+                        }
 }
-
 ==================================================
 FILE: apps\frontend\postcss.config.mjs
 ==================================================
@@ -587,12 +1466,28 @@ FILE: apps\frontend\app\globals.css
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --surface: #f5f6f8;
+  --surface-border: #e3e6ea;
+}
+
+.dark {
+  --background: #0a0a0a;
+  --foreground: #f5f5f5;
+  --surface: #171717;
+  --surface-border: #262626;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
 }
 ==================================================
 FILE: apps\frontend\app\layout.tsx
@@ -606,6 +1501,19 @@ export const metadata: Metadata = {
   description: "Nimko / Snack Foods Production & Distribution System",
 };
 
+// Runs before paint to avoid a light/dark flash on load. Reads the saved
+// preference from localStorage, falling back to the OS-level preference.
+const themeInitScript = `
+(function () {
+  try {
+    var stored = localStorage.getItem("theme");
+    var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    var dark = stored ? stored === "dark" : prefersDark;
+    document.documentElement.classList.toggle("dark", dark);
+  } catch (e) {}
+})();
+`;
+
 export default function RootLayout({
   children,
 }: {
@@ -613,9 +1521,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body>
         {children}
-        <Toaster theme="dark" position="top-right" richColors />
+        <Toaster theme="system" position="top-right" richColors />
       </body>
     </html>
   );
@@ -627,7 +1538,10 @@ FILE: apps\frontend\app\(auth)\login\page.tsx
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { AtSignIcon, LockIcon, Grid2x2PlusIcon } from "lucide-react";
+
+const LOGIN_IMAGE_URL = "https://res.cloudinary.com/dr9dwesyo/image/upload/v1787001758/ghanifoods/ghani-nimko-bag.png";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -650,18 +1564,29 @@ export default function LoginPage() {
 
   return (
     <main className="relative md:h-screen md:overflow-hidden lg:grid lg:grid-cols-2">
-      <div className="bg-neutral-900 relative hidden h-full flex-col border-r border-neutral-800 p-10 lg:flex">
-        <div className="z-10 flex items-center gap-2 text-neutral-50">
+      <div className="bg-neutral-900 relative hidden h-full flex-col border-r border-neutral-800 lg:flex overflow-hidden">
+        <Image
+          src={LOGIN_IMAGE_URL}
+          alt="Ghani Food - Nimko"
+          fill
+          priority
+          sizes="50vw"
+          className="object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/40" />
+
+        <div className="relative z-10 flex items-center gap-2 text-neutral-50 p-10">
           <Grid2x2PlusIcon className="size-6" />
           <p className="text-xl font-semibold">GhaniFoods</p>
         </div>
-        <div className="z-10 mt-auto">
+
+        <div className="relative z-10 mt-auto p-10">
           <blockquote className="space-y-2">
             <p className="text-xl text-neutral-100">
               Real-time visibility into raw materials, batches, and customer
               ledgers - all in one place.
             </p>
-            <footer className="font-mono text-sm font-semibold text-neutral-400">
+            <footer className="font-mono text-sm font-semibold text-neutral-300">
               ~ GhaniFoods Production Team
             </footer>
           </blockquote>
@@ -731,11 +1656,11 @@ import { Topbar } from "@/components/ui/topbar";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="flex min-h-screen bg-neutral-950">
+    <div className="flex min-h-screen bg-[var(--background)]">
       <AppSidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar />
-        <main className="flex-1 p-6 overflow-y-auto text-neutral-50">{children}</main>
+        <main className="flex-1 p-6 overflow-y-auto text-[var(--foreground)]">{children}</main>
       </div>
     </div>
   );
@@ -1014,15 +1939,17 @@ export default function NewBatchPage() {
   const [rowError, setRowError] = useState("");
   const [useLeftoverFirst, setUseLeftoverFirst] = useState(false);
   const [leftoverBatchId, setLeftoverBatchId] = useState("");
+  const [leftoverKgUsed, setLeftoverKgUsed] = useState("");
 
   const leftoverBatches = productionBatches.filter((b) => b.leftoverQtyKg > 0);
+  const selectedLeftoverBatch = leftoverBatches.find((b) => b.id === leftoverBatchId);
 
   const addRow = () => setRows((prev) => [...prev, { id: crypto.randomUUID(), rawMaterialId: rawMaterials[0]?.id ?? "", qty: "" }]);
   const removeRow = (id: string) => setRows((prev) => (prev.length > 1 ? prev.filter((r) => r.id !== id) : prev));
   const updateRow = (id: string, patch: Partial<ConsumptionRow>) =>
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
 
-  const estimatedCost = useMemo(() => {
+  const estimatedRawMaterialCost = useMemo(() => {
     return rows.reduce((total, row) => {
       const material = rawMaterials.find((m) => m.id === row.rawMaterialId);
       const qty = Number(row.qty) || 0;
@@ -1031,11 +1958,25 @@ export default function NewBatchPage() {
     }, 0);
   }, [rows, rawMaterials]);
 
+  const estimatedLeftoverCost = useMemo(() => {
+    if (!useLeftoverFirst || !selectedLeftoverBatch) return 0;
+    const kg = Math.min(Number(leftoverKgUsed) || 0, selectedLeftoverBatch.leftoverQtyKg);
+    return kg * selectedLeftoverBatch.bulkCostPerKg;
+  }, [useLeftoverFirst, selectedLeftoverBatch, leftoverKgUsed]);
+
+  const estimatedTotalCost = estimatedRawMaterialCost + estimatedLeftoverCost;
+
+  const effectiveKgUsedFromLeftover = useMemo(() => {
+    if (!useLeftoverFirst || !selectedLeftoverBatch) return 0;
+    return Math.min(Number(leftoverKgUsed) || 0, selectedLeftoverBatch.leftoverQtyKg);
+  }, [useLeftoverFirst, selectedLeftoverBatch, leftoverKgUsed]);
+
+  const estimatedTotalKg = (Number(outputYield) || 0) + effectiveKgUsedFromLeftover;
+
   const estimatedCostPerKg = useMemo(() => {
-    const yieldKg = Number(outputYield) || 0;
-    if (yieldKg <= 0) return 0;
-    return estimatedCost / yieldKg;
-  }, [estimatedCost, outputYield]);
+    if (estimatedTotalKg <= 0) return 0;
+    return estimatedTotalCost / estimatedTotalKg;
+  }, [estimatedTotalCost, estimatedTotalKg]);
 
   const onSubmit = async (values: BatchFormValues) => {
     setRowError("");
@@ -1057,8 +1998,35 @@ export default function NewBatchPage() {
       return;
     }
 
-    const newId = createBatch({ consumptions, outputYieldKg: values.outputYieldKg, wastageKg: values.wastageKg });
-    toast.success(`Batch ${newId} created â€” raw material stock deducted`);
+    if (useLeftoverFirst) {
+      if (!leftoverBatchId) {
+        setRowError("Select a leftover batch, or turn off 'Use Leftover From Previous Batch First'");
+        return;
+      }
+      const kg = Number(leftoverKgUsed) || 0;
+      if (kg <= 0) {
+        setRowError("Enter how many kg of leftover to use");
+        return;
+      }
+      if (selectedLeftoverBatch && kg > selectedLeftoverBatch.leftoverQtyKg) {
+        setRowError(`Only ${selectedLeftoverBatch.leftoverQtyKg} kg leftover available in ${selectedLeftoverBatch.id}`);
+        return;
+      }
+    }
+
+    const newId = createBatch({
+      consumptions,
+      outputYieldKg: values.outputYieldKg,
+      wastageKg: values.wastageKg,
+      leftoverBatchId: useLeftoverFirst ? leftoverBatchId : undefined,
+      leftoverKgUsed: useLeftoverFirst ? Number(leftoverKgUsed) || 0 : undefined,
+    });
+
+    if (useLeftoverFirst) {
+      toast.success(`Batch ${newId} created â€” raw material stock deducted and ${leftoverKgUsed} kg leftover from ${leftoverBatchId} consumed`);
+    } else {
+      toast.success(`Batch ${newId} created â€” raw material stock deducted`);
+    }
     router.push(`/batches/${newId}`);
   };
 
@@ -1102,11 +2070,17 @@ export default function NewBatchPage() {
         <div className="rounded-lg border border-neutral-800 bg-neutral-950 p-4">
           <div className="text-xs text-neutral-400">Estimated Batch Cost</div>
           <div className="text-lg font-semibold text-neutral-50 mt-1">
-            Rs. {estimatedCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            Rs. {estimatedTotalCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}
           </div>
-          {Number(outputYield) > 0 && (
+          {estimatedLeftoverCost > 0 && (
+            <div className="text-xs text-neutral-500 mt-1">
+              includes Rs. {estimatedLeftoverCost.toLocaleString(undefined, { maximumFractionDigits: 2 })} carried over from leftover
+            </div>
+          )}
+          {estimatedTotalKg > 0 && (
             <div className="text-xs text-neutral-400 mt-1">
               Est. cost/kg: Rs. {estimatedCostPerKg.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              {" "}(on {estimatedTotalKg} kg total{effectiveKgUsedFromLeftover > 0 ? `, incl. ${effectiveKgUsedFromLeftover} kg leftover` : ""})
             </div>
           )}
         </div>
@@ -1129,19 +2103,55 @@ export default function NewBatchPage() {
 
       <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-5 space-y-3">
         <label className="flex items-center gap-3 cursor-pointer">
-          <input type="checkbox" checked={useLeftoverFirst} onChange={(e) => setUseLeftoverFirst(e.target.checked)}
-            className="size-4 rounded border-neutral-700 bg-neutral-950" />
+          <input
+            type="checkbox"
+            checked={useLeftoverFirst}
+            onChange={(e) => {
+              setUseLeftoverFirst(e.target.checked);
+              if (!e.target.checked) {
+                setLeftoverBatchId("");
+                setLeftoverKgUsed("");
+              }
+            }}
+            className="size-4 rounded border-neutral-700 bg-neutral-950"
+          />
           <span className="text-sm text-neutral-200">Use Leftover From Previous Batch First</span>
         </label>
 
         {useLeftoverFirst && (
-          <select value={leftoverBatchId} onChange={(e) => setLeftoverBatchId(e.target.value)}
-            className="w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600">
-            <option value="">Select leftover batch...</option>
-            {leftoverBatches.map((b) => (
-              <option key={b.id} value={b.id}>{b.id} â€” {b.leftoverQtyKg} kg leftover</option>
-            ))}
-          </select>
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm text-neutral-400">Leftover Batch</label>
+              <select
+                value={leftoverBatchId}
+                onChange={(e) => { setLeftoverBatchId(e.target.value); setLeftoverKgUsed(""); }}
+                className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600"
+              >
+                <option value="">Select leftover batch...</option>
+                {leftoverBatches.map((b) => (
+                  <option key={b.id} value={b.id}>{b.id} â€” {b.leftoverQtyKg} kg available @ Rs. {b.bulkCostPerKg}/kg</option>
+                ))}
+              </select>
+            </div>
+
+            {selectedLeftoverBatch && (
+              <div>
+                <label className="text-sm text-neutral-400">Leftover Qty to Use (kg)</label>
+                <input
+                  value={leftoverKgUsed}
+                  onChange={(e) => setLeftoverKgUsed(e.target.value)}
+                  type="number"
+                  step="any"
+                  max={selectedLeftoverBatch.leftoverQtyKg}
+                  placeholder={`Up to ${selectedLeftoverBatch.leftoverQtyKg} kg`}
+                  className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600"
+                />
+                {Number(leftoverKgUsed) > selectedLeftoverBatch.leftoverQtyKg && (
+                  <p className="text-xs text-red-400 mt-1">Only {selectedLeftoverBatch.leftoverQtyKg} kg available in this batch</p>
+                )}
+              </div>
+            )}
+          </div>
         )}
       </div>
 
@@ -1276,6 +2286,14 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
         {batch.overheadTotal > 0 && (
           <div className="mt-4 text-xs text-amber-400">
             Overhead of Rs. {batch.overheadTotal.toLocaleString()} allocated across this batch's output.
+          </div>
+        )}
+
+        {batch.leftoverSourceBatchId && batch.leftoverKgConsumed && (
+          <div className="mt-2 text-xs text-blue-400">
+            Includes {batch.leftoverKgConsumed} kg of leftover bulk product carried forward from{" "}
+            <Link href={`/batches/${batch.leftoverSourceBatchId}`} className="underline">{batch.leftoverSourceBatchId}</Link>{" "}
+            (FIFO â€” cost blended into this batch's effective cost/kg).
           </div>
         )}
       </div>
@@ -2068,7 +3086,9 @@ function RecordPaymentDialog({ open, onClose, customerId, customerName }: { open
 export default function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const invoice = useStore((s) => s.invoices.find((i) => i.id === id));
+  const settings = useStore((s) => s.settings);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
 
   if (!invoice) {
     return (
@@ -2078,6 +3098,104 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       </div>
     );
   }
+
+  const handleDownloadPDF = async () => {
+    setGeneratingPdf(true);
+    try {
+      const { jsPDF } = await import("jspdf");
+      const doc = new jsPDF({ unit: "pt", format: "a4" });
+
+      const marginX = 48;
+      let y = 56;
+
+      doc.setFontSize(18);
+      doc.setFont("helvetica", "bold");
+      doc.text(settings.businessName || "GhaniFoods", marginX, y);
+
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      y += 16;
+      doc.text(settings.address || "", marginX, y);
+
+      doc.setFontSize(20);
+      doc.setFont("helvetica", "bold");
+      doc.text("INVOICE", 595 - marginX, 56, { align: "right" });
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(invoice.id, 595 - marginX, 74, { align: "right" });
+      doc.text(invoice.invoiceDate, 595 - marginX, 88, { align: "right" });
+
+      y += 32;
+      doc.setDrawColor(200);
+      doc.line(marginX, y, 595 - marginX, y);
+
+      y += 24;
+      doc.setFontSize(9);
+      doc.setTextColor(120);
+      doc.text("BILLED TO", marginX, y);
+      y += 14;
+      doc.setFontSize(12);
+      doc.setTextColor(20);
+      doc.setFont("helvetica", "bold");
+      doc.text(invoice.customerName, marginX, y);
+      doc.setFont("helvetica", "normal");
+
+      y += 30;
+      const colItem = marginX;
+      const colQty = 330;
+      const colPrice = 400;
+      const colSubtotal = 500;
+
+      doc.setFillColor(23, 23, 23);
+      doc.rect(marginX, y - 14, 595 - marginX * 2, 22, "F");
+      doc.setTextColor(255);
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.text("ITEM", colItem + 6, y + 1);
+      doc.text("QTY", colQty, y + 1);
+      doc.text("UNIT PRICE", colPrice, y + 1);
+      doc.text("SUBTOTAL", colSubtotal, y + 1);
+
+      y += 22;
+      doc.setTextColor(30);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+
+      const lines = invoice.items.length > 0
+        ? invoice.items
+        : [{ itemName: "Nimko Carton (legacy record)", qty: 0, unitPrice: 0, subtotal: invoice.totalAmount, itemId: "" }];
+
+      for (const line of lines) {
+        doc.text(String(line.itemName), colItem + 6, y);
+        doc.text(line.qty ? String(line.qty) : "-", colQty, y);
+        doc.text(line.unitPrice ? `Rs. ${line.unitPrice.toLocaleString()}` : "-", colPrice, y);
+        doc.text(`Rs. ${line.subtotal.toLocaleString()}`, colSubtotal, y);
+        y += 20;
+        doc.setDrawColor(230);
+        doc.line(marginX, y - 6, 595 - marginX, y - 6);
+      }
+
+      y += 20;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.text("Total:", colPrice, y);
+      doc.text(`Rs. ${invoice.totalAmount.toLocaleString()}`, colSubtotal, y);
+
+      y += 50;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(120);
+      doc.text(settings.invoiceFooterText || "Thank you for your business!", marginX, y);
+
+      doc.save(`${invoice.id}.pdf`);
+      toast.success(`Invoice ${invoice.id} downloaded as PDF`);
+    } catch (err) {
+      toast.error("Could not generate PDF. Please try again.");
+      console.error(err);
+    } finally {
+      setGeneratingPdf(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -2137,9 +3255,12 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
 
       <div className="flex gap-2 print:hidden">
         <button onClick={() => window.print()} className="rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-800">Print</button>
-        <button onClick={() => toast.info("PDF generation is planned for a later step (needs backend rendering).")}
-          className="rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-800">
-          Download PDF
+        <button
+          onClick={handleDownloadPDF}
+          disabled={generatingPdf}
+          className="rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+        >
+          {generatingPdf ? "Generating..." : "Download PDF"}
         </button>
         <button onClick={() => setDialogOpen(true)} className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200">
           Record Payment
@@ -2987,21 +4108,124 @@ export default function SettingsPage() {
   );
 }
 ==================================================
-FILE: apps\frontend\components\layout\AntdThemeProvider.tsx
+FILE: apps\frontend\components\ui\animated-theme-toggler.tsx
 ==================================================
-// components/layout/AntdThemeProvider.tsx
-"use client";
+"use client"
 
-import { ConfigProvider } from "antd";
-import { AntdRegistry } from "@ant-design/nextjs-registry";
-import { antdThemeConfig } from "@/lib/theme/tokens";
+import { useEffect, useRef, useState, useCallback } from "react"
+import { flushSync } from "react-dom"
 
-export default function AntdThemeProvider({ children }: { children: React.ReactNode }) {
+import { Moon, Sun } from "lucide-react"
+
+import { motion, AnimatePresence } from "framer-motion"
+
+import { cn } from "@/lib/utils"
+
+type AnimatedThemeTogglerProps = {
+  className?: string
+}
+
+export const AnimatedThemeToggler = ({ className }: AnimatedThemeTogglerProps) => {
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const [darkMode, setDarkMode] = useState(() =>
+    typeof window !== "undefined"
+      ? document.documentElement.classList.contains("dark")
+      : false
+  )
+
+  useEffect(() => {
+    const syncTheme = () =>
+      setDarkMode(document.documentElement.classList.contains("dark"))
+
+    const observer = new MutationObserver(syncTheme)
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    })
+    return () => observer.disconnect()
+  }, [])
+
+  const onToggle = useCallback(async () => {
+    if (!buttonRef.current) return
+
+    const applyToggle = () => {
+      const toggled = !darkMode
+      setDarkMode(toggled)
+      document.documentElement.classList.toggle("dark", toggled)
+      localStorage.setItem("theme", toggled ? "dark" : "light")
+    }
+
+    // Not all browsers support View Transitions - fall back gracefully.
+    if (typeof document.startViewTransition !== "function") {
+      applyToggle()
+      return
+    }
+
+    await document.startViewTransition(() => {
+      flushSync(applyToggle)
+    }).ready
+
+    const { left, top, width, height } = buttonRef.current.getBoundingClientRect()
+    const centerX = left + width / 2
+    const centerY = top + height / 2
+    const maxDistance = Math.hypot(
+      Math.max(centerX, window.innerWidth - centerX),
+      Math.max(centerY, window.innerHeight - centerY)
+    )
+
+    document.documentElement.animate(
+      {
+        clipPath: [
+          `circle(0px at ${centerX}px ${centerY}px)`,
+          `circle(${maxDistance}px at ${centerX}px ${centerY}px)`,
+        ],
+      },
+      {
+        duration: 700,
+        easing: "ease-in-out",
+        pseudoElement: "::view-transition-new(root)",
+      }
+    )
+  }, [darkMode])
+
   return (
-    <AntdRegistry>
-      <ConfigProvider theme={antdThemeConfig}>{children}</ConfigProvider>
-    </AntdRegistry>
-  );
+    <button
+      ref={buttonRef}
+      onClick={onToggle}
+      aria-label="Switch theme"
+      className={cn(
+        "flex items-center justify-center p-2 rounded-full outline-none focus:outline-none active:outline-none focus:ring-0 cursor-pointer hover:bg-neutral-800/60 transition-colors",
+        className
+      )}
+      type="button"
+    >
+      <AnimatePresence mode="wait" initial={false}>
+        {darkMode ? (
+          <motion.span
+            key="sun-icon"
+            initial={{ opacity: 0, scale: 0.55, rotate: 25 }}
+            animate={{ opacity: 1, scale: 1, rotate: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.33 }}
+            className="text-neutral-200"
+          >
+            <Sun size={18} />
+          </motion.span>
+        ) : (
+          <motion.span
+            key="moon-icon"
+            initial={{ opacity: 0, scale: 0.55, rotate: -25 }}
+            animate={{ opacity: 1, scale: 1, rotate: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.33 }}
+            className="text-neutral-700"
+          >
+            <Moon size={18} />
+          </motion.span>
+        )}
+      </AnimatePresence>
+    </button>
+  )
 }
 ==================================================
 FILE: apps\frontend\components\ui\auth-page.tsx
@@ -3812,6 +5036,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Notification, User as UserIcon, ChevronDown as ChevronDownIcon } from "@carbon/icons-react";
 import { useStore } from "@/lib/store";
+import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
 
 function NotificationBell() {
   const [open, setOpen] = useState(false);
@@ -3921,6 +5146,7 @@ export function Topbar() {
         className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200">
         + New Invoice
       </Link>
+      <AnimatedThemeToggler />
       <NotificationBell />
       <UserMenu />
     </div>
@@ -4037,6 +5263,8 @@ export type ProductionBatch = {
   bulkCostPerKg: number;
   overheadTotal: number;
   status: "in_progress" | "completed";
+  leftoverSourceBatchId?: string;
+  leftoverKgConsumed?: number;
 };
 
 export type FinishedCarton = {
@@ -4203,6 +5431,8 @@ type State = {
     consumptions: { rawMaterialId: string; qty: number }[];
     outputYieldKg: number;
     wastageKg: number;
+    leftoverBatchId?: string;
+    leftoverKgUsed?: number;
   }) => string;
   allocateOverhead: (batchId: string, electricity: number, gas: number, rent: number) => void;
 
@@ -4282,23 +5512,63 @@ export const useStore = create<State>()(
           }),
         })),
 
+      // ------------------------------------------------------------------
+      // FIFO leftover logic (FR-10):
+      // If leftoverBatchId + leftoverKgUsed are provided, that quantity of
+      // bulk product is pulled from the earlier batch's leftover pool BEFORE
+      // being combined with this batch's freshly produced output. The two
+      // are cost-blended so the new batch's effective cost/kg reflects both
+      // the raw-material cost of the new output AND the carried-forward
+      // cost/kg of the reused leftover.
+      // ------------------------------------------------------------------
       createBatch: (input) => {
         const id = `batch-${Date.now()}`;
         set((s) => {
-          let totalCost = 0;
+          let rawMaterialCost = 0;
           const rawMaterials = s.rawMaterials.map((m) => {
             const line = input.consumptions.find((c) => c.rawMaterialId === m.id);
             if (!line) return m;
-            totalCost += line.qty * m.avgUnitCost;
+            rawMaterialCost += line.qty * m.avgUnitCost;
             return { ...m, quantityInStock: Math.max(0, m.quantityInStock - line.qty) };
           });
-          const bulkCostPerKg = input.outputYieldKg > 0 ? totalCost / input.outputYieldKg : 0;
+
+          let productionBatches = s.productionBatches;
+          let leftoverCostContribution = 0;
+          let leftoverKgActuallyUsed = 0;
+
+          if (input.leftoverBatchId && input.leftoverKgUsed && input.leftoverKgUsed > 0) {
+            const sourceBatch = s.productionBatches.find((b) => b.id === input.leftoverBatchId);
+            if (sourceBatch) {
+              // Never consume more than what's actually available (FIFO safety cap)
+              leftoverKgActuallyUsed = Math.min(input.leftoverKgUsed, sourceBatch.leftoverQtyKg);
+              leftoverCostContribution = leftoverKgActuallyUsed * sourceBatch.bulkCostPerKg;
+
+              productionBatches = productionBatches.map((b) =>
+                b.id === input.leftoverBatchId
+                  ? { ...b, leftoverQtyKg: Number((b.leftoverQtyKg - leftoverKgActuallyUsed).toFixed(2)) }
+                  : b
+              );
+            }
+          }
+
+          const totalCost = rawMaterialCost + leftoverCostContribution;
+          const totalKg = input.outputYieldKg + leftoverKgActuallyUsed;
+          const bulkCostPerKg = totalKg > 0 ? totalCost / totalKg : 0;
+
           const newBatch: ProductionBatch = {
-            id, batchDate: today(), outputYieldKg: input.outputYieldKg, wastageKg: input.wastageKg,
-            leftoverQtyKg: input.outputYieldKg, bulkCostPerKg: Number(bulkCostPerKg.toFixed(2)),
-            overheadTotal: 0, status: "in_progress",
+            id,
+            batchDate: today(),
+            outputYieldKg: input.outputYieldKg,
+            wastageKg: input.wastageKg,
+            leftoverQtyKg: Number(totalKg.toFixed(2)),
+            bulkCostPerKg: Number(bulkCostPerKg.toFixed(2)),
+            overheadTotal: 0,
+            status: "in_progress",
+            leftoverSourceBatchId: leftoverKgActuallyUsed > 0 ? input.leftoverBatchId : undefined,
+            leftoverKgConsumed: leftoverKgActuallyUsed > 0 ? Number(leftoverKgActuallyUsed.toFixed(2)) : undefined,
           };
-          return { rawMaterials, productionBatches: [newBatch, ...s.productionBatches] };
+
+          return { rawMaterials, productionBatches: [newBatch, ...productionBatches] };
         });
         return id;
       },

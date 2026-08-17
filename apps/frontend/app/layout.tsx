@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Toaster } from "sonner";
+import { ThemeToaster } from "@/components/ui/theme-toaster";
 
 export const metadata: Metadata = {
   title: "GhaniFoods",
@@ -32,7 +32,7 @@ export default function RootLayout({
       </head>
       <body>
         {children}
-        <Toaster theme="system" position="top-right" richColors />
+        <ThemeToaster />
       </body>
     </html>
   );

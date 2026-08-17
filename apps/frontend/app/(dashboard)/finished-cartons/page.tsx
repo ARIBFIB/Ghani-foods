@@ -57,14 +57,14 @@ function NewPackingRunDialog({ open, onClose }: { open: boolean; onClose: () => 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-md rounded-xl border border-neutral-800 bg-neutral-900 p-5 space-y-4">
-        <h2 className="text-lg font-semibold text-neutral-50">New Packing Run â€” Step {step} of 3</h2>
+      <div className="w-full max-w-md rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5 space-y-4">
+        <h2 className="text-lg font-semibold text-[var(--foreground)]">New Packing Run â€” Step {step} of 3</h2>
 
         {step === 1 && (
           <div>
-            <label className="text-sm text-neutral-400">Select Batch</label>
+            <label className="text-sm text-[var(--text-muted)]">Select Batch</label>
             <select value={batchId} onChange={(e) => setBatchId(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600">
+              className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]">
               {productionBatches.map((b) => (
                 <option key={b.id} value={b.id}>{b.id} â€” {b.leftoverQtyKg} kg available</option>
               ))}
@@ -75,47 +75,47 @@ function NewPackingRunDialog({ open, onClose }: { open: boolean; onClose: () => 
         {step === 2 && (
           <div className="space-y-3">
             <div>
-              <label className="text-sm text-neutral-400">Packaging Material</label>
+              <label className="text-sm text-[var(--text-muted)]">Packaging Material</label>
               <select value={packagingId} onChange={(e) => setPackagingId(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600">
+                className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]">
                 {packagingMaterials.map((p) => (
                   <option key={p.id} value={p.id}>{p.name} â€” {p.stockQty} in stock</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="text-sm text-neutral-400">Packets per Carton</label>
+              <label className="text-sm text-[var(--text-muted)]">Packets per Carton</label>
               <input value={packetsPerCarton} onChange={(e) => setPacketsPerCarton(e.target.value)} type="number"
-                className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+                className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
             </div>
             <div>
-              <label className="text-sm text-neutral-400">Number of Cartons</label>
+              <label className="text-sm text-[var(--text-muted)]">Number of Cartons</label>
               <input value={cartons} onChange={(e) => setCartons(e.target.value)} type="number"
-                className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+                className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
             </div>
             <div>
-              <label className="text-sm text-neutral-400">Bulk Product Used (kg)</label>
+              <label className="text-sm text-[var(--text-muted)]">Bulk Product Used (kg)</label>
               <input value={bulkKgUsed} onChange={(e) => setBulkKgUsed(e.target.value)} type="number"
-                className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+                className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
             </div>
           </div>
         )}
 
         {step === 3 && (
-          <div className="rounded-lg border border-neutral-800 bg-neutral-950 p-4 space-y-2">
-            <div className="flex justify-between text-sm"><span className="text-neutral-400">Source Batch</span><span className="text-neutral-50">{batchId}</span></div>
-            <div className="flex justify-between text-sm"><span className="text-neutral-400">Packaging</span><span className="text-neutral-50">{packaging?.name}</span></div>
-            <div className="flex justify-between text-sm"><span className="text-neutral-400">Cartons</span><span className="text-neutral-50">{cartons}</span></div>
-            <div className="flex justify-between text-sm"><span className="text-neutral-400">Bulk Used</span><span className="text-neutral-50">{bulkKgUsed} kg</span></div>
-            <div className="flex justify-between text-sm pt-2 border-t border-neutral-800">
-              <span className="text-neutral-400">Est. Cost / Carton</span>
-              <span className="text-neutral-50 font-semibold">Rs. {costPerCarton.toFixed(2)}</span>
+          <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--background)] p-4 space-y-2">
+            <div className="flex justify-between text-sm"><span className="text-[var(--text-muted)]">Source Batch</span><span className="text-[var(--foreground)]">{batchId}</span></div>
+            <div className="flex justify-between text-sm"><span className="text-[var(--text-muted)]">Packaging</span><span className="text-[var(--foreground)]">{packaging?.name}</span></div>
+            <div className="flex justify-between text-sm"><span className="text-[var(--text-muted)]">Cartons</span><span className="text-[var(--foreground)]">{cartons}</span></div>
+            <div className="flex justify-between text-sm"><span className="text-[var(--text-muted)]">Bulk Used</span><span className="text-[var(--foreground)]">{bulkKgUsed} kg</span></div>
+            <div className="flex justify-between text-sm pt-2 border-t border-[var(--surface-border)]">
+              <span className="text-[var(--text-muted)]">Est. Cost / Carton</span>
+              <span className="text-[var(--foreground)] font-semibold">Rs. {costPerCarton.toFixed(2)}</span>
             </div>
           </div>
         )}
 
         <div className="flex justify-between pt-2">
-          <button onClick={() => (step === 1 ? onClose() : setStep(step - 1))} className="rounded-lg px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">
+          <button onClick={() => (step === 1 ? onClose() : setStep(step - 1))} className="rounded-lg px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]">
             {step === 1 ? "Cancel" : "Back"}
           </button>
           {step < 3 ? (
@@ -140,26 +140,26 @@ export default function FinishedCartonsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-neutral-50">Finished Cartons</h1>
+        <h1 className="text-xl font-semibold text-[var(--foreground)]">Finished Cartons</h1>
         <button onClick={() => setDialogOpen(true)} className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200">
           + New Packing Run
         </button>
       </div>
 
-      <div className="flex gap-2 border-b border-neutral-800">
-        <button onClick={() => setTab("ready")} className={`px-4 py-2 text-sm font-medium border-b-2 ${tab === "ready" ? "border-neutral-50 text-neutral-50" : "border-transparent text-neutral-400"}`}>
+      <div className="flex gap-2 border-b border-[var(--surface-border)]">
+        <button onClick={() => setTab("ready")} className={`px-4 py-2 text-sm font-medium border-b-2 ${tab === "ready" ? "border-neutral-50 text-[var(--foreground)]" : "border-transparent text-[var(--text-muted)]"}`}>
           Ready for Sale
         </button>
-        <button onClick={() => setTab("leftover")} className={`px-4 py-2 text-sm font-medium border-b-2 ${tab === "leftover" ? "border-neutral-50 text-neutral-50" : "border-transparent text-neutral-400"}`}>
+        <button onClick={() => setTab("leftover")} className={`px-4 py-2 text-sm font-medium border-b-2 ${tab === "leftover" ? "border-neutral-50 text-[var(--foreground)]" : "border-transparent text-[var(--text-muted)]"}`}>
           Unpacked / Leftover
         </button>
       </div>
 
       {tab === "ready" ? (
-        <div className="overflow-hidden rounded-xl border border-neutral-800">
+        <div className="overflow-hidden rounded-xl border border-[var(--surface-border)]">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-neutral-400">
+              <tr className="border-b border-[var(--surface-border)] bg-[var(--surface)] text-left text-[var(--text-muted)]">
                 <th className="px-4 py-3 font-medium">Carton</th>
                 <th className="px-4 py-3 font-medium">Source Batch</th>
                 <th className="px-4 py-3 font-medium">Packets/Carton</th>
@@ -169,22 +169,22 @@ export default function FinishedCartonsPage() {
             </thead>
             <tbody>
               {cartons.map((c) => (
-                <tr key={c.id} className="border-b border-neutral-900 last:border-0 hover:bg-neutral-900/60">
-                  <td className="px-4 py-3 text-neutral-50">{c.name}</td>
-                  <td className="px-4 py-3 text-neutral-300">{c.sourceBatchId}</td>
-                  <td className="px-4 py-3 text-neutral-300">{c.packetsPerCarton}</td>
-                  <td className="px-4 py-3 text-neutral-300">Rs. {c.costPerCarton.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-neutral-300">{c.stockQty}</td>
+                <tr key={c.id} className="border-b border-[var(--surface-border)] last:border-0 hover:bg-[var(--surface)]/60">
+                  <td className="px-4 py-3 text-[var(--foreground)]">{c.name}</td>
+                  <td className="px-4 py-3 text-[var(--text-secondary)]">{c.sourceBatchId}</td>
+                  <td className="px-4 py-3 text-[var(--text-secondary)]">{c.packetsPerCarton}</td>
+                  <td className="px-4 py-3 text-[var(--text-secondary)]">Rs. {c.costPerCarton.toLocaleString()}</td>
+                  <td className="px-4 py-3 text-[var(--text-secondary)]">{c.stockQty}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-neutral-800">
+        <div className="overflow-hidden rounded-xl border border-[var(--surface-border)]">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-neutral-800 bg-neutral-900 text-left text-neutral-400">
+              <tr className="border-b border-[var(--surface-border)] bg-[var(--surface)] text-left text-[var(--text-muted)]">
                 <th className="px-4 py-3 font-medium">Batch</th>
                 <th className="px-4 py-3 font-medium">Leftover Bulk (kg)</th>
                 <th className="px-4 py-3 font-medium">Bulk Cost/Kg</th>
@@ -192,14 +192,14 @@ export default function FinishedCartonsPage() {
             </thead>
             <tbody>
               {leftoverBatches.map((b) => (
-                <tr key={b.id} className="border-b border-neutral-900 last:border-0 hover:bg-neutral-900/60">
-                  <td className="px-4 py-3 text-neutral-50">{b.id}</td>
-                  <td className="px-4 py-3 text-neutral-300">{b.leftoverQtyKg} kg</td>
-                  <td className="px-4 py-3 text-neutral-300">Rs. {b.bulkCostPerKg.toLocaleString()}</td>
+                <tr key={b.id} className="border-b border-[var(--surface-border)] last:border-0 hover:bg-[var(--surface)]/60">
+                  <td className="px-4 py-3 text-[var(--foreground)]">{b.id}</td>
+                  <td className="px-4 py-3 text-[var(--text-secondary)]">{b.leftoverQtyKg} kg</td>
+                  <td className="px-4 py-3 text-[var(--text-secondary)]">Rs. {b.bulkCostPerKg.toLocaleString()}</td>
                 </tr>
               ))}
               {leftoverBatches.length === 0 && (
-                <tr><td colSpan={3} className="px-4 py-8 text-center text-neutral-500">No leftover bulk product.</td></tr>
+                <tr><td colSpan={3} className="px-4 py-8 text-center text-[var(--foreground)]0">No leftover bulk product.</td></tr>
               )}
             </tbody>
           </table>

@@ -36,46 +36,46 @@ export default function SettingsPage() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-2xl">
-      <h1 className="text-xl font-semibold text-neutral-50">Settings</h1>
+      <h1 className="text-xl font-semibold text-[var(--foreground)]">Settings</h1>
 
-      <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-5 space-y-4">
-        <h2 className="text-sm font-semibold text-neutral-200">Business Profile</h2>
+      <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5 space-y-4">
+        <h2 className="text-sm font-semibold text-[var(--foreground)]">Business Profile</h2>
 
         <div>
-          <label className="text-sm text-neutral-400">Business Name</label>
+          <label className="text-sm text-[var(--text-muted)]">Business Name</label>
           <input {...register("businessName")}
-            className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+            className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
           {errors.businessName && <p className="text-xs text-red-400 mt-1">{errors.businessName.message}</p>}
         </div>
 
         <div>
-          <label className="text-sm text-neutral-400">Address</label>
+          <label className="text-sm text-[var(--text-muted)]">Address</label>
           <input {...register("address")}
-            className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+            className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
           {errors.address && <p className="text-xs text-red-400 mt-1">{errors.address.message}</p>}
         </div>
 
         <div>
-          <label className="text-sm text-neutral-400">Invoice Footer Text</label>
+          <label className="text-sm text-[var(--text-muted)]">Invoice Footer Text</label>
           <input {...register("invoiceFooterText")}
-            className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+            className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
         </div>
       </div>
 
-      <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-5 space-y-4">
-        <h2 className="text-sm font-semibold text-neutral-200">Defaults</h2>
+      <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5 space-y-4">
+        <h2 className="text-sm font-semibold text-[var(--foreground)]">Defaults</h2>
 
         <div>
-          <label className="text-sm text-neutral-400">Default Profit Margin %</label>
+          <label className="text-sm text-[var(--text-muted)]">Default Profit Margin %</label>
           <input {...register("defaultProfitMarginPercent")} type="number" step="any"
-            className="mt-1 w-48 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+            className="mt-1 w-48 rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
           {errors.defaultProfitMarginPercent && <p className="text-xs text-red-400 mt-1">{errors.defaultProfitMarginPercent.message}</p>}
         </div>
 
         <div>
-          <label className="text-sm text-neutral-400">Low-Stock Threshold Default</label>
+          <label className="text-sm text-[var(--text-muted)]">Low-Stock Threshold Default</label>
           <input {...register("lowStockThresholdDefault")} type="number"
-            className="mt-1 w-48 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+            className="mt-1 w-48 rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
           {errors.lowStockThresholdDefault && <p className="text-xs text-red-400 mt-1">{errors.lowStockThresholdDefault.message}</p>}
         </div>
       </div>

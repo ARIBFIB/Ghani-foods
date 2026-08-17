@@ -85,18 +85,18 @@ function NewInvoiceForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-3xl">
-      <h1 className="text-xl font-semibold text-neutral-50">New Invoice</h1>
+      <h1 className="text-xl font-semibold text-[var(--foreground)]">New Invoice</h1>
 
-      <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-5 space-y-4">
+      <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5 space-y-4">
         <div>
-          <label className="text-sm text-neutral-400">Customer</label>
+          <label className="text-sm text-[var(--text-muted)]">Customer</label>
           <select {...register("customerId")}
-            className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600">
+            className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]">
             {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
           {errors.customerId && <p className="text-xs text-red-400 mt-1">{errors.customerId.message}</p>}
           {selectedCustomer && (
-            <p className="text-xs text-neutral-500 mt-1">
+            <p className="text-xs text-[var(--foreground)]0 mt-1">
               Current balance: Rs. {Math.abs(selectedCustomer.currentBalance).toLocaleString()}{" "}
               {selectedCustomer.currentBalance > 0 ? "(owes)" : "(credit)"}
             </p>
@@ -104,17 +104,17 @@ function NewInvoiceForm() {
         </div>
 
         <div>
-          <label className="text-sm text-neutral-400">Margin % (used for items with no price history)</label>
+          <label className="text-sm text-[var(--text-muted)]">Margin % (used for items with no price history)</label>
           <input {...register("margin")} type="number" step="any"
-            className="mt-1 w-40 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+            className="mt-1 w-40 rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
           {errors.margin && <p className="text-xs text-red-400 mt-1">{errors.margin.message}</p>}
         </div>
       </div>
 
-      <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-5 space-y-4">
+      <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-neutral-200">Invoice Items</h2>
-          <button type="button" onClick={addLine} className="rounded-lg border border-neutral-700 px-3 py-1.5 text-xs text-neutral-200 hover:bg-neutral-800">+ Add Item</button>
+          <h2 className="text-sm font-semibold text-[var(--foreground)]">Invoice Items</h2>
+          <button type="button" onClick={addLine} className="rounded-lg border border-[var(--surface-border-strong)] px-3 py-1.5 text-xs text-[var(--foreground)] hover:bg-[var(--surface-hover)]">+ Add Item</button>
         </div>
 
         <div className="space-y-3">
@@ -125,18 +125,18 @@ function NewInvoiceForm() {
               <div key={line.id} className="space-y-1">
                 <div className="flex items-center gap-2">
                   <select value={line.itemId} onChange={(e) => handleItemChange(line.id, e.target.value)}
-                    className="flex-1 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600">
+                    className="flex-1 rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]">
                     {finishedCartons.map((c) => <option key={c.id} value={c.id}>{c.name} â€” {c.stockQty} in stock</option>)}
                   </select>
                   <input value={line.qty} onChange={(e) => updateLine(line.id, { qty: e.target.value })} type="number" placeholder="Qty"
-                    className="w-20 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+                    className="w-20 rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
                   <input value={line.unitPrice} onChange={(e) => updateLine(line.id, { unitPrice: e.target.value })} type="number" placeholder="Unit Price"
-                    className="w-28 rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
-                  <button type="button" onClick={() => removeLine(line.id)} className="rounded-lg border border-neutral-800 px-3 py-2 text-sm text-neutral-400 hover:bg-neutral-800">-</button>
+                    className="w-28 rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
+                  <button type="button" onClick={() => removeLine(line.id)} className="rounded-lg border border-[var(--surface-border)] px-3 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-hover)]">-</button>
                 </div>
                 <div className="flex gap-2">
                   {memorized !== undefined && (
-                    <span className="inline-block rounded-full bg-neutral-800 px-2.5 py-0.5 text-xs text-neutral-300">
+                    <span className="inline-block rounded-full bg-[var(--surface-hover)] px-2.5 py-0.5 text-xs text-[var(--text-secondary)]">
                       Last price: Rs. {memorized.toLocaleString()}
                     </span>
                   )}
@@ -153,13 +153,13 @@ function NewInvoiceForm() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-5 flex items-center justify-between">
-        <span className="text-sm text-neutral-400">Total</span>
-        <span className="text-2xl font-semibold text-neutral-50">Rs. {total.toLocaleString()}</span>
+      <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5 flex items-center justify-between">
+        <span className="text-sm text-[var(--text-muted)]">Total</span>
+        <span className="text-2xl font-semibold text-[var(--foreground)]">Rs. {total.toLocaleString()}</span>
       </div>
 
       <div className="flex justify-end gap-2">
-        <button type="button" onClick={() => router.push("/invoices")} className="rounded-lg px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">Cancel</button>
+        <button type="button" onClick={() => router.push("/invoices")} className="rounded-lg px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]">Cancel</button>
         <button type="submit" disabled={isSubmitting}
           className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200 disabled:opacity-50">
           {isSubmitting ? "Saving..." : "Save & Generate Invoice"}
@@ -171,7 +171,7 @@ function NewInvoiceForm() {
 
 export default function NewInvoicePage() {
   return (
-    <Suspense fallback={<div className="text-neutral-400 text-sm">Loading...</div>}>
+    <Suspense fallback={<div className="text-[var(--text-muted)] text-sm">Loading...</div>}>
       <NewInvoiceForm />
     </Suspense>
   );

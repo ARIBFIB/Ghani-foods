@@ -33,30 +33,30 @@ function AddPackagingDialog({ open, onClose }: { open: boolean; onClose: () => v
   };
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 p-5 space-y-4">
-        <h2 className="text-lg font-semibold text-neutral-50">Add Packaging Material</h2>
+      <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-sm rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5 space-y-4">
+        <h2 className="text-lg font-semibold text-[var(--foreground)]">Add Packaging Material</h2>
         <div className="space-y-3">
           <div>
-            <label className="text-sm text-neutral-400">Name</label>
+            <label className="text-sm text-[var(--text-muted)]">Name</label>
             <input {...register("name")} placeholder="e.g. Carton Box (Large)"
-              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+              className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
             {errors.name && <p className="text-xs text-red-400 mt-1">{errors.name.message}</p>}
           </div>
           <div>
-            <label className="text-sm text-neutral-400">Unit Cost</label>
+            <label className="text-sm text-[var(--text-muted)]">Unit Cost</label>
             <input {...register("unitCost")} type="number" step="any"
-              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+              className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
             {errors.unitCost && <p className="text-xs text-red-400 mt-1">{errors.unitCost.message}</p>}
           </div>
           <div>
-            <label className="text-sm text-neutral-400">Low Stock Threshold</label>
+            <label className="text-sm text-[var(--text-muted)]">Low Stock Threshold</label>
             <input {...register("lowStockThreshold")} type="number"
-              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+              className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
             {errors.lowStockThreshold && <p className="text-xs text-red-400 mt-1">{errors.lowStockThreshold.message}</p>}
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={() => { reset(); onClose(); }} className="rounded-lg px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">Cancel</button>
+          <button type="button" onClick={() => { reset(); onClose(); }} className="rounded-lg px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]">Cancel</button>
           <button type="submit" disabled={isSubmitting} className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200 disabled:opacity-50">
             {isSubmitting ? "Saving..." : "Save"}
           </button>
@@ -77,23 +77,23 @@ function RestockDialog({ open, onClose, item }: { open: boolean; onClose: () => 
   };
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 p-5 space-y-4">
-        <h2 className="text-lg font-semibold text-neutral-50">Restock: {item.name}</h2>
+      <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-sm rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5 space-y-4">
+        <h2 className="text-lg font-semibold text-[var(--foreground)]">Restock: {item.name}</h2>
         <div className="space-y-3">
           <div>
-            <label className="text-sm text-neutral-400">Quantity to Add</label>
+            <label className="text-sm text-[var(--text-muted)]">Quantity to Add</label>
             <input {...register("qty")} type="number" step="any"
-              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+              className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
             {errors.qty && <p className="text-xs text-red-400 mt-1">{errors.qty.message}</p>}
           </div>
           <div>
-            <label className="text-sm text-neutral-400">Cost per unit (optional)</label>
+            <label className="text-sm text-[var(--text-muted)]">Cost per unit (optional)</label>
             <input {...register("cost")} type="number" step="any"
-              className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+              className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={() => { reset(); onClose(); }} className="rounded-lg px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">Cancel</button>
+          <button type="button" onClick={() => { reset(); onClose(); }} className="rounded-lg px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]">Cancel</button>
           <button type="submit" disabled={isSubmitting} className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200 disabled:opacity-50">
             {isSubmitting ? "Saving..." : "Save"}
           </button>
@@ -109,7 +109,7 @@ export default function PackagingPage() {
   const [restockTarget, setRestockTarget] = useState<PackagingMaterial | null>(null);
 
   const columns = useMemo<ColumnDef<PackagingMaterial, unknown>[]>(() => [
-    { accessorKey: "name", header: "Name", cell: ({ getValue }) => <span className="text-neutral-50">{getValue() as string}</span> },
+    { accessorKey: "name", header: "Name", cell: ({ getValue }) => <span className="text-[var(--foreground)]">{getValue() as string}</span> },
     { accessorKey: "unitCost", header: "Unit Cost", cell: ({ getValue }) => `Rs. ${(getValue() as number).toLocaleString()}` },
     { accessorKey: "stockQty", header: "Stock Qty", cell: ({ getValue }) => (getValue() as number).toLocaleString() },
     { accessorKey: "lowStockThreshold", header: "Threshold", cell: ({ getValue }) => (getValue() as number).toLocaleString() },
@@ -121,7 +121,7 @@ export default function PackagingPage() {
       id: "action", header: "", enableSorting: false,
       cell: ({ row }) => (
         <button onClick={() => setRestockTarget(row.original)}
-          className="rounded-lg border border-neutral-700 px-3 py-1.5 text-xs text-neutral-200 hover:bg-neutral-800">
+          className="rounded-lg border border-[var(--surface-border-strong)] px-3 py-1.5 text-xs text-[var(--foreground)] hover:bg-[var(--surface-hover)]">
           Restock
         </button>
       ),
@@ -131,7 +131,7 @@ export default function PackagingPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-neutral-50">Packaging Materials</h1>
+        <h1 className="text-xl font-semibold text-[var(--foreground)]">Packaging Materials</h1>
         <button onClick={() => setAddOpen(true)} className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200">
           + Add Packaging Material
         </button>

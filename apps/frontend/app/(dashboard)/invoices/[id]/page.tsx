@@ -33,16 +33,16 @@ function RecordPaymentDialog({ open, onClose, customerId, customerName }: { open
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 p-5 space-y-4">
-        <h2 className="text-lg font-semibold text-neutral-50">Record Payment â€” {customerName}</h2>
+      <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-sm rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5 space-y-4">
+        <h2 className="text-lg font-semibold text-[var(--foreground)]">Record Payment â€” {customerName}</h2>
         <div>
-          <label className="text-sm text-neutral-400">Amount</label>
+          <label className="text-sm text-[var(--text-muted)]">Amount</label>
           <input {...register("amount")} type="number" step="any"
-            className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-neutral-50 outline-none focus:border-neutral-600" />
+            className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
           {errors.amount && <p className="text-xs text-red-400 mt-1">{errors.amount.message}</p>}
         </div>
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" onClick={() => { reset(); onClose(); }} className="rounded-lg px-4 py-2 text-sm text-neutral-300 hover:bg-neutral-800">Cancel</button>
+          <button type="button" onClick={() => { reset(); onClose(); }} className="rounded-lg px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]">Cancel</button>
           <button type="submit" disabled={isSubmitting}
             className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200 disabled:opacity-50">
             {isSubmitting ? "Saving..." : "Save"}
@@ -63,8 +63,8 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   if (!invoice) {
     return (
       <div className="space-y-4">
-        <Link href="/invoices" className="text-sm text-neutral-400 hover:underline">&larr; Back to Invoices</Link>
-        <p className="text-neutral-400">Invoice not found.</p>
+        <Link href="/invoices" className="text-sm text-[var(--text-muted)] hover:underline">&larr; Back to Invoices</Link>
+        <p className="text-[var(--text-muted)]">Invoice not found.</p>
       </div>
     );
   }
@@ -169,27 +169,27 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="space-y-6">
-      <div className="text-sm text-neutral-400">
-        <Link href="/invoices" className="hover:underline text-neutral-300">Invoices</Link>{" "}
-        / <span className="text-neutral-50">{invoice.id}</span>
+      <div className="text-sm text-[var(--text-muted)]">
+        <Link href="/invoices" className="hover:underline text-[var(--text-secondary)]">Invoices</Link>{" "}
+        / <span className="text-[var(--foreground)]">{invoice.id}</span>
       </div>
 
-      <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-6 print:border-0">
+      <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-6 print:border-0">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-neutral-50">Invoice {invoice.id}</h1>
-            <p className="text-sm text-neutral-400 mt-1">{invoice.invoiceDate}</p>
+            <h1 className="text-xl font-semibold text-[var(--foreground)]">Invoice {invoice.id}</h1>
+            <p className="text-sm text-[var(--text-muted)] mt-1">{invoice.invoiceDate}</p>
           </div>
           <div className="text-right">
-            <div className="text-neutral-400 text-xs">Billed To</div>
-            <div className="text-neutral-50 font-medium">{invoice.customerName}</div>
+            <div className="text-[var(--text-muted)] text-xs">Billed To</div>
+            <div className="text-[var(--foreground)] font-medium">{invoice.customerName}</div>
           </div>
         </div>
 
-        <div className="mt-6 rounded-lg border border-neutral-800 overflow-hidden">
+        <div className="mt-6 rounded-lg border border-[var(--surface-border)] overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-neutral-800 bg-neutral-950 text-left text-neutral-400">
+              <tr className="border-b border-[var(--surface-border)] bg-[var(--background)] text-left text-[var(--text-muted)]">
                 <th className="px-4 py-2 font-medium">Item</th>
                 <th className="px-4 py-2 font-medium">Qty</th>
                 <th className="px-4 py-2 font-medium">Unit Price</th>
@@ -200,18 +200,18 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
               {invoice.items.length > 0 ? (
                 invoice.items.map((line, idx) => (
                   <tr key={idx}>
-                    <td className="px-4 py-2 text-neutral-300">{line.itemName}</td>
-                    <td className="px-4 py-2 text-neutral-300">{line.qty}</td>
-                    <td className="px-4 py-2 text-neutral-300">Rs. {line.unitPrice.toLocaleString()}</td>
-                    <td className="px-4 py-2 text-neutral-300">Rs. {line.subtotal.toLocaleString()}</td>
+                    <td className="px-4 py-2 text-[var(--text-secondary)]">{line.itemName}</td>
+                    <td className="px-4 py-2 text-[var(--text-secondary)]">{line.qty}</td>
+                    <td className="px-4 py-2 text-[var(--text-secondary)]">Rs. {line.unitPrice.toLocaleString()}</td>
+                    <td className="px-4 py-2 text-[var(--text-secondary)]">Rs. {line.subtotal.toLocaleString()}</td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td className="px-4 py-2 text-neutral-300">Nimko Carton (legacy record)</td>
-                  <td className="px-4 py-2 text-neutral-300">-</td>
-                  <td className="px-4 py-2 text-neutral-300">-</td>
-                  <td className="px-4 py-2 text-neutral-300">Rs. {invoice.totalAmount.toLocaleString()}</td>
+                  <td className="px-4 py-2 text-[var(--text-secondary)]">Nimko Carton (legacy record)</td>
+                  <td className="px-4 py-2 text-[var(--text-secondary)]">-</td>
+                  <td className="px-4 py-2 text-[var(--text-secondary)]">-</td>
+                  <td className="px-4 py-2 text-[var(--text-secondary)]">Rs. {invoice.totalAmount.toLocaleString()}</td>
                 </tr>
               )}
             </tbody>
@@ -219,16 +219,16 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
         </div>
 
         <div className="mt-4 flex justify-end">
-          <div className="text-lg font-semibold text-neutral-50">Total: Rs. {invoice.totalAmount.toLocaleString()}</div>
+          <div className="text-lg font-semibold text-[var(--foreground)]">Total: Rs. {invoice.totalAmount.toLocaleString()}</div>
         </div>
       </div>
 
       <div className="flex gap-2 print:hidden">
-        <button onClick={() => window.print()} className="rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-800">Print</button>
+        <button onClick={() => window.print()} className="rounded-lg border border-[var(--surface-border-strong)] px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)]">Print</button>
         <button
           onClick={handleDownloadPDF}
           disabled={generatingPdf}
-          className="rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+          className="rounded-lg border border-[var(--surface-border-strong)] px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)] disabled:opacity-50"
         >
           {generatingPdf ? "Generating..." : "Download PDF"}
         </button>

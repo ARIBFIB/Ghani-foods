@@ -90,7 +90,7 @@ function BrandBadge() {
           <InterfacesLogoSquare />
         </div>
         <div className="px-2 py-1">
-          <div className="font-semibold text-[16px] text-neutral-50">GhaniFoods</div>
+          <div className="font-semibold text-[16px] text-[var(--foreground)]">GhaniFoods</div>
         </div>
       </div>
     </div>
@@ -99,11 +99,11 @@ function BrandBadge() {
 
 function AvatarCircle() {
   return (
-    <div className="relative rounded-full shrink-0 size-8 bg-black">
+    <div className="relative rounded-full shrink-0 size-8 bg-[var(--background)]">
       <div className="flex items-center justify-center size-8">
-        <UserIcon size={16} className="text-neutral-50" />
+        <UserIcon size={16} className="text-[var(--foreground)]" />
       </div>
-      <div aria-hidden="true" className="absolute inset-0 rounded-full border border-neutral-800 pointer-events-none" />
+      <div aria-hidden="true" className="absolute inset-0 rounded-full border border-[var(--surface-border)] pointer-events-none" />
     </div>
   );
 }
@@ -117,7 +117,7 @@ function SearchContainer({ isCollapsed = false }: { isCollapsed?: boolean }) {
       style={{ transitionTimingFunction: softSpringEasing }}
     >
       <div
-        className={`bg-black h-10 relative rounded-lg flex items-center transition-all duration-500 ${
+        className={`bg-[var(--background)] h-10 relative rounded-lg flex items-center transition-all duration-500 ${
           isCollapsed ? "w-10 min-w-10 justify-center" : "w-full"
         }`}
         style={{ transitionTimingFunction: softSpringEasing }}
@@ -127,7 +127,7 @@ function SearchContainer({ isCollapsed = false }: { isCollapsed?: boolean }) {
           style={{ transitionTimingFunction: softSpringEasing }}
         >
           <div className="size-8 flex items-center justify-center">
-            <SearchIcon size={16} className="text-neutral-50" />
+            <SearchIcon size={16} className="text-[var(--foreground)]" />
           </div>
         </div>
 
@@ -142,14 +142,14 @@ function SearchContainer({ isCollapsed = false }: { isCollapsed?: boolean }) {
                 placeholder="Search..."
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
-                className="w-full bg-transparent border-none outline-none text-[14px] text-neutral-50 placeholder:text-neutral-400 leading-[20px]"
+                className="w-full bg-transparent border-none outline-none text-[14px] text-[var(--foreground)] placeholder:text-[var(--text-muted)] leading-[20px]"
                 tabIndex={isCollapsed ? -1 : 0}
               />
             </div>
           </div>
         </div>
 
-        <div aria-hidden="true" className="absolute inset-0 rounded-lg border border-neutral-800 pointer-events-none" />
+        <div aria-hidden="true" className="absolute inset-0 rounded-lg border border-[var(--surface-border)] pointer-events-none" />
       </div>
     </div>
   );
@@ -174,7 +174,7 @@ function getSidebarContent(activeSection: SectionId): SidebarContent {
     dashboard: {
       title: "Dashboard",
       sections: [
-        { title: "Overview", items: [{ icon: <View size={16} className="text-neutral-50" />, label: "Dashboard", href: "/" }] },
+        { title: "Overview", items: [{ icon: <View size={16} className="text-[var(--foreground)]" />, label: "Dashboard", href: "/" }] },
       ],
     },
     "raw-materials": {
@@ -183,8 +183,8 @@ function getSidebarContent(activeSection: SectionId): SidebarContent {
         {
           title: "Inventory",
           items: [
-            { icon: <Folder size={16} className="text-neutral-50" />, label: "All Raw Materials", href: "/raw-materials" },
-            { icon: <FolderOpen size={16} className="text-neutral-50" />, label: "Packaging Materials", href: "/packaging" },
+            { icon: <Folder size={16} className="text-[var(--foreground)]" />, label: "All Raw Materials", href: "/raw-materials" },
+            { icon: <FolderOpen size={16} className="text-[var(--foreground)]" />, label: "Packaging Materials", href: "/packaging" },
           ],
         },
       ],
@@ -195,8 +195,8 @@ function getSidebarContent(activeSection: SectionId): SidebarContent {
         {
           title: "Batches",
           items: [
-            { icon: <Task size={16} className="text-neutral-50" />, label: "All Batches", href: "/batches" },
-            { icon: <AddLarge size={16} className="text-neutral-50" />, label: "New Batch", href: "/batches/new" },
+            { icon: <Task size={16} className="text-[var(--foreground)]" />, label: "All Batches", href: "/batches" },
+            { icon: <AddLarge size={16} className="text-[var(--foreground)]" />, label: "New Batch", href: "/batches/new" },
           ],
         },
       ],
@@ -204,13 +204,13 @@ function getSidebarContent(activeSection: SectionId): SidebarContent {
     "finished-cartons": {
       title: "Finished Cartons",
       sections: [
-        { title: "Stock", items: [{ icon: <Archive size={16} className="text-neutral-50" />, label: "Ready Stock", href: "/finished-cartons" }] },
+        { title: "Stock", items: [{ icon: <Archive size={16} className="text-[var(--foreground)]" />, label: "Ready Stock", href: "/finished-cartons" }] },
       ],
     },
     customers: {
       title: "Customers",
       sections: [
-        { title: "Customers", items: [{ icon: <UserMultiple size={16} className="text-neutral-50" />, label: "All Customers", href: "/customers" }] },
+        { title: "Customers", items: [{ icon: <UserMultiple size={16} className="text-[var(--foreground)]" />, label: "All Customers", href: "/customers" }] },
       ],
     },
     invoices: {
@@ -219,8 +219,8 @@ function getSidebarContent(activeSection: SectionId): SidebarContent {
         {
           title: "Invoices",
           items: [
-            { icon: <DocumentAdd size={16} className="text-neutral-50" />, label: "All Invoices", href: "/invoices" },
-            { icon: <AddLarge size={16} className="text-neutral-50" />, label: "New Invoice", href: "/invoices/new" },
+            { icon: <DocumentAdd size={16} className="text-[var(--foreground)]" />, label: "All Invoices", href: "/invoices" },
+            { icon: <AddLarge size={16} className="text-[var(--foreground)]" />, label: "New Invoice", href: "/invoices/new" },
           ],
         },
       ],
@@ -228,7 +228,7 @@ function getSidebarContent(activeSection: SectionId): SidebarContent {
     payments: {
       title: "Payments",
       sections: [
-        { title: "Payments", items: [{ icon: <ChartBar size={16} className="text-neutral-50" />, label: "All Payments", href: "/payments" }] },
+        { title: "Payments", items: [{ icon: <ChartBar size={16} className="text-[var(--foreground)]" />, label: "All Payments", href: "/payments" }] },
       ],
     },
     reports: {
@@ -237,9 +237,9 @@ function getSidebarContent(activeSection: SectionId): SidebarContent {
         {
           title: "Analytics",
           items: [
-            { icon: <Report size={16} className="text-neutral-50" />, label: "Inventory Movement", href: "/reports" },
-            { icon: <Analytics size={16} className="text-neutral-50" />, label: "Production Yield", href: "/reports" },
-            { icon: <StarFilled size={16} className="text-neutral-50" />, label: "P&L", href: "/reports" },
+            { icon: <Report size={16} className="text-[var(--foreground)]" />, label: "Inventory Movement", href: "/reports" },
+            { icon: <Analytics size={16} className="text-[var(--foreground)]" />, label: "Production Yield", href: "/reports" },
+            { icon: <StarFilled size={16} className="text-[var(--foreground)]" />, label: "P&L", href: "/reports" },
           ],
         },
       ],
@@ -250,9 +250,9 @@ function getSidebarContent(activeSection: SectionId): SidebarContent {
         {
           title: "Workspace",
           items: [
-            { icon: <SettingsIcon size={16} className="text-neutral-50" />, label: "Business Profile", href: "/settings" },
-            { icon: <Security size={16} className="text-neutral-50" />, label: "Security" },
-            { icon: <Notification size={16} className="text-neutral-50" />, label: "Notifications" },
+            { icon: <SettingsIcon size={16} className="text-[var(--foreground)]" />, label: "Business Profile", href: "/settings" },
+            { icon: <Security size={16} className="text-[var(--foreground)]" />, label: "Security" },
+            { icon: <Notification size={16} className="text-[var(--foreground)]" />, label: "Notifications" },
           ],
         },
       ],
@@ -279,7 +279,7 @@ function IconNavButton({
       title={label}
       aria-label={label}
       className={`flex items-center justify-center rounded-lg size-10 min-w-10 transition-colors duration-500
-        ${isActive ? "bg-neutral-800 text-neutral-50" : "hover:bg-neutral-800 text-neutral-400 hover:text-neutral-300"}`}
+        ${isActive ? "bg-[var(--surface-hover)] text-[var(--foreground)]" : "hover:bg-[var(--surface-hover)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]"}`}
       style={{ transitionTimingFunction: softSpringEasing }}
       onClick={onClick}
     >
@@ -305,7 +305,7 @@ function IconNavigation({ activeSection }: { activeSection: SectionId }) {
   const goTo = (section: SectionId) => router.push(SECTION_DEFAULT_ROUTE[section]);
 
   return (
-    <aside className="bg-black flex flex-col gap-2 items-center p-4 w-16 h-screen border-r border-neutral-800">
+    <aside className="bg-[var(--background)] flex flex-col gap-2 items-center p-4 w-16 h-screen border-r border-[var(--surface-border)]">
       <div className="mb-2 size-10 flex items-center justify-center">
         <div className="size-7">
           <InterfacesLogoSquare />
@@ -349,7 +349,7 @@ function SectionTitle({
         <button
           type="button"
           onClick={onToggleCollapse}
-          className="flex items-center justify-center rounded-lg size-10 min-w-10 transition-all duration-500 hover:bg-neutral-800 text-neutral-400 hover:text-neutral-300"
+          className="flex items-center justify-center rounded-lg size-10 min-w-10 transition-all duration-500 hover:bg-[var(--surface-hover)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
           style={{ transitionTimingFunction: softSpringEasing }}
           aria-label="Expand sidebar"
         >
@@ -366,14 +366,14 @@ function SectionTitle({
       <div className="flex items-center justify-between">
         <div className="flex items-center h-10">
           <div className="px-2 py-1">
-            <div className="font-semibold text-[18px] text-neutral-50 leading-[27px]">{title}</div>
+            <div className="font-semibold text-[18px] text-[var(--foreground)] leading-[27px]">{title}</div>
           </div>
         </div>
         <div className="pr-1">
           <button
             type="button"
             onClick={onToggleCollapse}
-            className="flex items-center justify-center rounded-lg size-10 min-w-10 transition-all duration-500 hover:bg-neutral-800 text-neutral-400 hover:text-neutral-300"
+            className="flex items-center justify-center rounded-lg size-10 min-w-10 transition-all duration-500 hover:bg-[var(--surface-hover)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
             style={{ transitionTimingFunction: softSpringEasing }}
             aria-label="Collapse sidebar"
           >
@@ -389,7 +389,7 @@ function MenuItem({ item, isCollapsed, isActive }: { item: MenuItemT; isCollapse
   const content = (
     <div
       className={`rounded-lg cursor-pointer transition-all duration-500 flex items-center relative ${
-        isActive ? "bg-neutral-800" : "hover:bg-neutral-800"
+        isActive ? "bg-[var(--surface-hover)]" : "hover:bg-[var(--surface-hover)]"
       } ${isCollapsed ? "w-10 min-w-10 h-10 justify-center p-4" : "w-full h-10 px-4 py-2"}`}
       style={{ transitionTimingFunction: softSpringEasing }}
       title={isCollapsed ? item.label : undefined}
@@ -399,7 +399,7 @@ function MenuItem({ item, isCollapsed, isActive }: { item: MenuItemT; isCollapse
         className={`flex-1 relative transition-opacity duration-500 overflow-hidden ${isCollapsed ? "opacity-0 w-0" : "opacity-100 ml-3"}`}
         style={{ transitionTimingFunction: softSpringEasing }}
       >
-        <div className="text-[14px] text-neutral-50 leading-[20px] truncate">{item.label}</div>
+        <div className="text-[14px] text-[var(--foreground)] leading-[20px] truncate">{item.label}</div>
       </div>
     </div>
   );
@@ -436,7 +436,7 @@ function MenuSection({
         style={{ transitionTimingFunction: softSpringEasing }}
       >
         <div className="flex items-center h-10 px-4">
-          <div className="text-[14px] text-neutral-400">{section.title}</div>
+          <div className="text-[14px] text-[var(--text-muted)]">{section.title}</div>
         </div>
       </div>
 
@@ -456,7 +456,7 @@ function DetailSidebar({ activeSection, pathname }: { activeSection: SectionId; 
 
   return (
     <aside
-      className={`bg-black flex flex-col gap-4 items-start p-4 transition-all duration-500 h-screen border-r border-neutral-800 ${
+      className={`bg-[var(--background)] flex flex-col gap-4 items-start p-4 transition-all duration-500 h-screen border-r border-[var(--surface-border)] ${
         isCollapsed ? "w-16 min-w-16 !px-0 justify-center" : "w-72"
       }`}
       style={{ transitionTimingFunction: softSpringEasing }}
@@ -475,10 +475,10 @@ function DetailSidebar({ activeSection, pathname }: { activeSection: SectionId; 
       </div>
 
       {!isCollapsed && (
-        <div className="w-full mt-auto pt-2 border-t border-neutral-800">
+        <div className="w-full mt-auto pt-2 border-t border-[var(--surface-border)]">
           <div className="flex items-center gap-2 px-2 py-2">
             <AvatarCircle />
-            <div className="text-[14px] text-neutral-50">Owner / Admin</div>
+            <div className="text-[14px] text-[var(--foreground)]">Owner / Admin</div>
           </div>
         </div>
       )}

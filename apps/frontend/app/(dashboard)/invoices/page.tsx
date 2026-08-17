@@ -25,7 +25,7 @@ export default function InvoicesPage() {
   const columns = useMemo<ColumnDef<Invoice, unknown>[]>(() => [
     {
       accessorKey: "id", header: "Invoice #",
-      cell: ({ row }) => <Link href={`/invoices/${row.original.id}`} className="text-neutral-50 hover:underline">{row.original.id}</Link>,
+      cell: ({ row }) => <Link href={`/invoices/${row.original.id}`} className="text-[var(--foreground)] hover:underline">{row.original.id}</Link>,
     },
     { accessorKey: "customerName", header: "Customer" },
     { accessorKey: "invoiceDate", header: "Date" },
@@ -42,7 +42,7 @@ export default function InvoicesPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-neutral-50">Invoices</h1>
+        <h1 className="text-xl font-semibold text-[var(--foreground)]">Invoices</h1>
         <Link href="/invoices/new" className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200">
           + New Invoice
         </Link>
