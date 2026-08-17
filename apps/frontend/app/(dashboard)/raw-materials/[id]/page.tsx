@@ -47,7 +47,7 @@ function RecordPurchaseDialog({ open, onClose, materialId }: { open: boolean; on
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" onClick={() => { reset(); onClose(); }} className="rounded-lg px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]">Cancel</button>
           <button type="submit" disabled={isSubmitting}
-            className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200 disabled:opacity-50">
+            className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:bg-neutral-200 disabled:opacity-50">
             {isSubmitting ? "Saving..." : "Save"}
           </button>
         </div>
@@ -117,7 +117,7 @@ export default function RawMaterialDetailPage({ params }: { params: Promise<{ id
 
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-[var(--foreground)]">Purchase History</h2>
-        <button onClick={() => setDialogOpen(true)} className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200">
+        <button onClick={() => setDialogOpen(true)} className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
           + Record Purchase
         </button>
       </div>

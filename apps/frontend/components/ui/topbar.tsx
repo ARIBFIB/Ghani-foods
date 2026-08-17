@@ -114,7 +114,7 @@ export function Topbar() {
   return (
     <div className="flex items-center justify-end gap-3 border-b border-[var(--surface-border)] bg-[var(--background)] px-6 py-3 sticky top-0 z-30">
       <Link href="/invoices/new"
-        className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200">
+        className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
         + New Invoice
       </Link>
       <AnimatedThemeToggler />

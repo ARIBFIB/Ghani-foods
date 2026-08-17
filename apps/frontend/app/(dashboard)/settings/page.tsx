@@ -83,7 +83,7 @@ export default function SettingsPage() {
       <button
         type="submit"
         disabled={isSubmitting || !isDirty}
-        className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200 disabled:opacity-50"
+        className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:bg-neutral-200 disabled:opacity-50"
       >
         {isSubmitting ? "Saving..." : "Save Settings"}
       </button>

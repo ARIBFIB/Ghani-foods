@@ -69,7 +69,7 @@ function AddRawMaterialDialog({ open, onClose }: { open: boolean; onClose: () =>
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]">Cancel</button>
-          <button onClick={handleSave} className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200">Save</button>
+          <button onClick={handleSave} className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">Save</button>
         </div>
       </div>
     </div>
@@ -124,7 +124,7 @@ export default function DashboardPage() {
         <button onClick={() => router.push("/batches/new")} className="rounded-lg border border-neutral-400 dark:border-neutral-600 px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)] transition-colors">
           + New Batch
         </button>
-        <button onClick={() => router.push("/invoices/new")} className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200">
+        <button onClick={() => router.push("/invoices/new")} className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
           + New Invoice
         </button>
       </div>

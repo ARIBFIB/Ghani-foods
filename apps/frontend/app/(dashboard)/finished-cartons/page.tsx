@@ -119,9 +119,9 @@ function NewPackingRunDialog({ open, onClose }: { open: boolean; onClose: () => 
             {step === 1 ? "Cancel" : "Back"}
           </button>
           {step < 3 ? (
-            <button onClick={() => setStep(step + 1)} className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200">Next</button>
+            <button onClick={() => setStep(step + 1)} className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">Next</button>
           ) : (
-            <button onClick={handleConfirm} className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200">Confirm Packing</button>
+            <button onClick={handleConfirm} className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">Confirm Packing</button>
           )}
         </div>
       </div>
@@ -141,7 +141,7 @@ export default function FinishedCartonsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-[var(--foreground)]">Finished Cartons</h1>
-        <button onClick={() => setDialogOpen(true)} className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200">
+        <button onClick={() => setDialogOpen(true)} className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
           + New Packing Run
         </button>
       </div>
