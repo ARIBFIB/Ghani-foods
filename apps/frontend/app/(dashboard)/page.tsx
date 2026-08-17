@@ -1,49 +1,24 @@
-// app/(dashboard)/page.tsx
-import { Card, Col, Row, Statistic, Table, Tag } from "antd";
-import { dashboardKpis } from "@/lib/mock-data/kpis";
-import { invoices } from "@/lib/mock-data/invoices";
+import { kpis } from "@/lib/mock-data/kpis";
+
+function KpiCard({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+      <div className="text-neutral-400 text-sm">{label}</div>
+      <div className="text-2xl font-semibold text-neutral-50 mt-1">{value}</div>
+    </div>
+  );
+}
 
 export default function DashboardPage() {
-  const recent = invoices.slice(0, 5);
-
   return (
-    <div style={{ padding: 24 }}>
-      <Row gutter={16}>
-        <Col span={6}>
-          <Card><Statistic title="Raw Material Value" value={dashboardKpis.totalRawMaterialValue} prefix="Rs." /></Card>
-        </Col>
-        <Col span={6}>
-          <Card><Statistic title="Batches This Month" value={dashboardKpis.batchesThisMonth} /></Card>
-        </Col>
-        <Col span={6}>
-          <Card><Statistic title="Finished Cartons Ready" value={dashboardKpis.finishedCartonsReady} /></Card>
-        </Col>
-        <Col span={6}>
-          <Card><Statistic title="Total Receivables" value={dashboardKpis.totalReceivables} prefix="Rs." /></Card>
-        </Col>
-      </Row>
-
-      <Card title="Recent Invoices" style={{ marginTop: 24 }}>
-        <Table
-          rowKey="id"
-          dataSource={recent}
-          pagination={false}
-          columns={[
-            { title: "Invoice #", dataIndex: "id" },
-            { title: "Customer", dataIndex: "customerName" },
-            { title: "Date", dataIndex: "invoiceDate" },
-            { title: "Total", dataIndex: "totalAmount", render: (v: number) => `Rs. ${v.toLocaleString()}` },
-            {
-              title: "Status",
-              dataIndex: "status",
-              render: (s: string) => {
-                const color = s === "paid" ? "green" : s === "partial" ? "orange" : "red";
-                return <Tag color={color}>{s.toUpperCase()}</Tag>;
-              },
-            },
-          ]}
-        />
-      </Card>
+    <div className="space-y-6">
+      <h1 className="text-xl font-semibold">Dashboard</h1>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard label="Total Raw Material Value" value={`Rs. ${kpis.totalRawMaterialValue.toLocaleString()}`} />
+        <KpiCard label="Batches This Month" value={kpis.batchesThisMonth} />
+        <KpiCard label="Finished Cartons Ready" value={kpis.finishedCartonsReady} />
+        <KpiCard label="Total Receivables" value={`Rs. ${kpis.totalReceivables.toLocaleString()}`} />
+      </div>
     </div>
   );
 }
