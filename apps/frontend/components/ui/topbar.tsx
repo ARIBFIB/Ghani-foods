@@ -3,11 +3,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Notification, User as UserIcon, ChevronDown as ChevronDownIcon } from "@carbon/icons-react";
+import {
+  Notification,
+  User as UserIcon,
+  ChevronDown as ChevronDownIcon,
+  Menu as MenuIcon,
+} from "@carbon/icons-react";
 import { useStore } from "@/lib/store";
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
 import { useSidebar } from "@/lib/sidebar-context";
-import { Menu as MenuIcon } from "@carbon/icons-react";
 
 function NotificationBell() {
   const [open, setOpen] = useState(false);
@@ -41,13 +45,13 @@ function NotificationBell() {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 z-50 mt-2 w-72 rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] shadow-lg overflow-hidden">
+          <div className="absolute right-0 z-50 mt-2 w-72 max-w-[85vw] rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] shadow-lg overflow-hidden">
             <div className="px-4 py-3 border-b border-[var(--surface-border)] text-sm font-medium text-[var(--foreground)]">
               Low Stock Alerts
             </div>
             <div className="max-h-72 overflow-y-auto">
               {alerts.length === 0 && (
-                <div className="px-4 py-6 text-center text-sm text-[var(--foreground)]0">All stock levels are healthy.</div>
+                <div className="px-4 py-6 text-center text-sm text-[var(--text-faint)]">All stock levels are healthy.</div>
               )}
               {alerts.map((a) => (
                 <Link
@@ -57,7 +61,7 @@ function NotificationBell() {
                   className="flex items-center justify-between px-4 py-2.5 hover:bg-[var(--surface-hover)] border-b border-[var(--surface-border)] last:border-0"
                 >
                   <span className="text-sm text-[var(--foreground)]">{a.name}</span>
-                  <span className="text-xs text-red-400">{a.qty} / {a.threshold}</span>
+                  <span className="text-xs text-red-500">{a.qty} / {a.threshold}</span>
                 </Link>
               ))}
             </div>
@@ -85,10 +89,10 @@ function UserMenu() {
         className="flex items-center gap-1.5 rounded-lg px-1.5 py-1 hover:bg-[var(--surface-hover)]"
         aria-label="User menu"
       >
-        <div className="flex items-center justify-center size-8 rounded-full bg-[var(--surface-hover)] border border-[var(--surface-border-strong)]">
-          <UserIcon size={16} className="text-[var(--foreground)]" />
+        <div className="flex items-center justify-center size-8 rounded-full bg-[var(--surface-hover)] border border-[var(--surface-border)]">
+          <UserIcon size={16} className="text-[var(--text-secondary)]" />
         </div>
-        <ChevronDownIcon size={14} className="text-[var(--text-muted)]" />
+        <ChevronDownIcon size={14} className="text-[var(--text-muted)] hidden sm:block" />
       </button>
 
       {open && (
@@ -100,7 +104,7 @@ function UserMenu() {
               Settings
             </Link>
             <button onClick={handleLogout}
-              className="w-full text-left px-4 py-2.5 text-sm text-red-400 hover:bg-[var(--surface-hover)]">
+              className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-[var(--surface-hover)]">
               Log out
             </button>
           </div>
@@ -111,15 +115,29 @@ function UserMenu() {
 }
 
 export function Topbar() {
+  const { toggle } = useSidebar();
+
   return (
-    <div className="flex items-center justify-end gap-3 border-b border-[var(--surface-border)] bg-[var(--background)] px-6 py-3 sticky top-0 z-30">
-      <Link href="/invoices/new"
-        className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
-        + New Invoice
-      </Link>
-      <AnimatedThemeToggler />
-      <NotificationBell />
-      <UserMenu />
+    <div className="flex items-center gap-2 sm:gap-3 border-b border-[var(--surface-border)] bg-[var(--background)] px-3 sm:px-6 py-3 sticky top-0 z-30">
+      <button
+        type="button"
+        onClick={toggle}
+        aria-label="Open menu"
+        className="lg:hidden flex items-center justify-center size-9 rounded-lg hover:bg-[var(--surface-hover)] text-[var(--foreground)] shrink-0 border border-[var(--surface-border)]"
+      >
+        <MenuIcon size={20} />
+      </button>
+
+      <div className="flex items-center gap-2 sm:gap-3 ml-auto">
+        <Link href="/invoices/new"
+          className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity whitespace-nowrap">
+          <span className="hidden sm:inline">+ New Invoice</span>
+          <span className="sm:hidden">+ Invoice</span>
+        </Link>
+        <AnimatedThemeToggler />
+        <NotificationBell />
+        <UserMenu />
+      </div>
     </div>
   );
 }
