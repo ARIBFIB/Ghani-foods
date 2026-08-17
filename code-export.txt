@@ -1,6 +1,6 @@
 ﻿==================================================
 GhaniFoods - Full Code Export
-Generated: 2026-08-17 22:35:14
+Generated: 2026-08-17 23:00:30
 Total Files: 31
 ==================================================
 
@@ -102,551 +102,115 @@ Write-Host "Output: $OutputFile" -ForegroundColor Green
 Write-Host "Total files exported: $count" -ForegroundColor Green
 
 ==================================================
-FILE: fix-frontend-package.ps1
+FILE: fix-build-issue.ps1
 ==================================================
 
-# fix-frontend-package.ps1
+# fix-code-errors.ps1
 # Run from: D:\Rozmarrah-CUST\Saim Ashraf\Nimko\Working\Code\GhaniFoods
-# Usage: .\fix-frontend-package.ps1
+#   cd "D:\Rozmarrah-CUST\Saim Ashraf\Nimko\Working\Code\GhaniFoods"
+#   .\fix-code-errors.ps1
 
 $ErrorActionPreference = "Stop"
 $Root = Get-Location
-$frontendDir = Join-Path $Root "apps\frontend"
-$pkgPath = Join-Path $frontendDir "package.json"
+$FrontendDir = Join-Path $Root "apps\frontend"
 
-Write-Host "=== Fixing apps/frontend/package.json ===" -ForegroundColor Cyan
+$SidebarFile = Join-Path $FrontendDir "components\ui\sidebar-component.tsx"
+$PageFile    = Join-Path $FrontendDir "app\(dashboard)\page.tsx"
 
-if (-not (Test-Path $frontendDir)) {
-    Write-Host "ERROR: apps\frontend not found. Run this from the GhaniFoods root folder." -ForegroundColor Red
+Write-Host "=== Fixing code errors ===" -ForegroundColor Cyan
+
+# ---------------------------------------------------------------------
+# 1. Fix "Grain" -> "Gradient" in sidebar-component.tsx
+#    (@carbon/icons-react has no "Grain" export, only "Gradient")
+# ---------------------------------------------------------------------
+Write-Host ""
+Write-Host "[1/2] Fixing sidebar-component.tsx (Grain -> Gradient)..." -ForegroundColor Yellow
+
+if (Test-Path $SidebarFile) {
+    $sidebarContent = Get-Content $SidebarFile -Raw
+    if ($sidebarContent -match '\bGrain\b') {
+        $newSidebarContent = $sidebarContent -replace '\bGrain\b', 'Gradient'
+        $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+        [System.IO.File]::WriteAllText($SidebarFile, $newSidebarContent, $utf8NoBom)
+        Write-Host "  Replaced all 'Grain' with 'Gradient'." -ForegroundColor Green
+    } else {
+        Write-Host "  No 'Grain' references found (already fixed?)." -ForegroundColor Gray
+    }
+} else {
+    Write-Host "  File not found: $SidebarFile" -ForegroundColor Red
+}
+
+# ---------------------------------------------------------------------
+# 2. Fix kpis import mismatch in app/(dashboard)/page.tsx
+#    kpis.ts exports "dashboardKpis", not "kpis"
+# ---------------------------------------------------------------------
+Write-Host ""
+Write-Host "[2/2] Fixing page.tsx kpis import (dashboardKpis as kpis)..." -ForegroundColor Yellow
+
+if (Test-Path $PageFile) {
+    $pageContent = Get-Content $PageFile -Raw
+    $oldImport = 'import { kpis } from "@/lib/mock-data/kpis";'
+    $newImport = 'import { dashboardKpis as kpis } from "@/lib/mock-data/kpis";'
+
+    if ($pageContent -match [regex]::Escape($oldImport)) {
+        $newPageContent = $pageContent -replace [regex]::Escape($oldImport), $newImport
+        $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+        [System.IO.File]::WriteAllText($PageFile, $newPageContent, $utf8NoBom)
+        Write-Host "  Import line fixed." -ForegroundColor Green
+    } else {
+        Write-Host "  Exact import line not found - checking loosely..." -ForegroundColor Yellow
+        if ($pageContent -match 'import\s*\{\s*kpis\s*\}\s*from\s*"@/lib/mock-data/kpis";') {
+            $newPageContent = $pageContent -replace 'import\s*\{\s*kpis\s*\}\s*from\s*"@/lib/mock-data/kpis";', $newImport
+            $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+            [System.IO.File]::WriteAllText($PageFile, $newPageContent, $utf8NoBom)
+            Write-Host "  Import line fixed (loose match)." -ForegroundColor Green
+        } else {
+            Write-Host "  Could not find the kpis import line automatically. Please fix manually:" -ForegroundColor Red
+            Write-Host "  Change:  import { kpis } from `"@/lib/mock-data/kpis`";" -ForegroundColor Gray
+            Write-Host "  To:      import { dashboardKpis as kpis } from `"@/lib/mock-data/kpis`";" -ForegroundColor Gray
+        }
+    }
+} else {
+    Write-Host "  File not found: $PageFile" -ForegroundColor Red
+}
+
+# ---------------------------------------------------------------------
+# 3. Rebuild locally to confirm
+# ---------------------------------------------------------------------
+Write-Host ""
+Write-Host "Running local build to confirm fixes..." -ForegroundColor Yellow
+Push-Location $FrontendDir
+npm run build
+$buildExitCode = $LASTEXITCODE
+Pop-Location
+
+if ($buildExitCode -ne 0) {
+    Write-Host ""
+    Write-Host "Build STILL failing (exit code $buildExitCode). See errors above - there may be more mismatches to fix." -ForegroundColor Red
     exit 1
 }
 
-# New correct package.json content (Next.js + React + all existing deps)
-$newPkg = @'
-{
-  "name": "ghanifoods-frontend",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
-    "start": "next start",
-    "lint": "next lint"
-  },
-  "dependencies": {
-    "next": "^15.4.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "@ant-design/icons": "^6.3.2",
-    "@ant-design/nextjs-registry": "^1.3.0",
-    "@hookform/resolvers": "^5.9.1",
-    "@tanstack/react-query": "^5.101.4",
-    "@tanstack/react-table": "^9.1.2",
-    "antd": "^6.6.1",
-    "dayjs": "^1.11.23",
-    "react-hook-form": "^7.85.0",
-    "recharts": "^3.10.1",
-    "zod": "^4.4.3"
-  },
-  "devDependencies": {
-    "typescript": "^5.6.3",
-    "@types/node": "^22.7.5",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
-    "eslint": "^9.15.0",
-    "eslint-config-next": "^15.4.0"
-  }
-}
-'@
-
-# Write file as UTF-8 WITHOUT BOM
-$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-[System.IO.File]::WriteAllText($pkgPath, $newPkg, $utf8NoBom)
-Write-Host "  package.json rewritten (UTF-8, no BOM)." -ForegroundColor Green
-
-# Remove stale node_modules / lockfile inside apps/frontend so install is clean
-$frontendNodeModules = Join-Path $frontendDir "node_modules"
-$frontendLock = Join-Path $frontendDir "package-lock.json"
-
-if (Test-Path $frontendNodeModules) {
-    Write-Host "  Removing apps\frontend\node_modules ..." -ForegroundColor Yellow
-    Remove-Item -Path $frontendNodeModules -Recurse -Force
-}
-if (Test-Path $frontendLock) {
-    Write-Host "  Removing apps\frontend\package-lock.json ..." -ForegroundColor Yellow
-    Remove-Item -Path $frontendLock -Force
-}
-
-# Reinstall dependencies for the frontend workspace
-Write-Host "`n=== Installing frontend dependencies ===" -ForegroundColor Cyan
-Push-Location $frontendDir
-npm install
-Pop-Location
-
-
-
-
-Write-Host "`n=== Done ===" -ForegroundColor Cyan
-Write-Host "Next steps:" -ForegroundColor White
-Write-Host "  1. Test locally:  cd apps\frontend && npm run build" -ForegroundColor Gray
-Write-Host "  2. If build succeeds, commit and push:" -ForegroundColor Gray
-Write-Host "       git add apps/frontend/package.json apps/frontend/package-lock.json" -ForegroundColor Gray
-Write-Host "       git commit -m `"fix: add missing next/react deps, remove BOM from package.json`"" -ForegroundColor Gray
-Write-Host "       git push" -ForegroundColor Gray
-
-==================================================
-FILE: monorepo-setup.ps1
-==================================================
-
-# monorepo-setup.ps1
-# Run from: D:\Rozmarrah-CUST\Saim Ashraf\Nimko\Working\Code\GhaniFoods
-# Usage: .\monorepo-setup.ps1
-
-$ErrorActionPreference = "Stop"
-$Root = $PSScriptRoot
-
-function Write-FileB64 {
-    param([string]$RelativePath, [string]$Content)
-    $full = Join-Path $Root $RelativePath
-    $dir = Split-Path $full -Parent
-    if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
-    $bytes = [System.Text.Encoding]::UTF8.GetBytes($Content)
-    [System.IO.File]::WriteAllBytes($full, $bytes)
-    Write-Host "  + $RelativePath" -ForegroundColor DarkGray
-}
-
-Write-Host "=== GhaniFoods Monorepo Setup ===" -ForegroundColor Cyan
-
-# ---------------------------------------------------------------------
-# 1. Create apps/frontend and apps/backend
-# ---------------------------------------------------------------------
-Write-Host "`n[1/6] Creating apps/frontend and apps/backend folders..." -ForegroundColor Yellow
-$frontendDir = Join-Path $Root "apps\frontend"
-$backendDir  = Join-Path $Root "apps\backend"
-New-Item -ItemType Directory -Path $frontendDir -Force | Out-Null
-New-Item -ItemType Directory -Path $backendDir -Force | Out-Null
-Write-Host "  Done." -ForegroundColor Green
-
-# ---------------------------------------------------------------------
-# 2. Move existing frontend files/folders into apps/frontend
-# ---------------------------------------------------------------------
-Write-Host "`n[2/6] Moving existing frontend code into apps/frontend..." -ForegroundColor Yellow
-
-$ExcludeFromMove = @(
-    "apps",
-    ".git",
-    "node_modules",
-    "export-code.ps1",
-    "setup-ghanifoods-frontend.ps1",
-    "monorepo-setup.ps1",
-    "code-export.txt"
-)
-
-Get-ChildItem -Path $Root -Force | Where-Object {
-    $ExcludeFromMove -notcontains $_.Name
-} | ForEach-Object {
-    Write-Host "  moving $($_.Name) -> apps\frontend\$($_.Name)" -ForegroundColor DarkGray
-    Move-Item -Path $_.FullName -Destination (Join-Path $frontendDir $_.Name) -Force
-}
-
-$staleModules = Join-Path $Root "node_modules"
-if (Test-Path $staleModules) {
-    Write-Host "  removing stale root node_modules..." -ForegroundColor DarkGray
-    Remove-Item -Path $staleModules -Recurse -Force
-}
-Write-Host "  Frontend moved." -ForegroundColor Green
-
-# ---------------------------------------------------------------------
-# 3. Ensure apps/frontend/package.json has proper scripts + name
-# ---------------------------------------------------------------------
-Write-Host "`n[3/6] Patching apps/frontend/package.json (scripts)..." -ForegroundColor Yellow
-
-$frontendPkgPath = Join-Path $frontendDir "package.json"
-if (Test-Path $frontendPkgPath) {
-    $pkg = Get-Content $frontendPkgPath -Raw | ConvertFrom-Json
-
-    if (-not $pkg.name) { $pkg | Add-Member -NotePropertyName name -NotePropertyValue "ghanifoods-frontend" -Force }
-    else { $pkg.name = "ghanifoods-frontend" }
-
-    if (-not $pkg.private) { $pkg | Add-Member -NotePropertyName private -NotePropertyValue $true -Force }
-
-    if (-not $pkg.scripts) {
-        $pkg | Add-Member -NotePropertyName scripts -NotePropertyValue ([PSCustomObject]@{}) -Force
-    }
-    if (-not $pkg.scripts.dev)   { $pkg.scripts | Add-Member -NotePropertyName dev   -NotePropertyValue "next dev --turbopack" -Force }
-    if (-not $pkg.scripts.build) { $pkg.scripts | Add-Member -NotePropertyName build -NotePropertyValue "next build --turbopack" -Force }
-    if (-not $pkg.scripts.start) { $pkg.scripts | Add-Member -NotePropertyName start -NotePropertyValue "next start" -Force }
-    if (-not $pkg.scripts.lint)  { $pkg.scripts | Add-Member -NotePropertyName lint  -NotePropertyValue "next lint" -Force }
-
-    $pkg | ConvertTo-Json -Depth 20 | Set-Content -Path $frontendPkgPath -Encoding UTF8
-    Write-Host "  Patched." -ForegroundColor Green
-} else {
-    Write-Host "  WARNING: apps/frontend/package.json not found - skipping patch." -ForegroundColor Red
-}
-
-# ---------------------------------------------------------------------
-# 4. Scaffold backend (Express + TypeScript, mock data, CORS enabled)
-# ---------------------------------------------------------------------
-Write-Host "`n[4/6] Scaffolding apps/backend..." -ForegroundColor Yellow
-
-$backendPkg = @'
-{
-  "name": "ghanifoods-backend",
-  "version": "0.1.0",
-  "private": true,
-  "main": "dist/index.js",
-  "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "build": "tsc -p tsconfig.json",
-    "start": "node dist/index.js"
-  },
-  "dependencies": {
-    "cors": "^2.8.5",
-    "express": "^4.19.2"
-  },
-  "devDependencies": {
-    "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
-    "@types/node": "^22.7.5",
-    "tsx": "^4.19.2",
-    "typescript": "^5.6.3"
-  }
-}
-'@
-Write-FileB64 "apps\backend\package.json" $backendPkg
-
-$backendTsconfig = @'
-{
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "CommonJS",
-    "moduleResolution": "Node",
-    "lib": ["ES2022"],
-    "outDir": "dist",
-    "rootDir": "src",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true
-  },
-  "include": ["src"]
-}
-'@
-Write-FileB64 "apps\backend\tsconfig.json" $backendTsconfig
-
-$backendGitignore = @'
-node_modules
-dist
-.env
-'@
-Write-FileB64 "apps\backend\.gitignore" $backendGitignore
-
-$backendEnvExample = @'
-PORT=4000
-FRONTEND_ORIGIN=http://localhost:3000
-'@
-Write-FileB64 "apps\backend\.env.example" $backendEnvExample
-
-$backendData = @'
-// src/data.ts
-// In-memory mock data for local/dev use - mirrors apps/frontend/lib/mock-data/*
-// Replace with real DB (Prisma/Postgres etc.) later without changing route shapes.
-
-export type RawMaterial = {
-  id: string; name: string; unit: string;
-  quantityInStock: number; avgUnitCost: number; lowStockThreshold: number;
-};
-export let rawMaterials: RawMaterial[] = [
-  { id: "rm-1", name: "Atta (Flour)", unit: "kg", quantityInStock: 420, avgUnitCost: 145.5, lowStockThreshold: 100 },
-  { id: "rm-2", name: "Ghee", unit: "kg", quantityInStock: 65, avgUnitCost: 780, lowStockThreshold: 80 },
-  { id: "rm-3", name: "Salt", unit: "kg", quantityInStock: 210, avgUnitCost: 28, lowStockThreshold: 50 },
-  { id: "rm-4", name: "Spice Mix", unit: "kg", quantityInStock: 34, avgUnitCost: 620, lowStockThreshold: 40 },
-];
-
-export type PackagingMaterial = {
-  id: string; name: string; unitCost: number; stockQty: number; lowStockThreshold: number;
-};
-export let packagingMaterials: PackagingMaterial[] = [
-  { id: "pm-1", name: "Carton Box (Large)", unitCost: 45, stockQty: 320, lowStockThreshold: 100 },
-  { id: "pm-2", name: "Shopper Bag", unitCost: 3.5, stockQty: 2400, lowStockThreshold: 500 },
-  { id: "pm-3", name: "Dabbe (Tin)", unitCost: 22, stockQty: 150, lowStockThreshold: 60 },
-];
-
-export type ProductionBatch = {
-  id: string; batchDate: string; outputYieldKg: number; wastageKg: number;
-  leftoverQtyKg: number; bulkCostPerKg: number; status: "in_progress" | "completed";
-};
-export let productionBatches: ProductionBatch[] = [
-  { id: "batch-1", batchDate: "2026-08-10", outputYieldKg: 500, wastageKg: 8, leftoverQtyKg: 40, bulkCostPerKg: 210.75, status: "completed" },
-  { id: "batch-2", batchDate: "2026-08-13", outputYieldKg: 480, wastageKg: 5, leftoverQtyKg: 480, bulkCostPerKg: 205.3, status: "completed" },
-  { id: "batch-3", batchDate: "2026-08-16", outputYieldKg: 300, wastageKg: 0, leftoverQtyKg: 0, bulkCostPerKg: 0, status: "in_progress" },
-];
-
-export type FinishedCarton = {
-  id: string; name: string; sourceBatchId: string;
-  packetsPerCarton: number; costPerCarton: number; stockQty: number;
-};
-export let finishedCartons: FinishedCarton[] = [
-  { id: "fc-1", name: "Nimko Carton - 24pk", sourceBatchId: "batch-1", packetsPerCarton: 24, costPerCarton: 610, stockQty: 85 },
-  { id: "fc-2", name: "Nimko Carton - 48pk", sourceBatchId: "batch-2", packetsPerCarton: 48, costPerCarton: 1150, stockQty: 42 },
-];
-
-export type Customer = { id: string; name: string; phone: string; currentBalance: number; };
-export let customers: Customer[] = [
-  { id: "cust-1", name: "Al-Madina General Store", phone: "0300-1234567", currentBalance: 12500 },
-  { id: "cust-2", name: "Bilal Traders", phone: "0333-9988776", currentBalance: -2000 },
-  { id: "cust-3", name: "Rehman Wholesale", phone: "0345-1122334", currentBalance: 0 },
-];
-
-export type Invoice = {
-  id: string; customerId: string; customerName: string;
-  invoiceDate: string; totalAmount: number; status: "unpaid" | "partial" | "paid";
-};
-export let invoices: Invoice[] = [
-  { id: "inv-1001", customerId: "cust-1", customerName: "Al-Madina General Store", invoiceDate: "2026-08-15", totalAmount: 18300, status: "partial" },
-  { id: "inv-1002", customerId: "cust-2", customerName: "Bilal Traders", invoiceDate: "2026-08-14", totalAmount: 9200, status: "paid" },
-  { id: "inv-1003", customerId: "cust-3", customerName: "Rehman Wholesale", invoiceDate: "2026-08-12", totalAmount: 4600, status: "unpaid" },
-];
-
-export type Payment = {
-  id: string; customerId: string; customerName: string;
-  amount: number; note: string; paidAt: string;
-};
-export let payments: Payment[] = [
-  { id: "pay-1", customerId: "cust-2", customerName: "Bilal Traders", amount: 9200, note: "Full settlement inv-1002", paidAt: "2026-08-15" },
-  { id: "pay-2", customerId: "cust-1", customerName: "Al-Madina General Store", amount: 5800, note: "Partial payment", paidAt: "2026-08-16" },
-];
-
-export type CustomerItemPrice = { customerId: string; itemId: string; lastSoldPrice: number; };
-export let customerItemPrices: CustomerItemPrice[] = [
-  { customerId: "cust-1", itemId: "fc-1", lastSoldPrice: 640 },
-  { customerId: "cust-2", itemId: "fc-2", lastSoldPrice: 1180 },
-];
-
-export const dashboardKpis = {
-  totalRawMaterialValue: 128450,
-  batchesThisMonth: 6,
-  finishedCartonsReady: 127,
-  totalReceivables: 15900,
-};
-
-export let settings = {
-  businessName: "GhaniFoods",
-  address: "Mansehra, Khyber Pakhtunkhwa, Pakistan",
-  invoiceFooterText: "Thank you for your business!",
-  defaultProfitMarginPercent: 20,
-  lowStockThresholdDefault: 50,
-};
-'@
-Write-FileB64 "apps\backend\src\data.ts" $backendData
-
-$backendIndex = @'
-// src/index.ts
-import express from "express";
-import cors from "cors";
-import * as data from "./data";
-
-const app = express();
-const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
-const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || "http://localhost:3000";
-
-app.use(cors({ origin: FRONTEND_ORIGIN }));
-app.use(express.json());
-
-app.use((req, _res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
-  next();
-});
-
-app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
-
-app.get("/api/kpis", (_req, res) => res.json(data.dashboardKpis));
-
-app.get("/api/raw-materials", (_req, res) => res.json(data.rawMaterials));
-app.post("/api/raw-materials", (req, res) => {
-  const item = { id: `rm-${data.rawMaterials.length + 1}`, ...req.body };
-  data.rawMaterials.push(item);
-  res.status(201).json(item);
-});
-app.get("/api/raw-materials/:id", (req, res) => {
-  const item = data.rawMaterials.find((m) => m.id === req.params.id);
-  if (!item) return res.status(404).json({ error: "Not found" });
-  res.json(item);
-});
-app.post("/api/raw-materials/:id/receipts", (req, res) => {
-  res.status(201).json({ received: true, rawMaterialId: req.params.id, ...req.body });
-});
-
-app.get("/api/packaging-materials", (_req, res) => res.json(data.packagingMaterials));
-app.post("/api/packaging-materials/:id/restock", (req, res) => {
-  res.status(201).json({ restocked: true, materialId: req.params.id, ...req.body });
-});
-
-app.get("/api/batches", (_req, res) => res.json(data.productionBatches));
-app.get("/api/batches/:id", (req, res) => {
-  const item = data.productionBatches.find((b) => b.id === req.params.id);
-  if (!item) return res.status(404).json({ error: "Not found" });
-  res.json(item);
-});
-app.post("/api/batches", (req, res) => {
-  const item = { id: `batch-${data.productionBatches.length + 1}`, status: "in_progress", ...req.body };
-  data.productionBatches.push(item);
-  res.status(201).json(item);
-});
-app.post("/api/batches/:id/overhead", (req, res) => {
-  res.status(200).json({ allocated: true, batchId: req.params.id, ...req.body });
-});
-
-app.get("/api/finished-cartons", (_req, res) => res.json(data.finishedCartons));
-app.post("/api/finished-cartons/packing-run", (req, res) => {
-  res.status(201).json({ packed: true, ...req.body });
-});
-
-app.get("/api/customers", (_req, res) => res.json(data.customers));
-app.post("/api/customers", (req, res) => {
-  const item = { id: `cust-${data.customers.length + 1}`, currentBalance: 0, ...req.body };
-  data.customers.push(item);
-  res.status(201).json(item);
-});
-app.get("/api/customers/:id", (req, res) => {
-  const item = data.customers.find((c) => c.id === req.params.id);
-  if (!item) return res.status(404).json({ error: "Not found" });
-  res.json(item);
-});
-app.get("/api/customers/:id/item-prices", (req, res) => {
-  const rows = data.customerItemPrices.filter((p) => p.customerId === req.params.id);
-  res.json(rows);
-});
-
-app.get("/api/invoices", (_req, res) => res.json(data.invoices));
-app.get("/api/invoices/:id", (req, res) => {
-  const item = data.invoices.find((i) => i.id === req.params.id);
-  if (!item) return res.status(404).json({ error: "Not found" });
-  res.json(item);
-});
-app.post("/api/invoices", (req, res) => {
-  const item = { id: `inv-${1000 + data.invoices.length + 1}`, status: "unpaid", ...req.body };
-  data.invoices.push(item);
-  res.status(201).json(item);
-});
-app.get("/api/invoices/:id/pdf", (req, res) => {
-  res.status(200).json({ message: "PDF generation not implemented yet", invoiceId: req.params.id });
-});
-
-app.get("/api/payments", (_req, res) => res.json(data.payments));
-app.post("/api/payments", (req, res) => {
-  const item = { id: `pay-${data.payments.length + 1}`, ...req.body };
-  data.payments.push(item);
-  res.status(201).json(item);
-});
-
-app.get("/api/reports/inventory", (_req, res) => {
-  res.json({ rawMaterials: data.rawMaterials, packagingMaterials: data.packagingMaterials });
-});
-app.get("/api/reports/pnl", (_req, res) => {
-  res.json({ batches: data.productionBatches, invoices: data.invoices });
-});
-
-app.get("/api/settings", (_req, res) => res.json(data.settings));
-app.patch("/api/settings", (req, res) => {
-  data.settings = { ...data.settings, ...req.body };
-  res.json(data.settings);
-});
-
-app.listen(PORT, () => {
-  console.log(`GhaniFoods backend running at http://localhost:${PORT}`);
-});
-'@
-Write-FileB64 "apps\backend\src\index.ts" $backendIndex
-
-Write-Host "  Backend scaffolded." -ForegroundColor Green
-
-# ---------------------------------------------------------------------
-# 5. Root package.json (npm workspaces + concurrently)
-# ---------------------------------------------------------------------
-Write-Host "`n[5/6] Writing root package.json and README..." -ForegroundColor Yellow
-
-$rootPkg = @'
-{
-  "name": "ghanifoods-monorepo",
-  "version": "0.1.0",
-  "private": true,
-  "workspaces": [
-    "apps/*"
-  ],
-  "scripts": {
-    "dev": "concurrently -k -n BACKEND,FRONTEND -c blue,green \"npm run dev --workspace=apps/backend\" \"npm run dev --workspace=apps/frontend\"",
-    "dev:frontend": "npm run dev --workspace=apps/frontend",
-    "dev:backend": "npm run dev --workspace=apps/backend",
-    "build": "npm run build --workspace=apps/backend && npm run build --workspace=apps/frontend",
-    "build:frontend": "npm run build --workspace=apps/frontend",
-    "build:backend": "npm run build --workspace=apps/backend",
-    "start:backend": "npm run start --workspace=apps/backend",
-    "start:frontend": "npm run start --workspace=apps/frontend"
-  },
-  "devDependencies": {
-    "concurrently": "^9.0.1"
-  }
-}
-'@
-Write-FileB64 "package.json" $rootPkg
-
-$rootGitignore = @'
-node_modules
-.next
-dist
-.env
-*.log
-'@
-Write-FileB64 ".gitignore" $rootGitignore
-
-$readmeLines = @(
-    "# GhaniFoods Monorepo",
-    "",
-    "apps/frontend = Next.js 15 (App Router) + Ant Design, currently running on mock data.",
-    "apps/backend  = Express + TypeScript API, currently serving mock/in-memory data.",
-    "",
-    "## Run both together",
-    "  npm install",
-    "  npm run dev",
-    "",
-    "Frontend: http://localhost:3000",
-    "Backend:  http://localhost:4000",
-    "",
-    "## Run separately",
-    "  npm run dev:frontend   (just Next.js)",
-    "  npm run dev:backend    (just Express API)",
-    "",
-    "## Build",
-    "  npm run build"
-)
-$rootReadme = $readmeLines -join "`r`n"
-Write-FileB64 "README.md" $rootReadme
-
-Write-Host "  Root workspace files written." -ForegroundColor Green
-
-# ---------------------------------------------------------------------
-# 6. Install everything from root
-# ---------------------------------------------------------------------
-Write-Host "`n[6/6] Installing dependencies (root + workspaces)..." -ForegroundColor Yellow
-Push-Location $Root
-npm install
-Pop-Location
-Write-Host "  Installed." -ForegroundColor Green
-
-Write-Host "`n=== Monorepo setup complete ===" -ForegroundColor Cyan
-Write-Host "Structure:" -ForegroundColor White
-Write-Host "  GhaniFoods\"
-Write-Host "  |-- apps\frontend  (Next.js, moved as-is)"
-Write-Host "  |-- apps\backend   (Express + TS, mock data)"
-Write-Host "  `-- package.json   (workspaces root)"
 Write-Host ""
-Write-Host "Run both together:  npm run dev" -ForegroundColor Green
-Write-Host "Frontend only:      npm run dev:frontend" -ForegroundColor Gray
-Write-Host "Backend only:       npm run dev:backend" -ForegroundColor Gray
-Write-Host "Frontend URL:       http://localhost:3000" -ForegroundColor Gray
-Write-Host "Backend URL:        http://localhost:4000" -ForegroundColor Gray
+Write-Host "Build SUCCEEDED locally!" -ForegroundColor Green
+
+# ---------------------------------------------------------------------
+# 4. Commit and push
+# ---------------------------------------------------------------------
+Write-Host ""
+Write-Host "Committing and pushing..." -ForegroundColor Yellow
+$statusOutput = git status --porcelain
+if ($statusOutput) {
+    git add $SidebarFile
+    git add $PageFile
+    git commit -m "fix: correct Carbon icon name (Grain -> Gradient) and kpis import mismatch"
+    git push origin main
+    Write-Host "Pushed to origin/main. Vercel should now build successfully." -ForegroundColor Green
+} else {
+    Write-Host "Nothing to commit." -ForegroundColor Yellow
+}
+
+Write-Host ""
+Write-Host "=== Done ===" -ForegroundColor Cyan
 
 ==================================================
 FILE: package.json
@@ -697,649 +261,6 @@ Backend:  http://localhost:4000
 ## Build
   npm run build#   G h a n i - f o o d s  
  
-
-==================================================
-FILE: setup-frontend-design.ps1
-==================================================
-
-# setup-frontend-design.ps1
-# Run from: D:\Rozmarrah-CUST\Saim Ashraf\Nimko\Working\Code\GhaniFoods
-# Usage: .\setup-frontend-design.ps1
-
-$ErrorActionPreference = "Stop"
-$Root = Get-Location
-$FE = Join-Path $Root "apps\frontend"
-
-function Write-FileNoBom {
-    param([string]$RelPath, [string]$Content)
-    $full = Join-Path $FE $RelPath
-    $dir = Split-Path $full -Parent
-    if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
-    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-    [System.IO.File]::WriteAllText($full, $Content, $utf8NoBom)
-    Write-Host "  + apps\frontend\$RelPath" -ForegroundColor DarkGray
-}
-
-if (-not (Test-Path $FE)) {
-    Write-Host "ERROR: apps\frontend not found. Run this from the GhaniFoods root folder." -ForegroundColor Red
-    exit 1
-}
-
-Write-Host "=== Setting up frontend design system (sidebar + auth) ===" -ForegroundColor Cyan
-
-# ---------------------------------------------------------------------
-# 1. lib/utils.ts (shadcn cn helper)
-# ---------------------------------------------------------------------
-Write-Host "`n[1/8] lib/utils.ts" -ForegroundColor Yellow
-$utils = @'
-import { type ClassValue, clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
-'@
-Write-FileNoBom "lib\utils.ts" $utils
-
-# ---------------------------------------------------------------------
-# 2. components/ui/button.tsx
-# ---------------------------------------------------------------------
-Write-Host "`n[2/8] components/ui/button.tsx" -ForegroundColor Yellow
-$button = @'
-import * as React from "react";
-import { Slot } from "@radix-ui/react-slot";
-import { cva, type VariantProps } from "class-variance-authority";
-
-import { cn } from "@/lib/utils";
-
-const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
-      },
-      size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
-        icon: "h-10 w-10",
-      },
-    },
-    defaultVariants: { variant: "default", size: "default" },
-  }
-);
-
-export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
-  asChild?: boolean;
-}
-
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
-    const Comp = asChild ? Slot : "button";
-    return (
-      <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />
-    );
-  }
-);
-Button.displayName = "Button";
-
-export { Button, buttonVariants };
-'@
-Write-FileNoBom "components\ui\button.tsx" $button
-
-# ---------------------------------------------------------------------
-# 3. components/ui/input.tsx
-# ---------------------------------------------------------------------
-Write-Host "`n[3/8] components/ui/input.tsx" -ForegroundColor Yellow
-$input = @'
-import * as React from "react";
-
-import { cn } from "@/lib/utils";
-
-export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {}
-
-const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, ...props }, ref) => {
-    return (
-      <input
-        type={type}
-        className={cn(
-          "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-          className
-        )}
-        ref={ref}
-        {...props}
-      />
-    );
-  }
-);
-Input.displayName = "Input";
-
-export { Input };
-'@
-Write-FileNoBom "components\ui\input.tsx" $input
-
-# ---------------------------------------------------------------------
-# 4. components/ui/sidebar-component.tsx (adapted for GhaniFoods nav)
-# ---------------------------------------------------------------------
-Write-Host "`n[4/8] components/ui/sidebar-component.tsx" -ForegroundColor Yellow
-$sidebar = @'
-"use client";
-
-import React, { useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import {
-  Search as SearchIcon,
-  Dashboard,
-  Grain,
-  Archive,
-  Package,
-  UserMultiple,
-  Analytics,
-  DocumentAdd,
-  Settings as SettingsIcon,
-  User as UserIcon,
-  ChevronDown as ChevronDownIcon,
-  Money,
-} from "@carbon/icons-react";
-
-const softSpringEasing = "cubic-bezier(0.25, 1.1, 0.4, 1)";
-
-function LogoBadge() {
-  return (
-    <div className="relative shrink-0 w-full">
-      <div className="flex items-center p-1 w-full">
-        <div className="h-10 w-8 flex items-center justify-center">
-          <div className="size-6 rounded-md bg-neutral-50" />
-        </div>
-        <div className="px-2 py-1">
-          <div className="font-semibold text-[16px] text-neutral-50">GhaniFoods</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AvatarCircle() {
-  return (
-    <div className="relative rounded-full shrink-0 size-8 bg-neutral-800 flex items-center justify-center">
-      <UserIcon size={16} className="text-neutral-50" />
-    </div>
-  );
-}
-
-function SearchBox({ isCollapsed }: { isCollapsed: boolean }) {
-  const [value, setValue] = useState("");
-  return (
-    <div
-      className={`bg-neutral-900 h-10 relative rounded-lg flex items-center transition-all duration-500 w-full ${
-        isCollapsed ? "justify-center" : ""
-      }`}
-      style={{ transitionTimingFunction: softSpringEasing }}
-    >
-      <div className="size-8 flex items-center justify-center shrink-0">
-        <SearchIcon size={16} className="text-neutral-50" />
-      </div>
-      {!isCollapsed && (
-        <input
-          type="text"
-          placeholder="Search..."
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          className="w-full bg-transparent border-none outline-none text-[14px] text-neutral-50 placeholder:text-neutral-500"
-        />
-      )}
-      <div className="absolute inset-0 rounded-lg border border-neutral-800 pointer-events-none" />
-    </div>
-  );
-}
-
-type NavItem = { href: string; label: string; icon: React.ReactNode };
-
-const NAV_ITEMS: NavItem[] = [
-  { href: "/", label: "Dashboard", icon: <Dashboard size={16} /> },
-  { href: "/raw-materials", label: "Raw Materials", icon: <Grain size={16} /> },
-  { href: "/packaging", label: "Packaging", icon: <Archive size={16} /> },
-  { href: "/batches", label: "Production Batches", icon: <Package size={16} /> },
-  { href: "/finished-cartons", label: "Finished Cartons", icon: <Archive size={16} /> },
-  { href: "/customers", label: "Customers", icon: <UserMultiple size={16} /> },
-  { href: "/invoices", label: "Invoices", icon: <DocumentAdd size={16} /> },
-  { href: "/payments", label: "Payments", icon: <Money size={16} /> },
-  { href: "/reports", label: "Reports", icon: <Analytics size={16} /> },
-];
-
-function IconNavButton({
-  children,
-  isActive,
-  href,
-}: {
-  children: React.ReactNode;
-  isActive: boolean;
-  href: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className={`flex items-center justify-center rounded-lg size-10 min-w-10 transition-colors duration-500 ${
-        isActive
-          ? "bg-neutral-800 text-neutral-50"
-          : "hover:bg-neutral-800 text-neutral-400 hover:text-neutral-300"
-      }`}
-      style={{ transitionTimingFunction: softSpringEasing }}
-    >
-      {children}
-    </Link>
-  );
-}
-
-function IconRail({ pathname }: { pathname: string }) {
-  return (
-    <aside className="bg-black flex flex-col gap-2 items-center p-4 w-16 min-h-screen border-r border-neutral-800">
-      <div className="mb-2 size-10 flex items-center justify-center">
-        <div className="size-7 rounded-md bg-neutral-50" />
-      </div>
-      <div className="flex flex-col gap-2 w-full items-center">
-        {NAV_ITEMS.map((item) => (
-          <IconNavButton key={item.href} href={item.href} isActive={pathname === item.href}>
-            {item.icon}
-          </IconNavButton>
-        ))}
-      </div>
-      <div className="flex-1" />
-      <div className="flex flex-col gap-2 w-full items-center">
-        <IconNavButton href="/settings" isActive={pathname === "/settings"}>
-          <SettingsIcon size={16} />
-        </IconNavButton>
-        <AvatarCircle />
-      </div>
-    </aside>
-  );
-}
-
-function DetailPanel({ pathname }: { pathname: string }) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const active = NAV_ITEMS.find((n) => n.href === pathname);
-
-  return (
-    <aside
-      className={`bg-black flex flex-col gap-4 items-start p-4 transition-all duration-500 min-h-screen border-r border-neutral-800 ${
-        isCollapsed ? "w-16 !px-0 items-center" : "w-64"
-      }`}
-      style={{ transitionTimingFunction: softSpringEasing }}
-    >
-      {!isCollapsed && <LogoBadge />}
-
-      <div className="w-full flex items-center justify-between">
-        {!isCollapsed && (
-          <div className="px-2 py-1 text-[16px] font-semibold text-neutral-50">
-            {active?.label ?? "GhaniFoods"}
-          </div>
-        )}
-        <button
-          type="button"
-          onClick={() => setIsCollapsed((s) => !s)}
-          className="flex items-center justify-center rounded-lg size-10 min-w-10 hover:bg-neutral-800 text-neutral-400"
-          aria-label="Toggle sidebar"
-        >
-          <ChevronDownIcon size={16} className={isCollapsed ? "rotate-180" : "-rotate-90"} />
-        </button>
-      </div>
-
-      {!isCollapsed && <SearchBox isCollapsed={isCollapsed} />}
-
-      <nav className="flex flex-col gap-1 w-full">
-        {NAV_ITEMS.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={`h-10 rounded-lg flex items-center px-3 gap-3 transition-colors ${
-              pathname === item.href ? "bg-neutral-800" : "hover:bg-neutral-800"
-            } ${isCollapsed ? "justify-center px-0" : ""}`}
-          >
-            <span className="text-neutral-50 shrink-0">{item.icon}</span>
-            {!isCollapsed && (
-              <span className="text-[14px] text-neutral-50 truncate">{item.label}</span>
-            )}
-          </Link>
-        ))}
-      </nav>
-
-      {!isCollapsed && (
-        <div className="w-full mt-auto pt-2 border-t border-neutral-800">
-          <div className="flex items-center gap-2 px-2 py-2">
-            <AvatarCircle />
-            <div className="text-[14px] text-neutral-50">Owner / Admin</div>
-          </div>
-        </div>
-      )}
-    </aside>
-  );
-}
-
-export function AppSidebar() {
-  const pathname = usePathname();
-  return (
-    <div className="flex flex-row">
-      <IconRail pathname={pathname} />
-      <DetailPanel pathname={pathname} />
-    </div>
-  );
-}
-
-export default AppSidebar;
-'@
-Write-FileNoBom "components\ui\sidebar-component.tsx" $sidebar
-
-# ---------------------------------------------------------------------
-# 5. components/ui/auth-page.tsx
-# ---------------------------------------------------------------------
-Write-Host "`n[5/8] components/ui/auth-page.tsx" -ForegroundColor Yellow
-$auth = @'
-"use client";
-
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
-import { AtSignIcon, LockIcon, Grid2x2PlusIcon } from "lucide-react";
-import { Button } from "./button";
-import { Input } from "./input";
-
-export function AuthPage() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) {
-      setError("Please enter both email and password.");
-      return;
-    }
-    // Dummy auth: any non-empty credentials succeed
-    setError("");
-    router.push("/");
-  };
-
-  return (
-    <main className="relative md:h-screen md:overflow-hidden lg:grid lg:grid-cols-2">
-      <div className="bg-neutral-900 relative hidden h-full flex-col border-r border-neutral-800 p-10 lg:flex">
-        <div className="z-10 flex items-center gap-2 text-neutral-50">
-          <Grid2x2PlusIcon className="size-6" />
-          <p className="text-xl font-semibold">GhaniFoods</p>
-        </div>
-        <div className="z-10 mt-auto">
-          <blockquote className="space-y-2">
-            <p className="text-xl text-neutral-100">
-              Real-time visibility into raw materials, batches, and customer ledgers -
-              all in one place.
-            </p>
-            <footer className="font-mono text-sm font-semibold text-neutral-400">
-              ~ GhaniFoods Production Team
-            </footer>
-          </blockquote>
-        </div>
-      </div>
-
-      <div className="relative flex min-h-screen flex-col justify-center p-4 bg-black">
-        <div className="mx-auto w-full max-w-sm space-y-4">
-          <div className="flex items-center gap-2 lg:hidden text-neutral-50">
-            <Grid2x2PlusIcon className="size-6" />
-            <p className="text-xl font-semibold">GhaniFoods</p>
-          </div>
-
-          <div className="flex flex-col space-y-1">
-            <h1 className="text-2xl font-bold tracking-wide text-neutral-50">
-              Sign in to GhaniFoods
-            </h1>
-            <p className="text-neutral-400 text-base">
-              Enter your credentials to access the dashboard.
-            </p>
-          </div>
-
-          <form className="space-y-3" onSubmit={handleSubmit}>
-            <div className="relative h-max">
-              <Input
-                placeholder="you@ghanifoods.com"
-                className="peer ps-9 bg-neutral-900 border-neutral-800 text-neutral-50 placeholder:text-neutral-500"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-              <div className="text-neutral-500 pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3">
-                <AtSignIcon className="size-4" aria-hidden="true" />
-              </div>
-            </div>
-
-            <div className="relative h-max">
-              <Input
-                placeholder="Password"
-                className="peer ps-9 bg-neutral-900 border-neutral-800 text-neutral-50 placeholder:text-neutral-500"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              <div className="text-neutral-500 pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3">
-                <LockIcon className="size-4" aria-hidden="true" />
-              </div>
-            </div>
-
-            {error && <p className="text-red-400 text-sm">{error}</p>}
-
-            <Button type="submit" className="w-full" size="lg">
-              Sign In
-            </Button>
-          </form>
-
-          <p className="text-neutral-500 mt-8 text-sm">
-            Demo build - any email/password combination signs you in.
-          </p>
-        </div>
-      </div>
-    </main>
-  );
-}
-
-export default AuthPage;
-'@
-Write-FileNoBom "components\ui\auth-page.tsx" $auth
-
-# ---------------------------------------------------------------------
-# 6. app/(auth)/login/page.tsx
-# ---------------------------------------------------------------------
-Write-Host "`n[6/8] app/(auth)/login/page.tsx" -ForegroundColor Yellow
-$loginPage = @'
-import { AuthPage } from "@/components/ui/auth-page";
-
-export default function LoginPage() {
-  return <AuthPage />;
-}
-'@
-Write-FileNoBom "app\(auth)\login\page.tsx" $loginPage
-
-# ---------------------------------------------------------------------
-# 7. app/(dashboard)/layout.tsx - wraps all dashboard pages with sidebar
-# ---------------------------------------------------------------------
-Write-Host "`n[7/8] app/(dashboard)/layout.tsx" -ForegroundColor Yellow
-$dashboardLayout = @'
-import type { ReactNode } from "react";
-import { AppSidebar } from "@/components/ui/sidebar-component";
-
-export default function DashboardLayout({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex min-h-screen bg-neutral-950">
-      <AppSidebar />
-      <main className="flex-1 p-6 overflow-y-auto text-neutral-50">{children}</main>
-    </div>
-  );
-}
-'@
-Write-FileNoBom "app\(dashboard)\layout.tsx" $dashboardLayout
-
-# ---------------------------------------------------------------------
-# 8. Dummy dashboard page using existing mock data (lib/mock-data/kpis.ts)
-# ---------------------------------------------------------------------
-Write-Host "`n[8/8] app/(dashboard)/page.tsx (KPI dashboard, dummy data)" -ForegroundColor Yellow
-$dashboardPage = @'
-import { kpis } from "@/lib/mock-data/kpis";
-
-function KpiCard({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
-      <div className="text-neutral-400 text-sm">{label}</div>
-      <div className="text-2xl font-semibold text-neutral-50 mt-1">{value}</div>
-    </div>
-  );
-}
-
-export default function DashboardPage() {
-  return (
-    <div className="space-y-6">
-      <h1 className="text-xl font-semibold">Dashboard</h1>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard label="Total Raw Material Value" value={`Rs. ${kpis.totalRawMaterialValue.toLocaleString()}`} />
-        <KpiCard label="Batches This Month" value={kpis.batchesThisMonth} />
-        <KpiCard label="Finished Cartons Ready" value={kpis.finishedCartonsReady} />
-        <KpiCard label="Total Receivables" value={`Rs. ${kpis.totalReceivables.toLocaleString()}`} />
-      </div>
-    </div>
-  );
-}
-'@
-Write-FileNoBom "app\(dashboard)\page.tsx" $dashboardPage
-
-# ---------------------------------------------------------------------
-# 9. lib/mock-data/kpis.ts (in case it does not already export `kpis`)
-# ---------------------------------------------------------------------
-$kpisPath = Join-Path $FE "lib\mock-data\kpis.ts"
-if (-not (Test-Path $kpisPath)) {
-    Write-Host "`n  lib/mock-data/kpis.ts missing - creating it" -ForegroundColor Yellow
-    $kpis = @'
-export const kpis = {
-  totalRawMaterialValue: 128450,
-  batchesThisMonth: 6,
-  finishedCartonsReady: 127,
-  totalReceivables: 15900,
-};
-'@
-    Write-FileNoBom "lib\mock-data\kpis.ts" $kpis
-}
-
-# ---------------------------------------------------------------------
-# 10. tailwind.config.ts + globals.css (only create if missing)
-# ---------------------------------------------------------------------
-$twConfigPath = Join-Path $FE "tailwind.config.ts"
-if (-not (Test-Path $twConfigPath)) {
-    Write-Host "`n  tailwind.config.ts missing - creating it" -ForegroundColor Yellow
-    $twConfig = @'
-import type { Config } from "tailwindcss";
-
-const config: Config = {
-  darkMode: "class",
-  content: [
-    "./app/**/*.{ts,tsx}",
-    "./components/**/*.{ts,tsx}",
-    "./lib/**/*.{ts,tsx}",
-  ],
-  theme: {
-    extend: {},
-  },
-  plugins: [],
-};
-
-export default config;
-'@
-    Write-FileNoBom "tailwind.config.ts" $twConfig
-}
-
-$globalsCssPath = Join-Path $FE "app\globals.css"
-if (-not (Test-Path $globalsCssPath)) {
-    Write-Host "  app/globals.css missing - creating it" -ForegroundColor Yellow
-    $globalsCss = @'
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-:root {
-  --background: 0 0% 100%;
-  --foreground: 0 0% 4%;
-  --primary: 0 0% 9%;
-  --primary-foreground: 0 0% 98%;
-  --border: 0 0% 89%;
-  --input: 0 0% 89%;
-  --ring: 0 0% 4%;
-  --muted-foreground: 0 0% 45%;
-  --accent: 0 0% 96%;
-  --accent-foreground: 0 0% 9%;
-  --secondary: 0 0% 96%;
-  --secondary-foreground: 0 0% 9%;
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 0 0% 98%;
-}
-
-body {
-  background-color: #0a0a0a;
-}
-'@
-    Write-FileNoBom "app\globals.css" $globalsCss
-}
-
-# ---------------------------------------------------------------------
-# 11. Patch package.json to add required dependencies
-# ---------------------------------------------------------------------
-Write-Host "`n=== Patching package.json dependencies ===" -ForegroundColor Cyan
-$pkgPath = Join-Path $FE "package.json"
-$pkg = Get-Content $pkgPath -Raw | ConvertFrom-Json
-
-$depsToAdd = @{
-    "tailwindcss"             = "^4.0.0"
-    "postcss"                 = "^8.4.47"
-    "autoprefixer"            = "^10.4.20"
-    "clsx"                    = "^2.1.1"
-    "tailwind-merge"          = "^2.5.4"
-    "class-variance-authority"= "^0.7.1"
-    "@radix-ui/react-slot"    = "^1.1.0"
-    "lucide-react"            = "^0.460.0"
-    "framer-motion"           = "^11.11.17"
-    "@carbon/icons-react"     = "^11.53.0"
-}
-
-foreach ($dep in $depsToAdd.Keys) {
-    if (-not $pkg.dependencies.$dep) {
-        $pkg.dependencies | Add-Member -NotePropertyName $dep -NotePropertyValue $depsToAdd[$dep] -Force
-        Write-Host "  + $dep" -ForegroundColor Green
-    }
-}
-
-$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-$jsonOut = $pkg | ConvertTo-Json -Depth 20
-[System.IO.File]::WriteAllText($pkgPath, $jsonOut, $utf8NoBom)
-Write-Host "  package.json updated (UTF-8, no BOM)." -ForegroundColor Green
-
-# ---------------------------------------------------------------------
-# 12. Reinstall
-# ---------------------------------------------------------------------
-Write-Host "`n=== Installing dependencies ===" -ForegroundColor Cyan
-Push-Location $FE
-npm install
-Pop-Location
-
-Write-Host "`n=== Done ===" -ForegroundColor Cyan
-Write-Host "Next steps:" -ForegroundColor White
-Write-Host "  1. cd apps\frontend && npm run dev" -ForegroundColor Gray
-Write-Host "  2. Visit http://localhost:3000/login and http://localhost:3000/" -ForegroundColor Gray
-Write-Host "  3. If it looks good, commit and push:" -ForegroundColor Gray
-Write-Host "       git add ." -ForegroundColor Gray
-Write-Host "       git commit -m `"feat: add sidebar layout + login page with dummy data`"" -ForegroundColor Gray
-Write-Host "       git push" -ForegroundColor Gray
 
 ==================================================
 FILE: apps\backend\package.json
@@ -1604,6 +525,18 @@ app.listen(PORT, () => {
 });
 
 ==================================================
+FILE: apps\frontend\next-env.d.ts
+==================================================
+
+/// <reference types="next" />
+/// <reference types="next/image-types/global" />
+/// <reference path="./.next/types/routes.d.ts" />
+
+// NOTE: This file should not be edited
+// see https://nextjs.org/docs/app/api-reference/config/typescript for more information.
+
+
+==================================================
 FILE: apps\frontend\package.json
 ==================================================
 
@@ -1674,6 +607,37 @@ const config: Config = {
 export default config;
 
 ==================================================
+FILE: apps\frontend\tsconfig.json
+==================================================
+
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      { "name": "next" }
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
+
+==================================================
 FILE: apps\frontend\app\globals.css
 ==================================================
 
@@ -1732,7 +696,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 FILE: apps\frontend\app\(dashboard)\page.tsx
 ==================================================
 
-import { kpis } from "@/lib/mock-data/kpis";
+import { dashboardKpis as kpis } from "@/lib/mock-data/kpis";
 
 function KpiCard({ label, value }: { label: string; value: string | number }) {
   return (
@@ -1978,7 +942,7 @@ import { usePathname } from "next/navigation";
 import {
   Search as SearchIcon,
   Dashboard,
-  Grain,
+  Gradient,
   Archive,
   Package,
   UserMultiple,
@@ -2045,7 +1009,7 @@ type NavItem = { href: string; label: string; icon: React.ReactNode };
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Dashboard", icon: <Dashboard size={16} /> },
-  { href: "/raw-materials", label: "Raw Materials", icon: <Grain size={16} /> },
+  { href: "/raw-materials", label: "Raw Materials", icon: <Gradient size={16} /> },
   { href: "/packaging", label: "Packaging", icon: <Archive size={16} /> },
   { href: "/batches", label: "Production Batches", icon: <Package size={16} /> },
   { href: "/finished-cartons", label: "Finished Cartons", icon: <Archive size={16} /> },
