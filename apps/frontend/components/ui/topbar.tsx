@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Notification, User as UserIcon, ChevronDown as ChevronDownIcon } from "@carbon/icons-react";
 import { useStore } from "@/lib/store";
+import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
 
 function NotificationBell() {
   const [open, setOpen] = useState(false);
@@ -114,6 +115,7 @@ export function Topbar() {
         className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200">
         + New Invoice
       </Link>
+      <AnimatedThemeToggler />
       <NotificationBell />
       <UserMenu />
     </div>
