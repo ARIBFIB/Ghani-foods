@@ -121,7 +121,7 @@ export default function PackagingPage() {
       id: "action", header: "", enableSorting: false,
       cell: ({ row }) => (
         <button onClick={() => setRestockTarget(row.original)}
-          className="rounded-lg border border-[var(--surface-border-strong)] px-3 py-1.5 text-xs text-[var(--foreground)] hover:bg-[var(--surface-hover)]">
+          className="rounded-lg border border-neutral-400 dark:border-neutral-600 px-3 py-1.5 text-xs text-[var(--foreground)] hover:bg-[var(--surface-hover)]">
           Restock
         </button>
       ),

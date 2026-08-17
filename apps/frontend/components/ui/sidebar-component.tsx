@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { GhaniLogo } from "./ghani-logo";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -75,8 +76,8 @@ function getSectionFromPathname(pathname: string): SectionId {
 function InterfacesLogoSquare() {
   return (
     <div className="aspect-[24/24] grow min-h-px min-w-px overflow-clip relative shrink-0">
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className="size-4 rounded-sm bg-neutral-50" />
+      <div className="absolute inset-0 flex items-center justify-center text-[var(--foreground)]">
+        <GhaniLogo className="size-5" />
       </div>
     </div>
   );

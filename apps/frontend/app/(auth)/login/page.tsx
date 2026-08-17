@@ -3,7 +3,8 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { AtSignIcon, LockIcon, Grid2x2PlusIcon } from "lucide-react";
+import { AtSignIcon, LockIcon } from "lucide-react";
+import { GhaniLogo } from "@/components/ui/ghani-logo";
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
 
 const LOGIN_IMAGE_URL = "https://res.cloudinary.com/dr9dwesyo/image/upload/v1787001758/ghanifoods/ghani-nimko-bag.png";
@@ -45,7 +46,7 @@ export default function LoginPage() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/40" />
 
         <div className="relative z-10 flex items-center gap-2 text-neutral-50 p-10">
-          <Grid2x2PlusIcon className="size-6" />
+          <GhaniLogo className="size-6" />
           <p className="text-xl font-semibold">GhaniFoods</p>
         </div>
 
@@ -65,7 +66,7 @@ export default function LoginPage() {
       <div className="relative flex min-h-screen flex-col justify-center p-4 bg-[var(--background)]">
         <div className="mx-auto w-full max-w-sm space-y-4">
           <div className="flex items-center gap-2 lg:hidden text-[var(--foreground)]">
-            <Grid2x2PlusIcon className="size-6" />
+            <GhaniLogo className="size-6" />
             <p className="text-xl font-semibold">GhaniFoods</p>
           </div>
 

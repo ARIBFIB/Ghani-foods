@@ -113,7 +113,7 @@ export default function ReportsPage() {
         <div className="space-y-4">
           <div className="flex justify-end">
             <button onClick={handleInventoryExport}
-              className="rounded-lg border border-[var(--surface-border-strong)] px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)]">
+              className="rounded-lg border border-neutral-400 dark:border-neutral-600 px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)]">
               Export CSV
             </button>
           </div>
@@ -149,7 +149,7 @@ export default function ReportsPage() {
         <div className="space-y-4">
           <div className="flex justify-end">
             <button onClick={handleYieldExport}
-              className="rounded-lg border border-[var(--surface-border-strong)] px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)]">
+              className="rounded-lg border border-neutral-400 dark:border-neutral-600 px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)]">
               Export CSV
             </button>
           </div>
@@ -175,7 +175,7 @@ export default function ReportsPage() {
         <div className="space-y-4">
           <div className="flex justify-end">
             <button onClick={handlePnlExport}
-              className="rounded-lg border border-[var(--surface-border-strong)] px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)]">
+              className="rounded-lg border border-neutral-400 dark:border-neutral-600 px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)]">
               Export CSV
             </button>
           </div>

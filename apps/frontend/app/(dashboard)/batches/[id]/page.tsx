@@ -129,7 +129,7 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
       </div>
 
       <div className="flex gap-2">
-        <button onClick={() => setDialogOpen(true)} className="rounded-lg border border-[var(--surface-border-strong)] px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)]">
+        <button onClick={() => setDialogOpen(true)} className="rounded-lg border border-neutral-400 dark:border-neutral-600 px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)]">
           Allocate Month-End Overhead
         </button>
         <button onClick={() => router.push(`/finished-cartons?batchId=${batch.id}`)} className="rounded-lg bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-200">

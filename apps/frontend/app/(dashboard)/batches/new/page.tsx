@@ -131,7 +131,7 @@ export default function NewBatchPage() {
       <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-[var(--foreground)]">Raw Material Consumption</h2>
-          <button type="button" onClick={addRow} className="rounded-lg border border-[var(--surface-border-strong)] px-3 py-1.5 text-xs text-[var(--foreground)] hover:bg-[var(--surface-hover)]">
+          <button type="button" onClick={addRow} className="rounded-lg border border-neutral-400 dark:border-neutral-600 px-3 py-1.5 text-xs text-[var(--foreground)] hover:bg-[var(--surface-hover)]">
             + Add Material Row
           </button>
         </div>

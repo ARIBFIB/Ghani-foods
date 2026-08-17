@@ -224,11 +224,11 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
       </div>
 
       <div className="flex gap-2 print:hidden">
-        <button onClick={() => window.print()} className="rounded-lg border border-[var(--surface-border-strong)] px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)]">Print</button>
+        <button onClick={() => window.print()} className="rounded-lg border border-neutral-400 dark:border-neutral-600 px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)]">Print</button>
         <button
           onClick={handleDownloadPDF}
           disabled={generatingPdf}
-          className="rounded-lg border border-[var(--surface-border-strong)] px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)] disabled:opacity-50"
+          className="rounded-lg border border-neutral-400 dark:border-neutral-600 px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)] disabled:opacity-50"
         >
           {generatingPdf ? "Generating..." : "Download PDF"}
         </button>
