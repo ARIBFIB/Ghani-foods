@@ -529,8 +529,8 @@ function DetailSidebar({ activeSection, pathname }: { activeSection: SectionId; 
           <CloseIcon size={18} />
         </button>
 
-        <BrandBadge />
-        <MobileSectionNav activeSection={activeSection} />
+        {!isCollapsed && <BrandBadge />}
+        {!isCollapsed && <MobileSectionNav activeSection={activeSection} />}
         <SectionTitle title={content.title} onToggleCollapse={toggleCollapse} isCollapsed={isCollapsed} />
         <div className="w-full lg:hidden">
           <SearchContainer isCollapsed={false} />
