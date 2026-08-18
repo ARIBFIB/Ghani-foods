@@ -1,3 +1,163 @@
+# Phase1-DataLayer.ps1
+# Run from: D:\Rozmarrah-CUST\Saim Ashraf\Nimko\Working\Code\GhaniFoods
+# Usage:    .\Phase1-DataLayer.ps1
+#
+# PHASE 1 of 5 - Data Layer
+# Rewrites apps\frontend\lib\store.ts and apps\frontend\lib\schemas.ts to add:
+#   - Supplier, Wrapper, Box, CartonConfiguration types
+#   - RawMaterialReceipt.supplierId / purchaseDate
+#   - FinishedCarton.configId / cartonsProduced
+#   - New store actions (addSupplier, addWrapper, addBox, addCartonConfiguration,
+#     createPackingRun rewritten to auto-calculate from cartonsProduced only)
+#
+# IMPORTANT: after this script, the project will NOT build cleanly yet.
+# Pages that still reference the old `packagingMaterials` array
+# (packaging/page.tsx, finished-cartons/page.tsx, dashboard page.tsx,
+# topbar.tsx, reports/page.tsx) will show TypeScript errors until
+# Phase 2 - Phase 5 scripts update them. This is expected - see the
+# summary printed at the end of this script.
+
+$ErrorActionPreference = "Stop"
+$ProjectRoot = Get-Location
+$FrontendLib = Join-Path $ProjectRoot "apps\frontend\lib"
+
+if (-not (Test-Path $FrontendLib)) {
+    Write-Host "ERROR: apps\frontend\lib not found. Run this script from the GhaniFoods root." -ForegroundColor Red
+    exit 1
+}
+
+function Write-Utf8NoBom($Path, $Content) {
+    $dir = Split-Path $Path -Parent
+    if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($Path, $Content, $utf8NoBom)
+}
+
+Write-Host "=== Phase 1: Data Layer (store.ts + schemas.ts) ===" -ForegroundColor Cyan
+
+# ---------------------------------------------------------------------------
+# lib/schemas.ts
+# ---------------------------------------------------------------------------
+$schemasContent = @'
+import { z } from "zod";
+
+export const rawMaterialSchema = z.object({
+  name: z.string().trim().min(2, "Name must be at least 2 characters"),
+  unit: z.string().trim().min(1, "Unit is required"),
+  lowStockThreshold: z.coerce.number().min(0, "Threshold cannot be negative"),
+});
+export type RawMaterialFormValues = z.infer<typeof rawMaterialSchema>;
+
+// Supplier-linked purchase receipt. supplierId is required (existing supplier
+// picked from combobox, or a freshly created one). purchaseDate defaults to
+// today but is always required per BRS FR-5.
+export const purchaseSchema = z.object({
+  supplierId: z.string().min(1, "Select a supplier"),
+  purchaseDate: z.string().min(1, "Purchase date is required"),
+  qty: z.coerce.number().positive("Quantity must be greater than 0"),
+  cost: z.coerce.number().positive("Cost must be greater than 0"),
+});
+export type PurchaseFormValues = z.infer<typeof purchaseSchema>;
+
+export const supplierSchema = z.object({
+  name: z.string().trim().min(2, "Name must be at least 2 characters"),
+  phone: z
+    .string()
+    .trim()
+    .min(7, "Enter a valid phone number")
+    .regex(/^[0-9+\-()\s]+$/, "Phone can only contain digits, spaces, + - ( )"),
+  address: z.string().trim().optional(),
+});
+export type SupplierFormValues = z.infer<typeof supplierSchema>;
+
+// Wrapper materials (wraps a single packet - Rs.5 / Rs.10 packet etc.)
+export const wrapperSchema = z.object({
+  name: z.string().trim().min(2, "Name must be at least 2 characters"),
+  unitCost: z.coerce.number().min(0, "Unit cost cannot be negative"),
+  lowStockThreshold: z.coerce.number().min(0, "Threshold cannot be negative"),
+});
+export type WrapperFormValues = z.infer<typeof wrapperSchema>;
+
+// Box materials (holds a defined number of packets)
+export const boxSchema = z.object({
+  name: z.string().trim().min(2, "Name must be at least 2 characters"),
+  unitCost: z.coerce.number().min(0, "Unit cost cannot be negative"),
+  lowStockThreshold: z.coerce.number().min(0, "Threshold cannot be negative"),
+});
+export type BoxFormValues = z.infer<typeof boxSchema>;
+
+export const restockSchema = z.object({
+  qty: z.coerce.number().positive("Quantity must be greater than 0"),
+  cost: z.coerce.number().min(0, "Cost cannot be negative").optional(),
+});
+export type RestockFormValues = z.infer<typeof restockSchema>;
+
+// Carton Configuration: Wrapper x Packets-per-Box x Box x Boxes-per-Carton.
+// Drives all auto-calculation during a packing run (FR-10, FR-17 - FR-21).
+export const cartonConfigSchema = z.object({
+  wrapperId: z.string().min(1, "Select a wrapper"),
+  packetsPerBox: z.coerce.number().int("Must be a whole number").positive("Must be greater than 0"),
+  boxId: z.string().min(1, "Select a box"),
+  boxesPerCarton: z.coerce.number().int("Must be a whole number").positive("Must be greater than 0"),
+});
+export type CartonConfigFormValues = z.infer<typeof cartonConfigSchema>;
+
+// Packing Run: the ONLY manual input is cartonsProduced. Everything else
+// (boxes, packets, material deductions, cost build-up) is derived in the
+// store from batchId + configId + cartonsProduced (FR-17).
+export const packingRunSchema = z.object({
+  batchId: z.string().min(1, "Select a batch"),
+  configId: z.string().min(1, "Select a carton configuration"),
+  cartonsProduced: z.coerce.number().int("Must be a whole number").positive("Must be greater than 0"),
+});
+export type PackingRunFormValues = z.infer<typeof packingRunSchema>;
+
+export const customerSchema = z.object({
+  name: z.string().trim().min(2, "Name must be at least 2 characters"),
+  phone: z
+    .string()
+    .trim()
+    .min(7, "Enter a valid phone number")
+    .regex(/^[0-9+\-()\s]+$/, "Phone can only contain digits, spaces, + - ( )"),
+  openingBalance: z.coerce.number(),
+});
+export type CustomerFormValues = z.infer<typeof customerSchema>;
+
+export const paymentSchema = z.object({
+  customerId: z.string().min(1, "Select a customer"),
+  amount: z.coerce.number().positive("Amount must be greater than 0"),
+  note: z.string().trim().optional(),
+});
+export type PaymentFormValues = z.infer<typeof paymentSchema>;
+
+export const batchSchema = z.object({
+  outputYieldKg: z.coerce.number().positive("Output yield must be greater than 0"),
+  wastageKg: z.coerce.number().min(0, "Wastage cannot be negative"),
+});
+export type BatchFormValues = z.infer<typeof batchSchema>;
+
+export const overheadSchema = z.object({
+  electricity: z.coerce.number().min(0, "Cannot be negative"),
+  gas: z.coerce.number().min(0, "Cannot be negative"),
+  rent: z.coerce.number().min(0, "Cannot be negative"),
+});
+export type OverheadFormValues = z.infer<typeof overheadSchema>;
+
+export const invoiceHeaderSchema = z.object({
+  customerId: z.string().min(1, "Select a customer"),
+  margin: z.coerce.number().min(0, "Margin cannot be negative"),
+});
+export type InvoiceHeaderFormValues = z.infer<typeof invoiceHeaderSchema>;
+'@
+
+$schemasPath = Join-Path $FrontendLib "schemas.ts"
+Write-Utf8NoBom -Path $schemasPath -Content $schemasContent
+Write-Host "  [1/2] Wrote apps\frontend\lib\schemas.ts" -ForegroundColor Green
+
+# ---------------------------------------------------------------------------
+# lib/store.ts
+# ---------------------------------------------------------------------------
+$storeContent = @'
 "use client";
 
 import { create } from "zustand";
@@ -598,3 +758,38 @@ export const useStore = create<State>()(
     { name: "ghanifoods-dummy-data" }
   )
 );
+'@
+
+$storePath = Join-Path $FrontendLib "store.ts"
+Write-Utf8NoBom -Path $storePath -Content $storeContent
+Write-Host "  [2/2] Wrote apps\frontend\lib\store.ts" -ForegroundColor Green
+
+Write-Host "`n=== Phase 1 complete ===" -ForegroundColor Green
+Write-Host ""
+Write-Host "DONE in this script:" -ForegroundColor Yellow
+Write-Host "  - lib/schemas.ts   : supplierSchema, wrapperSchema, boxSchema, cartonConfigSchema," -ForegroundColor Gray
+Write-Host "                       packingRunSchema added. purchaseSchema now requires supplierId + purchaseDate." -ForegroundColor Gray
+Write-Host "  - lib/store.ts     : Supplier, Wrapper, Box, CartonConfiguration types + seed data added." -ForegroundColor Gray
+Write-Host "                       packagingMaterials REMOVED, replaced by wrappers[] + boxes[]." -ForegroundColor Gray
+Write-Host "                       New actions: addSupplier, addWrapper, restockWrapper, addBox, restockBox," -ForegroundColor Gray
+Write-Host "                       addCartonConfiguration. recordPurchase signature changed (adds supplierId, purchaseDate)." -ForegroundColor Gray
+Write-Host "                       createPackingRun REWRITTEN: now takes only {batchId, configId, cartonsProduced}" -ForegroundColor Gray
+Write-Host "                       and derives boxes/packets/costs/stock deductions internally." -ForegroundColor Gray
+Write-Host ""
+Write-Host "NOT done yet (Phase 2-5, coming next):" -ForegroundColor Yellow
+Write-Host "  - app/(dashboard)/suppliers/page.tsx               (NEW - list + add dialog)" -ForegroundColor Gray
+Write-Host "  - app/(dashboard)/suppliers/[id]/page.tsx          (NEW - detail + purchase history)" -ForegroundColor Gray
+Write-Host "  - app/(dashboard)/packaging/carton-config/page.tsx (NEW - config list + create form)" -ForegroundColor Gray
+Write-Host "  - app/(dashboard)/packaging/page.tsx               (REWRITE - Wrappers/Boxes tabs)" -ForegroundColor Gray
+Write-Host "  - app/(dashboard)/raw-materials/page.tsx           (UPDATE - Add dialog needs Supplier + date)" -ForegroundColor Gray
+Write-Host "  - app/(dashboard)/raw-materials/[id]/page.tsx      (UPDATE - Supplier column + dialog)" -ForegroundColor Gray
+Write-Host "  - app/(dashboard)/finished-cartons/page.tsx        (REWRITE - Packing Run simplified to 1 input)" -ForegroundColor Gray
+Write-Host "  - app/(dashboard)/page.tsx (Dashboard)              (UPDATE - Add Raw Material dialog, packagingMaterials refs)" -ForegroundColor Gray
+Write-Host "  - components/ui/topbar.tsx                          (UPDATE - low-stock alerts need wrappers+boxes, not packagingMaterials)" -ForegroundColor Gray
+Write-Host "  - components/ui/sidebar-component.tsx               (UPDATE - add 'suppliers' section/nav item)" -ForegroundColor Gray
+Write-Host "  - app/(dashboard)/reports/page.tsx                  (UPDATE - inventory chart needs wrappers+boxes, not packagingMaterials)" -ForegroundColor Gray
+Write-Host ""
+Write-Host "WARNING: project will NOT type-check / build cleanly until Phase 2-5 scripts" -ForegroundColor Red
+Write-Host "are run, because those pages above still import/reference the old" -ForegroundColor Red
+Write-Host "'packagingMaterials' array and old recordPurchase/createPackingRun signatures." -ForegroundColor Red
+Write-Host "This is expected mid-refactor - next script (Phase 2) will fix Raw Materials + Suppliers pages." -ForegroundColor Yellow
