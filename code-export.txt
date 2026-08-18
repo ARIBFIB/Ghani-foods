@@ -1,7 +1,7 @@
 ==================================================
 GhaniFoods - Full Code Export
-Generated: 2026-08-18 17:09:28
-Total Files: 72
+Generated: 2026-08-18 17:35:33
+Total Files: 71
 ==================================================
 
 ==================================================
@@ -135,871 +135,6 @@ Write-Host "Total size: $([Math]::Round((Get-Item $OutputFile).Length / 1KB, 1))
 Write-Host ""
 Write-Host "NEXT STEP: Upload code-export.txt as a FILE ATTACHMENT in the chat." -ForegroundColor Yellow
 Write-Host "Do not copy-paste its contents as text - large pastes get truncated." -ForegroundColor Yellow
-==================================================
-FILE: fix-packing-run-crash.ps1
-==================================================
-# fix-packing-run-crash.ps1
-# Run from: D:\Rozmarrah-CUST\Saim Ashraf\Nimko\Working\Code\GhaniFoods
-# Usage: .\fix-packing-run-crash.ps1
-#
-# Fixes: "Application error" / React error #310 when clicking
-# "+ New Packing Run" on the Finished Cartons page.
-#
-# Root cause: apps/frontend/app/(dashboard)/finished-cartons/page.tsx had
-# `if (!open) return null;` BEFORE the `useMemo` hook inside
-# NewPackingRunDialog. That means useMemo is skipped when the dialog is
-# closed and called when it's open - a Rules-of-Hooks violation that
-# crashes React. This script moves the early return to AFTER all hooks.
-
-$TargetFile = Join-Path (Get-Location) "apps\frontend\app\(dashboard)\finished-cartons\page.tsx"
-
-if (-not (Test-Path $TargetFile)) {
-    Write-Host "ERROR: Could not find $TargetFile" -ForegroundColor Red
-    Write-Host "Make sure you run this script from the GhaniFoods project root." -ForegroundColor Yellow
-    exit 1
-}
-
-Write-Host "=== Fixing Packing Run dialog crash ===" -ForegroundColor Cyan
-
-$bytes = [System.IO.File]::ReadAllBytes($TargetFile)
-$stream = New-Object System.IO.MemoryStream(,$bytes)
-$reader = New-Object System.IO.StreamReader($stream, [System.Text.Encoding]::UTF8, $true)
-$content = $reader.ReadToEnd()
-$reader.Close()
-
-$oldBlock = @"
-  const [cartonsProduced, setCartonsProduced] = useState("10");
-
-  if (!open) return null;
-
-  const batch = productionBatches.find((b) => b.id === batchId);
-  const config = cartonConfigurations.find((c) => c.id === configId);
-  const wrapper = wrappers.find((w) => w.id === config?.wrapperId);
-  const box = boxes.find((b) => b.id === config?.boxId);
-
-  const cartons = Number(cartonsProduced) || 0;
-  const boxesNeeded = config ? cartons * config.boxesPerCarton : 0;
-  const packetsNeeded = config ? boxesNeeded * config.packetsPerBox : 0;
-
-  const insufficientWrapper = wrapper ? packetsNeeded > wrapper.stockQty : false;
-  const insufficientBox = box ? boxesNeeded > box.stockQty : false;
-
-  // Preview estimate - mirrors the store's internal calculation
-  const preview = useMemo(() => {
-    if (!batch || !config || !wrapper || !box || cartons <= 0) return null;
-    const nominalKgPerPacket = 0.05;
-    const estimatedKgNeeded = packetsNeeded * nominalKgPerPacket;
-    const bulkKgUsed = Math.min(estimatedKgNeeded, batch.leftoverQtyKg);
-    const bulkCostShare = batch.bulkCostPerKg * bulkKgUsed;
-    const costPerPacket = packetsNeeded > 0 ? bulkCostShare / packetsNeeded + wrapper.unitCost : wrapper.unitCost;
-    const costPerBox = config.packetsPerBox * costPerPacket + box.unitCost;
-    const costPerCarton = config.boxesPerCarton * costPerBox;
-    return { bulkKgUsed, costPerPacket, costPerBox, costPerCarton };
-  }, [batch, config, wrapper, box, cartons, packetsNeeded]);
-"@
-
-$newBlock = @"
-  const [cartonsProduced, setCartonsProduced] = useState("10");
-
-  const batch = productionBatches.find((b) => b.id === batchId);
-  const config = cartonConfigurations.find((c) => c.id === configId);
-  const wrapper = wrappers.find((w) => w.id === config?.wrapperId);
-  const box = boxes.find((b) => b.id === config?.boxId);
-
-  const cartons = Number(cartonsProduced) || 0;
-  const boxesNeeded = config ? cartons * config.boxesPerCarton : 0;
-  const packetsNeeded = config ? boxesNeeded * config.packetsPerBox : 0;
-
-  const insufficientWrapper = wrapper ? packetsNeeded > wrapper.stockQty : false;
-  const insufficientBox = box ? boxesNeeded > box.stockQty : false;
-
-  // Preview estimate - mirrors the store's internal calculation
-  // IMPORTANT: this hook must run on every render (even when the dialog is
-  // closed) - never put a conditional "return null" before a hook call.
-  const preview = useMemo(() => {
-    if (!open || !batch || !config || !wrapper || !box || cartons <= 0) return null;
-    const nominalKgPerPacket = 0.05;
-    const estimatedKgNeeded = packetsNeeded * nominalKgPerPacket;
-    const bulkKgUsed = Math.min(estimatedKgNeeded, batch.leftoverQtyKg);
-    const bulkCostShare = batch.bulkCostPerKg * bulkKgUsed;
-    const costPerPacket = packetsNeeded > 0 ? bulkCostShare / packetsNeeded + wrapper.unitCost : wrapper.unitCost;
-    const costPerBox = config.packetsPerBox * costPerPacket + box.unitCost;
-    const costPerCarton = config.boxesPerCarton * costPerBox;
-    return { bulkKgUsed, costPerPacket, costPerBox, costPerCarton };
-  }, [open, batch, config, wrapper, box, cartons, packetsNeeded]);
-
-  if (!open) return null;
-"@
-
-if ($content -notmatch [regex]::Escape('if (!open) return null;')) {
-    Write-Host "Could not find the expected block - the file may already be fixed or has changed." -ForegroundColor Yellow
-    exit 0
-}
-
-$updated = $content.Replace($oldBlock, $newBlock)
-
-if ($updated -eq $content) {
-    Write-Host "No changes made - the target block text did not match exactly (file may already be patched)." -ForegroundColor Yellow
-    exit 0
-}
-
-$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-[System.IO.File]::WriteAllText($TargetFile, $updated, $utf8NoBom)
-
-Write-Host "Fixed: apps\frontend\app\(dashboard)\finished-cartons\page.tsx" -ForegroundColor Green
-Write-Host ""
-Write-Host "=== Done ===" -ForegroundColor Cyan
-Write-Host "Please review with 'git diff', then commit and redeploy to Vercel." -ForegroundColor Yellow
-==================================================
-FILE: fix-sidebar-navigation-loading.ps1
-==================================================
-# fix-sidebar-navigation-loading.ps1
-# Run from: D:\Rozmarrah-CUST\Saim Ashraf\Nimko\Working\Code\GhaniFoods
-# Usage: .\fix-sidebar-navigation-loading.ps1
-#
-# Adds a Lottie loading overlay (public/loading/loading.json) that shows
-# for the brief gap when switching sidebar tabs, so the screen never looks
-# blank/frozen during route changes.
-#
-# Creates:
-#   apps/frontend/lib/navigation-loading-context.tsx
-#   apps/frontend/components/ui/navigation-loading-overlay.tsx
-# Overwrites:
-#   apps/frontend/app/(dashboard)/layout.tsx
-#   apps/frontend/components/ui/sidebar-component.tsx
-
-$FrontendRoot = Join-Path (Get-Location) "apps\frontend"
-
-if (-not (Test-Path $FrontendRoot)) {
-    Write-Host "ERROR: Could not find apps\frontend under $(Get-Location)" -ForegroundColor Red
-    Write-Host "Make sure you run this script from the GhaniFoods project root." -ForegroundColor Yellow
-    exit 1
-}
-
-$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-
-function Write-Utf8NoBom($Path, $Content) {
-    $dir = Split-Path $Path -Parent
-    if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
-    [System.IO.File]::WriteAllText($Path, $Content, $utf8NoBom)
-}
-
-Write-Host "=== Adding sidebar navigation loading overlay ===" -ForegroundColor Cyan
-
-# ---------------------------------------------------------------------------
-# 1. New file: lib/navigation-loading-context.tsx
-# ---------------------------------------------------------------------------
-$navContextPath = Join-Path $FrontendRoot "lib\navigation-loading-context.tsx"
-$navContextContent = @'
-"use client";
-
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-  useTransition,
-  type ReactNode,
-} from "react";
-import { useRouter } from "next/navigation";
-
-type NavigationLoadingContextValue = {
-  isLoading: boolean;
-  navigate: (href: string) => void;
-};
-
-const MIN_VISIBLE_MS = 300;
-
-const NavigationLoadingContext = createContext<NavigationLoadingContextValue | null>(null);
-
-export function NavigationLoadingProvider({ children }: { children: ReactNode }) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-  const [minTimeElapsed, setMinTimeElapsed] = useState(true);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const navigate = (href: string) => {
-    setMinTimeElapsed(false);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setMinTimeElapsed(true), MIN_VISIBLE_MS);
-    startTransition(() => {
-      router.push(href);
-    });
-  };
-
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
-
-  const isLoading = isPending || !minTimeElapsed;
-
-  return (
-    <NavigationLoadingContext.Provider value={{ isLoading, navigate }}>
-      {children}
-    </NavigationLoadingContext.Provider>
-  );
-}
-
-export function useNavigationLoading() {
-  const ctx = useContext(NavigationLoadingContext);
-  if (!ctx) throw new Error("useNavigationLoading must be used within NavigationLoadingProvider");
-  return ctx;
-}
-'@
-Write-Utf8NoBom $navContextPath $navContextContent
-Write-Host "  Created: lib\navigation-loading-context.tsx" -ForegroundColor Green
-
-# ---------------------------------------------------------------------------
-# 2. New file: components/ui/navigation-loading-overlay.tsx
-# ---------------------------------------------------------------------------
-$overlayPath = Join-Path $FrontendRoot "components\ui\navigation-loading-overlay.tsx"
-$overlayContent = @'
-"use client";
-
-import { useNavigationLoading } from "@/lib/navigation-loading-context";
-import { LottieLoader } from "@/components/ui/lottie-loader";
-
-export function NavigationLoadingOverlay() {
-  const { isLoading } = useNavigationLoading();
-
-  if (!isLoading) return null;
-
-  return (
-    <div className="fixed inset-0 z-[90] flex flex-col items-center justify-center bg-[var(--background)]/70 backdrop-blur-sm">
-      <LottieLoader src="/loading/loading.json" size={120} />
-    </div>
-  );
-}
-
-export default NavigationLoadingOverlay;
-'@
-Write-Utf8NoBom $overlayPath $overlayContent
-Write-Host "  Created: components\ui\navigation-loading-overlay.tsx" -ForegroundColor Green
-
-# ---------------------------------------------------------------------------
-# 3. Overwrite: app/(dashboard)/layout.tsx
-# ---------------------------------------------------------------------------
-$layoutPath = Join-Path $FrontendRoot "app\(dashboard)\layout.tsx"
-$layoutContent = @'
-import type { ReactNode } from "react";
-import { AppSidebar } from "@/components/ui/sidebar-component";
-import { Topbar } from "@/components/ui/topbar";
-import { SidebarProvider } from "@/lib/sidebar-context";
-import { NavigationLoadingProvider } from "@/lib/navigation-loading-context";
-import { NavigationLoadingOverlay } from "@/components/ui/navigation-loading-overlay";
-
-export default function DashboardLayout({ children }: { children: ReactNode }) {
-  return (
-    <NavigationLoadingProvider>
-      <SidebarProvider>
-        <div className="flex min-h-screen bg-[var(--background)]">
-          <AppSidebar />
-          <div className="flex-1 flex flex-col min-w-0">
-            <Topbar />
-            <main className="flex-1 p-4 sm:p-6 overflow-y-auto overflow-x-hidden text-[var(--foreground)]">
-              {children}
-            </main>
-          </div>
-        </div>
-        <NavigationLoadingOverlay />
-      </SidebarProvider>
-    </NavigationLoadingProvider>
-  );
-}
-'@
-Write-Utf8NoBom $layoutPath $layoutContent
-Write-Host "  Updated: app\(dashboard)\layout.tsx" -ForegroundColor Green
-
-# ---------------------------------------------------------------------------
-# 4. Overwrite: components/ui/sidebar-component.tsx
-#    (sidebar tab clicks now go through navigate() so the overlay shows)
-# ---------------------------------------------------------------------------
-$sidebarPath = Join-Path $FrontendRoot "components\ui\sidebar-component.tsx"
-$sidebarContent = @'
-"use client";
-
-import React, { useState } from "react";
-import { usePathname } from "next/navigation";
-import {
-  Search as SearchIcon,
-  Dashboard,
-  Task,
-  Folder,
-  UserMultiple,
-  Analytics,
-  DocumentAdd,
-  Settings as SettingsIcon,
-  User as UserIcon,
-  ChevronDown as ChevronDownIcon,
-  AddLarge,
-  Archive,
-  View,
-  Report,
-  StarFilled,
-  ChartBar,
-  FolderOpen,
-  Security,
-  Notification,
-  Close as CloseIcon,
-} from "@carbon/icons-react";
-import { GhaniLogo } from "./ghani-logo";
-import { useSidebar } from "@/lib/sidebar-context";
-import { useNavigationLoading } from "@/lib/navigation-loading-context";
-
-const softSpringEasing = "cubic-bezier(0.25, 1.1, 0.4, 1)";
-
-type SectionId =
-  | "dashboard"
-  | "suppliers"
-  | "raw-materials"
-  | "batches"
-  | "finished-cartons"
-  | "customers"
-  | "invoices"
-  | "payments"
-  | "reports"
-  | "settings";
-
-const SECTION_DEFAULT_ROUTE: Record<SectionId, string> = {
-  dashboard: "/",
-  suppliers: "/suppliers",
-  "raw-materials": "/raw-materials",
-  batches: "/batches",
-  "finished-cartons": "/finished-cartons",
-  customers: "/customers",
-  invoices: "/invoices",
-  payments: "/payments",
-  reports: "/reports",
-  settings: "/settings",
-};
-
-const ROUTE_PREFIXES: Array<[string, SectionId]> = [
-  ["/suppliers", "suppliers"],
-  ["/raw-materials", "raw-materials"],
-  ["/packaging", "raw-materials"],
-  ["/packaging/carton-config", "raw-materials"],
-  ["/batches", "batches"],
-  ["/finished-cartons", "finished-cartons"],
-  ["/customers", "customers"],
-  ["/invoices", "invoices"],
-  ["/payments", "payments"],
-  ["/reports", "reports"],
-  ["/settings", "settings"],
-];
-
-function getSectionFromPathname(pathname: string): SectionId {
-  for (const [prefix, section] of ROUTE_PREFIXES) {
-    if (pathname === prefix || pathname.startsWith(prefix + "/")) return section;
-  }
-  return "dashboard";
-}
-
-function BrandBadge() {
-  return (
-    <div className="relative shrink-0 w-full">
-      <div className="flex items-center p-1 w-full">
-        <div className="h-10 w-8 flex items-center justify-center pl-2 text-[var(--foreground)]">
-          <GhaniLogo className="size-5" />
-        </div>
-        <div className="px-2 py-1">
-          <div className="font-semibold text-[16px] text-[var(--foreground)]">GhaniFoods</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AvatarCircle() {
-  return (
-    <div className="relative rounded-full shrink-0 size-8 bg-[var(--surface-hover)]">
-      <div className="flex items-center justify-center size-8">
-        <UserIcon size={16} className="text-[var(--foreground)]" />
-      </div>
-      <div aria-hidden="true" className="absolute inset-0 rounded-full border border-[var(--surface-border)] pointer-events-none" />
-    </div>
-  );
-}
-
-function SearchContainer({ isCollapsed = false }: { isCollapsed?: boolean }) {
-  const [searchValue, setSearchValue] = useState("");
-
-  return (
-    <div
-      className={`relative shrink-0 transition-all duration-500 ${isCollapsed ? "w-full flex justify-center" : "w-full"}`}
-      style={{ transitionTimingFunction: softSpringEasing }}
-    >
-      <div
-        className={`bg-[var(--background)] h-10 relative rounded-lg flex items-center transition-all duration-500 ${
-          isCollapsed ? "w-10 min-w-10 justify-center" : "w-full"
-        }`}
-        style={{ transitionTimingFunction: softSpringEasing }}
-      >
-        <div
-          className={`flex items-center justify-center shrink-0 transition-all duration-500 ${isCollapsed ? "p-1" : "px-1"}`}
-          style={{ transitionTimingFunction: softSpringEasing }}
-        >
-          <div className="size-8 flex items-center justify-center">
-            <SearchIcon size={16} className="text-[var(--foreground)]" />
-          </div>
-        </div>
-
-        <div
-          className={`flex-1 relative transition-opacity duration-500 overflow-hidden ${isCollapsed ? "opacity-0 w-0" : "opacity-100"}`}
-          style={{ transitionTimingFunction: softSpringEasing }}
-        >
-          <div className="flex flex-col justify-center size-full">
-            <div className="flex flex-col gap-2 items-start justify-center pr-2 py-1 w-full">
-              <input
-                type="text"
-                placeholder="Search..."
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                className="w-full bg-transparent border-none outline-none text-[14px] text-[var(--foreground)] placeholder:text-[var(--text-muted)] leading-[20px]"
-                tabIndex={isCollapsed ? -1 : 0}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div aria-hidden="true" className="absolute inset-0 rounded-lg border border-[var(--surface-border)] pointer-events-none" />
-      </div>
-    </div>
-  );
-}
-
-interface MenuItemT {
-  icon?: React.ReactNode;
-  label: string;
-  href?: string;
-}
-interface MenuSectionT {
-  title: string;
-  items: MenuItemT[];
-}
-interface SidebarContent {
-  title: string;
-  sections: MenuSectionT[];
-}
-
-function getSidebarContent(activeSection: SectionId): SidebarContent {
-  const contentMap: Record<SectionId, SidebarContent> = {
-    dashboard: {
-      title: "Dashboard",
-      sections: [
-        { title: "Overview", items: [{ icon: <View size={16} className="text-[var(--foreground)]" />, label: "Dashboard", href: "/" }] },
-      ],
-    },
-    "raw-materials": {
-      title: "Raw Materials",
-      sections: [
-        {
-          title: "Inventory",
-          items: [
-            { icon: <Folder size={16} className="text-[var(--foreground)]" />, label: "All Raw Materials", href: "/raw-materials" },
-            { icon: <FolderOpen size={16} className="text-[var(--foreground)]" />, label: "Packaging Materials", href: "/packaging" },
-            { icon: <Archive size={16} className="text-[var(--foreground)]" />, label: "Carton Configurations", href: "/packaging/carton-config" },
-          ],
-        },
-      ],
-    },
-    suppliers: {
-      title: "Suppliers",
-      sections: [
-        { title: "Suppliers", items: [{ icon: <UserMultiple size={16} className="text-[var(--foreground)]" />, label: "All Suppliers", href: "/suppliers" }] },
-      ],
-    },
-    batches: {
-      title: "Production Batches",
-      sections: [
-        {
-          title: "Batches",
-          items: [
-            { icon: <Task size={16} className="text-[var(--foreground)]" />, label: "All Batches", href: "/batches" },
-            { icon: <AddLarge size={16} className="text-[var(--foreground)]" />, label: "New Batch", href: "/batches/new" },
-          ],
-        },
-      ],
-    },
-    "finished-cartons": {
-      title: "Finished Cartons",
-      sections: [
-        { title: "Stock", items: [{ icon: <Archive size={16} className="text-[var(--foreground)]" />, label: "Ready Stock", href: "/finished-cartons" }] },
-      ],
-    },
-    customers: {
-      title: "Customers",
-      sections: [
-        { title: "Customers", items: [{ icon: <UserMultiple size={16} className="text-[var(--foreground)]" />, label: "All Customers", href: "/customers" }] },
-      ],
-    },
-    invoices: {
-      title: "Invoices",
-      sections: [
-        {
-          title: "Invoices",
-          items: [
-            { icon: <DocumentAdd size={16} className="text-[var(--foreground)]" />, label: "All Invoices", href: "/invoices" },
-            { icon: <AddLarge size={16} className="text-[var(--foreground)]" />, label: "New Invoice", href: "/invoices/new" },
-          ],
-        },
-      ],
-    },
-    payments: {
-      title: "Payments",
-      sections: [
-        { title: "Payments", items: [{ icon: <ChartBar size={16} className="text-[var(--foreground)]" />, label: "All Payments", href: "/payments" }] },
-      ],
-    },
-    reports: {
-      title: "Reports",
-      sections: [
-        {
-          title: "Analytics",
-          items: [
-            { icon: <Report size={16} className="text-[var(--foreground)]" />, label: "Inventory Movement", href: "/reports" },
-            { icon: <Analytics size={16} className="text-[var(--foreground)]" />, label: "Production Yield", href: "/reports" },
-            { icon: <StarFilled size={16} className="text-[var(--foreground)]" />, label: "P&L", href: "/reports" },
-          ],
-        },
-      ],
-    },
-    settings: {
-      title: "Settings",
-      sections: [
-        {
-          title: "Workspace",
-          items: [
-            { icon: <SettingsIcon size={16} className="text-[var(--foreground)]" />, label: "Business Profile", href: "/settings" },
-            { icon: <Security size={16} className="text-[var(--foreground)]" />, label: "Security" },
-            { icon: <Notification size={16} className="text-[var(--foreground)]" />, label: "Notifications" },
-          ],
-        },
-      ],
-    },
-  };
-
-  return contentMap[activeSection];
-}
-
-function IconNavButton({
-  children,
-  isActive = false,
-  onClick,
-  label,
-}: {
-  children: React.ReactNode;
-  isActive?: boolean;
-  onClick: () => void;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      title={label}
-      aria-label={label}
-      className={`flex items-center justify-center rounded-lg size-10 min-w-10 transition-colors duration-500
-        ${isActive ? "bg-[var(--surface-hover)] text-[var(--foreground)]" : "hover:bg-[var(--surface-hover)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]"}`}
-      style={{ transitionTimingFunction: softSpringEasing }}
-      onClick={onClick}
-    >
-      {children}
-    </button>
-  );
-}
-
-function IconNavigation({ activeSection }: { activeSection: SectionId }) {
-  const { navigate } = useNavigationLoading();
-
-  const navItems: Array<{ id: SectionId; icon: React.ReactNode; label: string }> = [
-    { id: "dashboard", icon: <Dashboard size={16} />, label: "Dashboard" },
-    { id: "raw-materials", icon: <Folder size={16} />, label: "Raw Materials" },
-    { id: "suppliers", icon: <UserMultiple size={16} />, label: "Suppliers" },
-    { id: "batches", icon: <Task size={16} />, label: "Batches" },
-    { id: "finished-cartons", icon: <Archive size={16} />, label: "Finished Cartons" },
-    { id: "customers", icon: <UserMultiple size={16} />, label: "Customers" },
-    { id: "invoices", icon: <DocumentAdd size={16} />, label: "Invoices" },
-    { id: "payments", icon: <ChartBar size={16} />, label: "Payments" },
-    { id: "reports", icon: <Analytics size={16} />, label: "Reports" },
-  ];
-
-  const goTo = (section: SectionId) => navigate(SECTION_DEFAULT_ROUTE[section]);
-
-  return (
-    <aside className="hidden lg:flex bg-[var(--background)] flex-col gap-2 items-center p-4 w-16 h-screen border-r border-[var(--surface-border)]">
-      <div className="mb-2 size-10 flex items-center justify-center text-[var(--foreground)]">
-        <GhaniLogo className="size-6" />
-      </div>
-
-      <div className="flex flex-col gap-2 w-full items-center">
-        {navItems.map((item) => (
-          <IconNavButton key={item.id} isActive={activeSection === item.id} onClick={() => goTo(item.id)} label={item.label}>
-            {item.icon}
-          </IconNavButton>
-        ))}
-      </div>
-
-      <div className="flex-1" />
-
-      <div className="flex flex-col gap-2 w-full items-center">
-        <IconNavButton isActive={activeSection === "settings"} onClick={() => goTo("settings")} label="Settings">
-          <SettingsIcon size={16} />
-        </IconNavButton>
-        <div className="size-8">
-          <AvatarCircle />
-        </div>
-      </div>
-    </aside>
-  );
-}
-
-
-function MobileSectionNav({ activeSection }: { activeSection: SectionId }) {
-  const { navigate } = useNavigationLoading();
-
-  const navItems: Array<{ id: SectionId; icon: React.ReactNode; label: string }> = [
-    { id: "dashboard", icon: <Dashboard size={18} />, label: "Dashboard" },
-    { id: "raw-materials", icon: <Folder size={18} />, label: "Raw Materials" },
-    { id: "suppliers", icon: <UserMultiple size={18} />, label: "Suppliers" },
-    { id: "batches", icon: <Task size={18} />, label: "Batches" },
-    { id: "finished-cartons", icon: <Archive size={18} />, label: "Finished Cartons" },
-    { id: "customers", icon: <UserMultiple size={18} />, label: "Customers" },
-    { id: "invoices", icon: <DocumentAdd size={18} />, label: "Invoices" },
-    { id: "payments", icon: <ChartBar size={18} />, label: "Payments" },
-    { id: "reports", icon: <Analytics size={18} />, label: "Reports" },
-    { id: "settings", icon: <SettingsIcon size={18} />, label: "Settings" },
-  ];
-
-  const goTo = (section: SectionId) => navigate(SECTION_DEFAULT_ROUTE[section]);
-
-  return (
-    <div className="w-full lg:hidden flex flex-col gap-1">
-      <div className="px-2 py-1 text-[14px] text-[var(--text-muted)]">Sections</div>
-      <div className="grid grid-cols-1 gap-1">
-        {navItems.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => goTo(item.id)}
-            className={`flex items-center gap-3 rounded-lg px-4 py-2.5 text-left transition-colors duration-300 ${
-              activeSection === item.id
-                ? "bg-[var(--surface-hover)] text-[var(--foreground)]"
-                : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
-            }`}
-          >
-            <span className="shrink-0">{item.icon}</span>
-            <span className="text-[14px]">{item.label}</span>
-          </button>
-        ))}
-      </div>
-      <div className="h-px w-full bg-[var(--surface-border)] my-2" />
-    </div>
-  );
-}
-function SectionTitle({
-  title,
-  onToggleCollapse,
-  isCollapsed,
-}: {
-  title: string;
-  onToggleCollapse: () => void;
-  isCollapsed: boolean;
-}) {
-  if (isCollapsed) {
-    return (
-      <div className="w-full hidden lg:flex justify-center transition-all duration-500" style={{ transitionTimingFunction: softSpringEasing }}>
-        <button
-          type="button"
-          onClick={onToggleCollapse}
-          className="flex items-center justify-center rounded-lg size-10 min-w-10 transition-all duration-500 hover:bg-[var(--surface-hover)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
-          style={{ transitionTimingFunction: softSpringEasing }}
-          aria-label="Expand sidebar"
-        >
-          <span className="inline-block rotate-180">
-            <ChevronDownIcon size={16} />
-          </span>
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="w-full overflow-hidden transition-all duration-500" style={{ transitionTimingFunction: softSpringEasing }}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center h-10">
-          <div className="px-2 py-1">
-            <div className="font-semibold text-[18px] text-[var(--foreground)] leading-[27px]">{title}</div>
-          </div>
-        </div>
-        <div className="pr-1 hidden lg:block">
-          <button
-            type="button"
-            onClick={onToggleCollapse}
-            className="flex items-center justify-center rounded-lg size-10 min-w-10 transition-all duration-500 hover:bg-[var(--surface-hover)] text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
-            style={{ transitionTimingFunction: softSpringEasing }}
-            aria-label="Collapse sidebar"
-          >
-            <ChevronDownIcon size={16} className="-rotate-90" />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MenuItem({ item, isCollapsed, isActive }: { item: MenuItemT; isCollapsed?: boolean; isActive: boolean }) {
-  const { navigate } = useNavigationLoading();
-
-  const content = (
-    <div
-      className={`rounded-lg cursor-pointer transition-all duration-500 flex items-center relative ${
-        isActive ? "bg-[var(--surface-hover)]" : "hover:bg-[var(--surface-hover)]"
-      } ${isCollapsed ? "w-10 min-w-10 h-10 justify-center p-4" : "w-full h-10 px-4 py-2"}`}
-      style={{ transitionTimingFunction: softSpringEasing }}
-      title={isCollapsed ? item.label : undefined}
-    >
-      <div className="flex items-center justify-center shrink-0">{item.icon}</div>
-      <div
-        className={`flex-1 relative transition-opacity duration-500 overflow-hidden ${isCollapsed ? "opacity-0 w-0" : "opacity-100 ml-3"}`}
-        style={{ transitionTimingFunction: softSpringEasing }}
-      >
-        <div className="text-[14px] text-[var(--foreground)] leading-[20px] truncate">{item.label}</div>
-      </div>
-    </div>
-  );
-
-  return (
-    <div
-      className={`relative shrink-0 transition-all duration-500 ${isCollapsed ? "w-full flex justify-center" : "w-full"}`}
-      style={{ transitionTimingFunction: softSpringEasing }}
-    >
-      {item.href ? (
-        <button type="button" onClick={() => navigate(item.href!)} className="block w-full text-left">
-          {content}
-        </button>
-      ) : (
-        content
-      )}
-    </div>
-  );
-}
-
-function MenuSection({
-  section,
-  isCollapsed,
-  pathname,
-}: {
-  section: MenuSectionT;
-  isCollapsed?: boolean;
-  pathname: string;
-}) {
-  return (
-    <div className="flex flex-col w-full">
-      <div
-        className={`relative shrink-0 w-full transition-all duration-500 overflow-hidden ${isCollapsed ? "h-0 opacity-0" : "h-10 opacity-100"}`}
-        style={{ transitionTimingFunction: softSpringEasing }}
-      >
-        <div className="flex items-center h-10 px-4">
-          <div className="text-[14px] text-[var(--text-muted)]">{section.title}</div>
-        </div>
-      </div>
-
-      {section.items.map((item, index) => {
-        const isActive = !!item.href && (pathname === item.href || pathname.startsWith(item.href + "/"));
-        return <MenuItem key={`${section.title}-${index}`} item={item} isCollapsed={isCollapsed} isActive={isActive} />;
-      })}
-    </div>
-  );
-}
-
-function DetailSidebar({ activeSection, pathname }: { activeSection: SectionId; pathname: string }) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const { isOpen, close } = useSidebar();
-  const content = getSidebarContent(activeSection);
-
-  const toggleCollapse = () => setIsCollapsed((s) => !s);
-
-  return (
-    <>
-      {/* Mobile backdrop - only rendered when the drawer is open */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/60 lg:hidden"
-          onClick={close}
-          aria-hidden="true"
-        />
-      )}
-
-      <aside
-        className={`bg-[var(--background)] flex flex-col gap-4 items-start p-4 transition-all duration-300 h-screen border-r border-[var(--surface-border)]
-          fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] overflow-y-auto
-          ${isOpen ? "translate-x-0" : "-translate-x-full"}
-          lg:static lg:z-auto lg:translate-x-0 lg:transition-[width] lg:duration-500 lg:h-screen
-          ${isCollapsed ? "lg:w-16 lg:min-w-16 lg:!px-0 lg:justify-center" : "lg:w-72"}
-        `}
-        style={{ transitionTimingFunction: softSpringEasing }}
-      >
-        <button
-          type="button"
-          onClick={close}
-          aria-label="Close menu"
-          className="lg:hidden absolute top-4 right-4 flex items-center justify-center size-8 rounded-lg hover:bg-[var(--surface-hover)] text-[var(--text-muted)]"
-        >
-          <CloseIcon size={18} />
-        </button>
-
-        <BrandBadge />
-        <MobileSectionNav activeSection={activeSection} />
-        <SectionTitle title={content.title} onToggleCollapse={toggleCollapse} isCollapsed={isCollapsed} />
-        <div className="w-full lg:hidden">
-          <SearchContainer isCollapsed={false} />
-        </div>
-        <div className="w-full hidden lg:block">
-          <SearchContainer isCollapsed={isCollapsed} />
-        </div>
-
-        <div
-          className={`flex flex-col w-full overflow-y-auto transition-all duration-500 gap-4 items-start ${isCollapsed ? "lg:gap-2 lg:items-center" : ""}`}
-          style={{ transitionTimingFunction: softSpringEasing }}
-        >
-          {content.sections.map((section, index) => (
-            <MenuSection key={`${activeSection}-${index}`} section={section} isCollapsed={isCollapsed} pathname={pathname} />
-          ))}
-        </div>
-
-        <div className="w-full mt-auto pt-2 border-t border-[var(--surface-border)]">
-          <div className="flex items-center gap-2 px-2 py-2">
-            <AvatarCircle />
-            <div className="text-[14px] text-[var(--foreground)]">Owner / Admin</div>
-          </div>
-        </div>
-      </aside>
-    </>
-  );
-}
-
-export function AppSidebar() {
-  const pathname = usePathname();
-  const activeSection = getSectionFromPathname(pathname);
-
-  return (
-    <div className="flex flex-row">
-      <IconNavigation activeSection={activeSection} />
-      <DetailSidebar activeSection={activeSection} pathname={pathname} />
-    </div>
-  );
-}
-
-export default AppSidebar;
-'@
-Write-Utf8NoBom $sidebarPath $sidebarContent
-Write-Host "  Updated: components\ui\sidebar-component.tsx" -ForegroundColor Green
-
-Write-Host ""
-Write-Host "=== Done ===" -ForegroundColor Cyan
-Write-Host "Please review with 'git diff', test locally (npm run dev:frontend), then commit and redeploy." -ForegroundColor Yellow
 ==================================================
 FILE: package.json
 ==================================================
@@ -1596,6 +731,7 @@ FILE: apps\frontend\app\(auth)\login\page.tsx
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useNavigationLoading } from "@/lib/navigation-loading-context";
 import Image from "next/image";
 import { AtSignIcon, LockIcon } from "lucide-react";
 import { GhaniLogo } from "@/components/ui/ghani-logo";
@@ -1605,6 +741,7 @@ const LOGIN_IMAGE_URL = "https://res.cloudinary.com/dr9dwesyo/image/upload/v1787
 
 export default function LoginPage() {
   const router = useRouter();
+  const { navigate } = useNavigationLoading();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -1619,7 +756,7 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
     document.cookie = "ghanifoods-auth=1; path=/; max-age=86400";
-    router.push("/");
+    navigate("/");
   };
 
   return (
@@ -1795,8 +932,9 @@ FILE: apps\frontend\app\(dashboard)\page.tsx
 "use client";
 
 import { useMemo } from "react";
-import Link from "next/link";
+import { NavLink } from "@/components/ui/nav-link";
 import { useRouter } from "next/navigation";
+import { useNavigationLoading } from "@/lib/navigation-loading-context";
 import { useStore } from "@/lib/store";
 
 function KpiCard({ label, value }: { label: string; value: string | number }) {
@@ -1823,6 +961,7 @@ function StatusBadge({ status }: { status: "unpaid" | "partial" | "paid" }) {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { navigate } = useNavigationLoading();
   const rawMaterials = useStore((s) => s.rawMaterials);
   const wrappers = useStore((s) => s.wrappers);
   const boxes = useStore((s) => s.boxes);
@@ -1866,13 +1005,13 @@ export default function DashboardPage() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Link href="/raw-materials" className="rounded-lg border border-neutral-400 dark:border-neutral-600 px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)] transition-colors">
+        <NavLink href="/raw-materials" className="rounded-lg border border-neutral-400 dark:border-neutral-600 px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)] transition-colors">
           + Add Raw Material
-        </Link>
-        <button onClick={() => router.push("/batches/new")} className="rounded-lg border border-neutral-400 dark:border-neutral-600 px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)] transition-colors">
+        </NavLink>
+        <button onClick={() => navigate("/batches/new")} className="rounded-lg border border-neutral-400 dark:border-neutral-600 px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)] transition-colors">
           + New Batch
         </button>
-        <button onClick={() => router.push("/invoices/new")} className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
+        <button onClick={() => navigate("/invoices/new")} className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
           + New Invoice
         </button>
       </div>
@@ -1887,10 +1026,10 @@ export default function DashboardPage() {
               <div className="px-4 py-6 text-center text-sm text-[var(--text-faint)]">All stock levels are healthy.</div>
             )}
             {lowStockItems.map((item) => (
-              <Link key={item.id} href={item.href} className="flex items-center justify-between px-4 py-3 hover:bg-[var(--surface-hover)]/60">
+              <NavLink key={item.id} href={item.href} className="flex items-center justify-between px-4 py-3 hover:bg-[var(--surface-hover)]/60">
                 <span className="text-sm text-[var(--foreground)]">{item.name}</span>
                 <span className="text-xs text-red-400">{item.qty} / {item.threshold}</span>
-              </Link>
+              </NavLink>
             ))}
           </div>
         </div>
@@ -1898,14 +1037,14 @@ export default function DashboardPage() {
         <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] overflow-hidden">
           <div className="px-4 py-3 border-b border-[var(--surface-border)] flex items-center justify-between">
             <h2 className="text-sm font-semibold text-[var(--foreground)]">Recent Invoices</h2>
-            <Link href="/invoices" className="text-xs text-[var(--text-muted)] hover:text-[var(--foreground)] hover:underline">View all</Link>
+            <NavLink href="/invoices" className="text-xs text-[var(--text-muted)] hover:text-[var(--foreground)] hover:underline">View all</NavLink>
           </div>
           <table className="w-full text-sm">
             <tbody>
               {recentInvoices.map((inv) => (
                 <tr key={inv.id} className="border-b border-[var(--surface-border)] last:border-0">
                   <td className="px-4 py-3">
-                    <Link href={`/invoices/${inv.id}`} className="text-[var(--foreground)] hover:underline">{inv.id}</Link>
+                    <NavLink href={`/invoices/${inv.id}`} className="text-[var(--foreground)] hover:underline">{inv.id}</NavLink>
                   </td>
                   <td className="px-4 py-3 text-[var(--text-secondary)]">{inv.customerName}</td>
                   <td className="px-4 py-3 text-[var(--text-secondary)]">Rs. {inv.totalAmount.toLocaleString()}</td>
@@ -1925,7 +1064,7 @@ FILE: apps\frontend\app\(dashboard)\batches\page.tsx
 "use client";
 
 import { useMemo } from "react";
-import Link from "next/link";
+import { NavLink } from "@/components/ui/nav-link";
 import { type ColumnDef } from "@tanstack/react-table";
 import { useStore, type ProductionBatch } from "@/lib/store";
 import { SortableTable } from "@/components/ui/sortable-table";
@@ -1946,7 +1085,7 @@ export default function BatchesPage() {
   const columns = useMemo<ColumnDef<ProductionBatch, unknown>[]>(() => [
     {
       accessorKey: "id", header: "Batch ID",
-      cell: ({ row }) => <Link href={`/batches/${row.original.id}`} className="text-[var(--foreground)] hover:underline">{row.original.id}</Link>,
+      cell: ({ row }) => <NavLink href={`/batches/${row.original.id}`} className="text-[var(--foreground)] hover:underline">{row.original.id}</NavLink>,
     },
     { accessorKey: "batchDate", header: "Date" },
     { accessorKey: "outputYieldKg", header: "Output Yield (kg)" },
@@ -1969,9 +1108,9 @@ export default function BatchesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-[var(--foreground)]">Production Batches</h1>
-        <Link href="/batches/new" className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
+        <NavLink href="/batches/new" className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
           + New Batch
-        </Link>
+        </NavLink>
       </div>
       <SortableTable data={productionBatches} columns={columns} globalFilterPlaceholder="Search batches..." />
     </div>
@@ -1984,6 +1123,7 @@ FILE: apps\frontend\app\(dashboard)\batches\new\page.tsx
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useNavigationLoading } from "@/lib/navigation-loading-context";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -1994,6 +1134,7 @@ type ConsumptionRow = { id: string; rawMaterialId: string; qty: string };
 
 export default function NewBatchPage() {
   const router = useRouter();
+  const { navigate } = useNavigationLoading();
   const rawMaterials = useStore((s) => s.rawMaterials);
   const productionBatches = useStore((s) => s.productionBatches);
   const createBatch = useStore((s) => s.createBatch);
@@ -2103,7 +1244,7 @@ export default function NewBatchPage() {
     } else {
       toast.success(`Batch ${newId} created â€” raw material stock deducted`);
     }
-    router.push(`/batches/${newId}`);
+    navigate(`/batches/${newId}`);
   };
 
   return (
@@ -2232,7 +1373,7 @@ export default function NewBatchPage() {
       </div>
 
       <div className="flex justify-end gap-2">
-        <button type="button" onClick={() => router.push("/batches")} className="rounded-lg px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]">Cancel</button>
+        <button type="button" onClick={() => navigate("/batches")} className="rounded-lg px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]">Cancel</button>
         <button type="submit" disabled={isSubmitting}
           className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:bg-neutral-200 disabled:opacity-50">
           {isSubmitting ? "Saving..." : "Save Batch"}
@@ -2247,8 +1388,9 @@ FILE: apps\frontend\app\(dashboard)\batches\[id]\page.tsx
 "use client";
 
 import { use, useState } from "react";
-import Link from "next/link";
+import { NavLink } from "@/components/ui/nav-link";
 import { useRouter } from "next/navigation";
+import { useNavigationLoading } from "@/lib/navigation-loading-context";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -2315,13 +1457,14 @@ function OverheadDialog({ open, onClose, batchId }: { open: boolean; onClose: ()
 export default function BatchDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const { navigate } = useNavigationLoading();
   const batch = useStore((s) => s.productionBatches.find((b) => b.id === id));
   const [dialogOpen, setDialogOpen] = useState(false);
 
   if (!batch) {
     return (
       <div className="space-y-4">
-        <Link href="/batches" className="text-sm text-[var(--text-muted)] hover:underline">&larr; Back to Batches</Link>
+        <NavLink href="/batches" className="text-sm text-[var(--text-muted)] hover:underline">&larr; Back to Batches</NavLink>
         <p className="text-[var(--text-muted)]">Batch not found.</p>
       </div>
     );
@@ -2330,7 +1473,7 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
   return (
     <div className="space-y-6">
       <div className="text-sm text-[var(--text-muted)]">
-        <Link href="/batches" className="hover:underline text-[var(--text-secondary)]">Batches</Link>{" "}
+        <NavLink href="/batches" className="hover:underline text-[var(--text-secondary)]">Batches</NavLink>{" "}
         / <span className="text-[var(--foreground)]">{batch.id}</span>
       </div>
 
@@ -2368,7 +1511,7 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
         {batch.leftoverSourceBatchId && batch.leftoverKgConsumed && (
           <div className="mt-2 text-xs text-blue-400">
             Includes {batch.leftoverKgConsumed} kg of leftover bulk product carried forward from{" "}
-            <Link href={`/batches/${batch.leftoverSourceBatchId}`} className="underline">{batch.leftoverSourceBatchId}</Link>{" "}
+            <NavLink href={`/batches/${batch.leftoverSourceBatchId}`} className="underline">{batch.leftoverSourceBatchId}</NavLink>{" "}
             (FIFO â€” cost blended into this batch's effective cost/kg).
           </div>
         )}
@@ -2378,7 +1521,7 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
         <button onClick={() => setDialogOpen(true)} className="rounded-lg border border-neutral-400 dark:border-neutral-600 px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)]">
           Allocate Month-End Overhead
         </button>
-        <button onClick={() => router.push(`/finished-cartons?batchId=${batch.id}`)} className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
+        <button onClick={() => navigate(`/finished-cartons?batchId=${batch.id}`)} className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
           Send to Packaging
         </button>
       </div>
@@ -2393,7 +1536,7 @@ FILE: apps\frontend\app\(dashboard)\customers\page.tsx
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import { NavLink } from "@/components/ui/nav-link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -2466,7 +1609,7 @@ export default function CustomersPage() {
   const columns = useMemo<ColumnDef<Customer, unknown>[]>(() => [
     {
       accessorKey: "name", header: "Name",
-      cell: ({ row }) => <Link href={`/customers/${row.original.id}`} className="text-[var(--foreground)] hover:underline">{row.original.name}</Link>,
+      cell: ({ row }) => <NavLink href={`/customers/${row.original.id}`} className="text-[var(--foreground)] hover:underline">{row.original.name}</NavLink>,
     },
     { accessorKey: "phone", header: "Phone" },
     {
@@ -2494,8 +1637,9 @@ FILE: apps\frontend\app\(dashboard)\customers\[id]\page.tsx
 "use client";
 
 import { use, useMemo, useState } from "react";
-import Link from "next/link";
+import { NavLink } from "@/components/ui/nav-link";
 import { useRouter } from "next/navigation";
+import { useNavigationLoading } from "@/lib/navigation-loading-context";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -2558,6 +1702,7 @@ function RecordPaymentDialog({ open, onClose, customerId }: { open: boolean; onC
 export default function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const { navigate } = useNavigationLoading();
   const customer = useStore((s) => s.customers.find((c) => c.id === id));
   const allLedger = useStore((s) => s.ledgerEntries);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -2567,7 +1712,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   if (!customer) {
     return (
       <div className="space-y-4">
-        <Link href="/customers" className="text-sm text-[var(--text-muted)] hover:underline">&larr; Back to Customers</Link>
+        <NavLink href="/customers" className="text-sm text-[var(--text-muted)] hover:underline">&larr; Back to Customers</NavLink>
         <p className="text-[var(--text-muted)]">Customer not found.</p>
       </div>
     );
@@ -2579,7 +1724,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   return (
     <div className="space-y-6">
       <div className="text-sm text-[var(--text-muted)]">
-        <Link href="/customers" className="hover:underline text-[var(--text-secondary)]">Customers</Link>{" "}
+        <NavLink href="/customers" className="hover:underline text-[var(--text-secondary)]">Customers</NavLink>{" "}
         / <span className="text-[var(--foreground)]">{customer.name}</span>
       </div>
 
@@ -2609,7 +1754,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
         <button onClick={() => setDialogOpen(true)} className="rounded-lg border border-neutral-400 dark:border-neutral-600 px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)]">
           + Record Payment
         </button>
-        <button onClick={() => router.push(`/invoices/new?customerId=${customer.id}`)} className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
+        <button onClick={() => navigate(`/invoices/new?customerId=${customer.id}`)} className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
           New Invoice for this Customer
         </button>
       </div>
@@ -2655,7 +1800,7 @@ FILE: apps\frontend\app\(dashboard)\finished-cartons\page.tsx
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import { NavLink } from "@/components/ui/nav-link";
 import { toast } from "sonner";
 import { useStore } from "@/lib/store";
 
@@ -2762,7 +1907,7 @@ function NewPackingRunDialog({ open, onClose }: { open: boolean; onClose: () => 
               {cartonConfigurations.length === 0 && (
                 <p className="text-xs text-red-400 mt-1">
                   No carton configurations exist yet. Create one under{" "}
-                  <Link href="/packaging/carton-config" className="underline">Packaging &rarr; Carton Configurations</Link>.
+                  <NavLink href="/packaging/carton-config" className="underline">Packaging &rarr; Carton Configurations</NavLink>.
                 </p>
               )}
             </div>
@@ -2925,7 +2070,7 @@ FILE: apps\frontend\app\(dashboard)\invoices\page.tsx
 "use client";
 
 import { useMemo } from "react";
-import Link from "next/link";
+import { NavLink } from "@/components/ui/nav-link";
 import { type ColumnDef } from "@tanstack/react-table";
 import { useStore, type Invoice } from "@/lib/store";
 import { SortableTable } from "@/components/ui/sortable-table";
@@ -2949,7 +2094,7 @@ export default function InvoicesPage() {
   const columns = useMemo<ColumnDef<Invoice, unknown>[]>(() => [
     {
       accessorKey: "id", header: "Invoice #",
-      cell: ({ row }) => <Link href={`/invoices/${row.original.id}`} className="text-[var(--foreground)] hover:underline">{row.original.id}</Link>,
+      cell: ({ row }) => <NavLink href={`/invoices/${row.original.id}`} className="text-[var(--foreground)] hover:underline">{row.original.id}</NavLink>,
     },
     { accessorKey: "customerName", header: "Customer" },
     { accessorKey: "invoiceDate", header: "Date" },
@@ -2967,9 +2112,9 @@ export default function InvoicesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-[var(--foreground)]">Invoices</h1>
-        <Link href="/invoices/new" className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
+        <NavLink href="/invoices/new" className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
           + New Invoice
-        </Link>
+        </NavLink>
       </div>
       <SortableTable data={invoices} columns={columns} globalFilterPlaceholder="Search invoices..." />
     </div>
@@ -2982,6 +2127,7 @@ FILE: apps\frontend\app\(dashboard)\invoices\new\page.tsx
 
 import { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useNavigationLoading } from "@/lib/navigation-loading-context";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -2992,6 +2138,7 @@ type InvoiceLine = { id: string; itemId: string; qty: string; unitPrice: string 
 
 function NewInvoiceForm() {
   const router = useRouter();
+  const { navigate } = useNavigationLoading();
   const searchParams = useSearchParams();
   const preselectedCustomerId = searchParams.get("customerId") ?? "";
 
@@ -3058,7 +2205,7 @@ function NewInvoiceForm() {
 
     const newId = createInvoice({ customerId: values.customerId, lines: parsedLines });
     toast.success(`Invoice ${newId} created â€” stock deducted, ledger updated`);
-    router.push(`/invoices/${newId}`);
+    navigate(`/invoices/${newId}`);
   };
 
   const selectedCustomer = customers.find((c) => c.id === customerId);
@@ -3139,7 +2286,7 @@ function NewInvoiceForm() {
       </div>
 
       <div className="flex justify-end gap-2">
-        <button type="button" onClick={() => router.push("/invoices")} className="rounded-lg px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]">Cancel</button>
+        <button type="button" onClick={() => navigate("/invoices")} className="rounded-lg px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]">Cancel</button>
         <button type="submit" disabled={isSubmitting}
           className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:bg-neutral-200 disabled:opacity-50">
           {isSubmitting ? "Saving..." : "Save & Generate Invoice"}
@@ -3162,7 +2309,7 @@ FILE: apps\frontend\app\(dashboard)\invoices\[id]\page.tsx
 "use client";
 
 import { use, useState } from "react";
-import Link from "next/link";
+import { NavLink } from "@/components/ui/nav-link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -3224,7 +2371,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   if (!invoice) {
     return (
       <div className="space-y-4">
-        <Link href="/invoices" className="text-sm text-[var(--text-muted)] hover:underline">&larr; Back to Invoices</Link>
+        <NavLink href="/invoices" className="text-sm text-[var(--text-muted)] hover:underline">&larr; Back to Invoices</NavLink>
         <p className="text-[var(--text-muted)]">Invoice not found.</p>
       </div>
     );
@@ -3331,7 +2478,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   return (
     <div className="space-y-6">
       <div className="text-sm text-[var(--text-muted)]">
-        <Link href="/invoices" className="hover:underline text-[var(--text-secondary)]">Invoices</Link>{" "}
+        <NavLink href="/invoices" className="hover:underline text-[var(--text-secondary)]">Invoices</NavLink>{" "}
         / <span className="text-[var(--foreground)]">{invoice.id}</span>
       </div>
 
@@ -3408,7 +2555,7 @@ FILE: apps\frontend\app\(dashboard)\packaging\page.tsx
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import { NavLink } from "@/components/ui/nav-link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -3619,9 +2766,9 @@ export default function PackagingPage() {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-xl font-semibold text-[var(--foreground)]">Packaging Materials</h1>
         <div className="flex items-center gap-2">
-          <Link href="/packaging/carton-config" className="rounded-lg border border-neutral-400 dark:border-neutral-600 px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)]">
+          <NavLink href="/packaging/carton-config" className="rounded-lg border border-neutral-400 dark:border-neutral-600 px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)]">
             Carton Configurations
-          </Link>
+          </NavLink>
           {tab === "wrappers" ? (
             <button onClick={() => setAddWrapperOpen(true)} className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
               + Add Wrapper
@@ -3934,7 +3081,7 @@ FILE: apps\frontend\app\(dashboard)\raw-materials\page.tsx
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import { NavLink } from "@/components/ui/nav-link";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -4106,9 +3253,9 @@ export default function RawMaterialsPage() {
       accessorKey: "name",
       header: "Name",
       cell: ({ row }) => (
-        <Link href={`/raw-materials/${row.original.id}`} className="text-[var(--foreground)] hover:underline">
+        <NavLink href={`/raw-materials/${row.original.id}`} className="text-[var(--foreground)] hover:underline">
           {row.original.name}
-        </Link>
+        </NavLink>
       ),
     },
     { accessorKey: "unit", header: "Unit" },
@@ -4150,7 +3297,7 @@ FILE: apps\frontend\app\(dashboard)\raw-materials\[id]\page.tsx
 "use client";
 
 import { use, useMemo, useState } from "react";
-import Link from "next/link";
+import { NavLink } from "@/components/ui/nav-link";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -4245,7 +3392,7 @@ export default function RawMaterialDetailPage({ params }: { params: Promise<{ id
   if (!material) {
     return (
       <div className="space-y-4">
-        <Link href="/raw-materials" className="text-sm text-[var(--text-muted)] hover:underline">&larr; Back to Raw Materials</Link>
+        <NavLink href="/raw-materials" className="text-sm text-[var(--text-muted)] hover:underline">&larr; Back to Raw Materials</NavLink>
         <p className="text-[var(--text-muted)]">Raw material not found.</p>
       </div>
     );
@@ -4256,7 +3403,7 @@ export default function RawMaterialDetailPage({ params }: { params: Promise<{ id
   return (
     <div className="space-y-6">
       <div className="text-sm text-[var(--text-muted)]">
-        <Link href="/raw-materials" className="hover:underline text-[var(--text-secondary)]">Raw Materials</Link>{" "}
+        <NavLink href="/raw-materials" className="hover:underline text-[var(--text-secondary)]">Raw Materials</NavLink>{" "}
         / <span className="text-[var(--foreground)]">{material.name}</span>
       </div>
 
@@ -4319,7 +3466,7 @@ export default function RawMaterialDetailPage({ params }: { params: Promise<{ id
                   <td className="px-4 py-3 text-[var(--text-secondary)]">{r.purchaseDate}</td>
                   <td className="px-4 py-3 text-[var(--text-secondary)]">
                     {supplier ? (
-                      <Link href={`/suppliers/${supplier.id}`} className="hover:underline text-[var(--foreground)]">{supplier.name}</Link>
+                      <NavLink href={`/suppliers/${supplier.id}`} className="hover:underline text-[var(--foreground)]">{supplier.name}</NavLink>
                     ) : "-"}
                   </td>
                   <td className="px-4 py-3 text-[var(--text-secondary)]">{r.qty} {material.unit}</td>
@@ -4669,7 +3816,7 @@ FILE: apps\frontend\app\(dashboard)\suppliers\page.tsx
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import { NavLink } from "@/components/ui/nav-link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -4744,7 +3891,7 @@ export default function SuppliersPage() {
   const columns = useMemo<ColumnDef<Row, unknown>[]>(() => [
     {
       accessorKey: "name", header: "Name",
-      cell: ({ row }) => <Link href={`/suppliers/${row.original.id}`} className="text-[var(--foreground)] hover:underline">{row.original.name}</Link>,
+      cell: ({ row }) => <NavLink href={`/suppliers/${row.original.id}`} className="text-[var(--foreground)] hover:underline">{row.original.name}</NavLink>,
     },
     { accessorKey: "phone", header: "Phone" },
     { accessorKey: "totalPurchases", header: "Total Purchases" },
@@ -4770,7 +3917,7 @@ FILE: apps\frontend\app\(dashboard)\suppliers\[id]\page.tsx
 "use client";
 
 import { use, useMemo } from "react";
-import Link from "next/link";
+import { NavLink } from "@/components/ui/nav-link";
 import { useStore } from "@/lib/store";
 
 export default function SupplierDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -4792,7 +3939,7 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
   if (!supplier) {
     return (
       <div className="space-y-4">
-        <Link href="/suppliers" className="text-sm text-[var(--text-muted)] hover:underline">&larr; Back to Suppliers</Link>
+        <NavLink href="/suppliers" className="text-sm text-[var(--text-muted)] hover:underline">&larr; Back to Suppliers</NavLink>
         <p className="text-[var(--text-muted)]">Supplier not found.</p>
       </div>
     );
@@ -4801,7 +3948,7 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
   return (
     <div className="space-y-6">
       <div className="text-sm text-[var(--text-muted)]">
-        <Link href="/suppliers" className="hover:underline text-[var(--text-secondary)]">Suppliers</Link>{" "}
+        <NavLink href="/suppliers" className="hover:underline text-[var(--text-secondary)]">Suppliers</NavLink>{" "}
         / <span className="text-[var(--foreground)]">{supplier.name}</span>
       </div>
 
@@ -4842,7 +3989,7 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
                   <td className="px-4 py-3 text-[var(--text-secondary)]">{r.purchaseDate}</td>
                   <td className="px-4 py-3 text-[var(--text-secondary)]">
                     {material ? (
-                      <Link href={`/raw-materials/${material.id}`} className="hover:underline text-[var(--foreground)]">{material.name}</Link>
+                      <NavLink href={`/raw-materials/${material.id}`} className="hover:underline text-[var(--foreground)]">{material.name}</NavLink>
                     ) : "-"}
                   </td>
                   <td className="px-4 py-3 text-[var(--text-secondary)]">{r.qty} {material?.unit ?? ""}</td>
@@ -5000,12 +4147,14 @@ FILE: apps\frontend\components\ui\auth-page.tsx
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useNavigationLoading } from "@/lib/navigation-loading-context";
 import { AtSignIcon, LockIcon, Grid2x2PlusIcon } from "lucide-react";
 import { Button } from "./button";
 import { Input } from "./input";
 
 export function AuthPage() {
   const router = useRouter();
+  const { navigate } = useNavigationLoading();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -5018,7 +4167,7 @@ export function AuthPage() {
     }
     // Dummy auth: any non-empty credentials succeed
     setError("");
-    router.push("/");
+    navigate("/");
   };
 
   return (
@@ -5285,6 +4434,48 @@ export function LottieLoader({ src, size = 160, className = "", loop = true }: L
 }
 
 export default LottieLoader;
+==================================================
+FILE: apps\frontend\components\ui\nav-link.tsx
+==================================================
+"use client";
+
+import NextLink, { type LinkProps } from "next/link";
+import { forwardRef, type AnchorHTMLAttributes } from "react";
+import { useNavigationLoading } from "@/lib/navigation-loading-context";
+
+type NavLinkProps = LinkProps &
+  Omit<AnchorHTMLAttributes<HTMLAnchorElement>, keyof LinkProps | "href"> & {
+    children?: React.ReactNode;
+  };
+
+// Drop-in replacement for next/link. Keeps Next's built-in prefetching
+// (hover/viewport) so most routes are already warm by the time they're
+// clicked, but routes the actual click through the shared navigate()
+// context so every link in the app gets the same instant-nav /
+// only-show-loader-if-actually-slow behavior as the sidebar.
+export const NavLink = forwardRef<HTMLAnchorElement, NavLinkProps>(
+  ({ href, onClick, children, ...rest }, ref) => {
+    const { navigate } = useNavigationLoading();
+
+    const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+      onClick?.(e);
+      if (e.defaultPrevented) return;
+      // Let modified clicks (new tab, etc.) behave natively.
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+      e.preventDefault();
+      navigate(typeof href === "string" ? href : href.toString());
+    };
+
+    return (
+      <NextLink ref={ref} href={href} onClick={handleClick} {...rest}>
+        {children}
+      </NextLink>
+    );
+  }
+);
+NavLink.displayName = "NavLink";
+
+export default NavLink;
 ==================================================
 FILE: apps\frontend\components\ui\navigation-loading-overlay.tsx
 ==================================================
@@ -6092,8 +5283,9 @@ FILE: apps\frontend\components\ui\topbar.tsx
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { NavLink } from "@/components/ui/nav-link";
 import { useRouter } from "next/navigation";
+import { useNavigationLoading } from "@/lib/navigation-loading-context";
 import {
   Notification,
   User as UserIcon,
@@ -6149,7 +5341,7 @@ function NotificationBell() {
                 <div className="px-4 py-6 text-center text-sm text-[var(--text-faint)]">All stock levels are healthy.</div>
               )}
               {alerts.map((a) => (
-                <Link
+                <NavLink
                   key={a.id}
                   href={a.href}
                   onClick={() => setOpen(false)}
@@ -6157,7 +5349,7 @@ function NotificationBell() {
                 >
                   <span className="text-sm text-[var(--foreground)]">{a.name}</span>
                   <span className="text-xs text-red-500">{a.qty} / {a.threshold}</span>
-                </Link>
+                </NavLink>
               ))}
             </div>
           </div>
@@ -6170,11 +5362,12 @@ function NotificationBell() {
 function UserMenu() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
+  const { navigate } = useNavigationLoading();
 
   const handleLogout = () => {
     setOpen(false);
     document.cookie = "ghanifoods-auth=; path=/; max-age=0";
-    router.push("/login");
+    navigate("/login");
   };
 
   return (
@@ -6194,10 +5387,10 @@ function UserMenu() {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div className="absolute right-0 z-50 mt-2 w-48 rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] shadow-lg overflow-hidden">
-            <Link href="/settings" onClick={() => setOpen(false)}
+            <NavLink href="/settings" onClick={() => setOpen(false)}
               className="block px-4 py-2.5 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)]">
               Settings
-            </Link>
+            </NavLink>
             <button onClick={handleLogout}
               className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-[var(--surface-hover)]">
               Log out
@@ -6224,11 +5417,11 @@ export function Topbar() {
       </button>
 
       <div className="flex items-center gap-2 sm:gap-3 ml-auto">
-        <Link href="/invoices/new"
+        <NavLink href="/invoices/new"
           className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity whitespace-nowrap">
           <span className="hidden sm:inline">+ New Invoice</span>
           <span className="sm:hidden">+ Invoice</span>
-        </Link>
+        </NavLink>
         <AnimatedThemeToggler />
         <NotificationBell />
         <UserMenu />
@@ -6259,32 +5452,54 @@ type NavigationLoadingContextValue = {
   navigate: (href: string) => void;
 };
 
-const MIN_VISIBLE_MS = 300;
+// If the route resolves before this much time has passed, the loader never
+// appears at all - navigation just feels instant. If it takes longer than
+// this, the loader is shown immediately and stays up until the transition
+// actually finishes (no artificial minimum visible time).
+const SHOW_LOADER_AFTER_MS = 150;
 
 const NavigationLoadingContext = createContext<NavigationLoadingContextValue | null>(null);
 
 export function NavigationLoadingProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [minTimeElapsed, setMinTimeElapsed] = useState(true);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showLoader, setShowLoader] = useState(false);
+  const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const navigate = (href: string) => {
-    setMinTimeElapsed(false);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => setMinTimeElapsed(true), MIN_VISIBLE_MS);
+    if (showTimerRef.current) clearTimeout(showTimerRef.current);
+
+    // Don't show anything yet - only arm a timer. If the transition below
+    // finishes before this fires, the timer gets cleared and the user never
+    // sees a loader at all (this is the common case for prefetched routes).
+    showTimerRef.current = setTimeout(() => {
+      setShowLoader(true);
+    }, SHOW_LOADER_AFTER_MS);
+
     startTransition(() => {
       router.push(href);
     });
   };
 
+  // As soon as the transition settles, cancel any pending "show loader"
+  // timer and hide the loader immediately - no minimum visible duration.
+  useEffect(() => {
+    if (!isPending) {
+      if (showTimerRef.current) {
+        clearTimeout(showTimerRef.current);
+        showTimerRef.current = null;
+      }
+      setShowLoader(false);
+    }
+  }, [isPending]);
+
   useEffect(() => {
     return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
+      if (showTimerRef.current) clearTimeout(showTimerRef.current);
     };
   }, []);
 
-  const isLoading = isPending || !minTimeElapsed;
+  const isLoading = isPending && showLoader;
 
   return (
     <NavigationLoadingContext.Provider value={{ isLoading, navigate }}>
