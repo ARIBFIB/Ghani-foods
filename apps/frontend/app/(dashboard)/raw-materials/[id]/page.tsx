@@ -2,7 +2,7 @@
 
 import { use, useMemo, useState } from "react";
 import Link from "next/link";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { useStore } from "@/lib/store";
@@ -10,18 +10,25 @@ import { purchaseSchema, type PurchaseFormValues } from "@/lib/schemas";
 
 function RecordPurchaseDialog({ open, onClose, materialId }: { open: boolean; onClose: () => void; materialId: string }) {
   const recordPurchase = useStore((s) => s.recordPurchase);
+  const suppliers = useStore((s) => s.suppliers);
+  const today = new Date().toISOString().slice(0, 10);
+
   const {
     register,
     handleSubmit,
+    control,
     reset,
     formState: { errors, isSubmitting },
-  } = useForm<PurchaseFormValues>({ resolver: zodResolver(purchaseSchema) });
+  } = useForm<PurchaseFormValues>({
+    resolver: zodResolver(purchaseSchema),
+    defaultValues: { supplierId: suppliers[0]?.id ?? "", purchaseDate: today, qty: 0, cost: 0 },
+  });
 
   if (!open) return null;
 
   const onSubmit = async (values: PurchaseFormValues) => {
-    recordPurchase(materialId, values.qty, values.cost);
-    toast.success("Purchase recorded â€” average cost updated");
+    recordPurchase(materialId, values.qty, values.cost, values.supplierId, values.purchaseDate);
+    toast.success("Purchase recorded - average cost updated");
     reset();
     onClose();
   };
@@ -31,6 +38,27 @@ function RecordPurchaseDialog({ open, onClose, materialId }: { open: boolean; on
       <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-sm rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5 space-y-4 max-h-[90vh] overflow-y-auto">
         <h2 className="text-lg font-semibold text-[var(--foreground)]">Record Purchase</h2>
         <div className="space-y-3">
+          <div>
+            <label className="text-sm text-[var(--text-muted)]">Supplier</label>
+            <Controller
+              control={control}
+              name="supplierId"
+              render={({ field }) => (
+                <select {...field}
+                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]">
+                  <option value="">Select supplier...</option>
+                  {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              )}
+            />
+            {errors.supplierId && <p className="text-xs text-red-400 mt-1">{errors.supplierId.message}</p>}
+          </div>
+          <div>
+            <label className="text-sm text-[var(--text-muted)]">Purchase Date</label>
+            <input {...register("purchaseDate")} type="date"
+              className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
+            {errors.purchaseDate && <p className="text-xs text-red-400 mt-1">{errors.purchaseDate.message}</p>}
+          </div>
           <div>
             <label className="text-sm text-[var(--text-muted)]">Quantity</label>
             <input {...register("qty")} type="number" step="any"
@@ -47,7 +75,7 @@ function RecordPurchaseDialog({ open, onClose, materialId }: { open: boolean; on
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" onClick={() => { reset(); onClose(); }} className="rounded-lg px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]">Cancel</button>
           <button type="submit" disabled={isSubmitting}
-            className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:bg-neutral-200 disabled:opacity-50">
+            className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity disabled:opacity-50">
             {isSubmitting ? "Saving..." : "Save"}
           </button>
         </div>
@@ -60,6 +88,7 @@ export default function RawMaterialDetailPage({ params }: { params: Promise<{ id
   const { id } = use(params);
   const material = useStore((s) => s.rawMaterials.find((m) => m.id === id));
   const allReceipts = useStore((s) => s.receipts);
+  const suppliers = useStore((s) => s.suppliers);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const receipts = useMemo(() => allReceipts.filter((r) => r.rawMaterialId === id), [allReceipts, id]);
@@ -117,7 +146,7 @@ export default function RawMaterialDetailPage({ params }: { params: Promise<{ id
 
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-[var(--foreground)]">Purchase History</h2>
-        <button onClick={() => setDialogOpen(true)} className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
+        <button onClick={() => setDialogOpen(true)} className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
           + Record Purchase
         </button>
       </div>
@@ -127,22 +156,31 @@ export default function RawMaterialDetailPage({ params }: { params: Promise<{ id
           <thead>
             <tr className="border-b border-[var(--surface-border)] bg-[var(--surface)] text-left text-[var(--text-muted)]">
               <th className="px-4 py-3 font-medium">Date</th>
+              <th className="px-4 py-3 font-medium">Supplier</th>
               <th className="px-4 py-3 font-medium">Quantity</th>
               <th className="px-4 py-3 font-medium">Cost / Unit</th>
               <th className="px-4 py-3 font-medium">Total</th>
             </tr>
           </thead>
           <tbody>
-            {receipts.map((r) => (
-              <tr key={r.id} className="border-b border-[var(--surface-border)] last:border-0 hover:bg-[var(--surface)]/60">
-                <td className="px-4 py-3 text-[var(--text-secondary)]">{r.date}</td>
-                <td className="px-4 py-3 text-[var(--text-secondary)]">{r.qty} {material.unit}</td>
-                <td className="px-4 py-3 text-[var(--text-secondary)]">Rs. {r.cost.toLocaleString()}</td>
-                <td className="px-4 py-3 text-[var(--text-secondary)]">Rs. {(r.qty * r.cost).toLocaleString()}</td>
-              </tr>
-            ))}
+            {receipts.map((r) => {
+              const supplier = suppliers.find((s) => s.id === r.supplierId);
+              return (
+                <tr key={r.id} className="border-b border-[var(--surface-border)] last:border-0 hover:bg-[var(--surface)]/60">
+                  <td className="px-4 py-3 text-[var(--text-secondary)]">{r.purchaseDate}</td>
+                  <td className="px-4 py-3 text-[var(--text-secondary)]">
+                    {supplier ? (
+                      <Link href={`/suppliers/${supplier.id}`} className="hover:underline text-[var(--foreground)]">{supplier.name}</Link>
+                    ) : "-"}
+                  </td>
+                  <td className="px-4 py-3 text-[var(--text-secondary)]">{r.qty} {material.unit}</td>
+                  <td className="px-4 py-3 text-[var(--text-secondary)]">Rs. {r.cost.toLocaleString()}</td>
+                  <td className="px-4 py-3 text-[var(--text-secondary)]">Rs. {(r.qty * r.cost).toLocaleString()}</td>
+                </tr>
+              );
+            })}
             {receipts.length === 0 && (
-              <tr><td colSpan={4} className="px-4 py-8 text-center text-[var(--foreground)]0">No purchases recorded yet.</td></tr>
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-[var(--text-faint)]">No purchases recorded yet.</td></tr>
             )}
           </tbody>
         </table>

@@ -32,6 +32,7 @@ const softSpringEasing = "cubic-bezier(0.25, 1.1, 0.4, 1)";
 
 type SectionId =
   | "dashboard"
+  | "suppliers"
   | "raw-materials"
   | "batches"
   | "finished-cartons"
@@ -43,6 +44,7 @@ type SectionId =
 
 const SECTION_DEFAULT_ROUTE: Record<SectionId, string> = {
   dashboard: "/",
+  suppliers: "/suppliers",
   "raw-materials": "/raw-materials",
   batches: "/batches",
   "finished-cartons": "/finished-cartons",
@@ -54,6 +56,7 @@ const SECTION_DEFAULT_ROUTE: Record<SectionId, string> = {
 };
 
 const ROUTE_PREFIXES: Array<[string, SectionId]> = [
+  ["/suppliers", "suppliers"],
   ["/raw-materials", "raw-materials"],
   ["/packaging", "raw-materials"],
   ["/batches", "batches"],
@@ -179,6 +182,12 @@ function getSidebarContent(activeSection: SectionId): SidebarContent {
         },
       ],
     },
+    suppliers: {
+      title: "Suppliers",
+      sections: [
+        { title: "Suppliers", items: [{ icon: <UserMultiple size={16} className="text-[var(--foreground)]" />, label: "All Suppliers", href: "/suppliers" }] },
+      ],
+    },
     batches: {
       title: "Production Batches",
       sections: [
@@ -284,6 +293,7 @@ function IconNavigation({ activeSection }: { activeSection: SectionId }) {
   const navItems: Array<{ id: SectionId; icon: React.ReactNode; label: string }> = [
     { id: "dashboard", icon: <Dashboard size={16} />, label: "Dashboard" },
     { id: "raw-materials", icon: <Folder size={16} />, label: "Raw Materials" },
+    { id: "suppliers", icon: <UserMultiple size={16} />, label: "Suppliers" },
     { id: "batches", icon: <Task size={16} />, label: "Batches" },
     { id: "finished-cartons", icon: <Archive size={16} />, label: "Finished Cartons" },
     { id: "customers", icon: <UserMultiple size={16} />, label: "Customers" },
@@ -329,6 +339,7 @@ function MobileSectionNav({ activeSection }: { activeSection: SectionId }) {
   const navItems: Array<{ id: SectionId; icon: React.ReactNode; label: string }> = [
     { id: "dashboard", icon: <Dashboard size={18} />, label: "Dashboard" },
     { id: "raw-materials", icon: <Folder size={18} />, label: "Raw Materials" },
+    { id: "suppliers", icon: <UserMultiple size={18} />, label: "Suppliers" },
     { id: "batches", icon: <Task size={18} />, label: "Batches" },
     { id: "finished-cartons", icon: <Archive size={18} />, label: "Finished Cartons" },
     { id: "customers", icon: <UserMultiple size={18} />, label: "Customers" },
