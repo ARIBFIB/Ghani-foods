@@ -243,6 +243,7 @@ if (Test-Path $finishedCartonsPath) {
 
 Write-Host "`n=== Phase 4 complete ===" -ForegroundColor Green
 Write-Host ""
+
 Write-Host "DONE in this script:" -ForegroundColor Yellow
 Write-Host "  - Dashboard '+ Add Raw Material' now links to /raw-materials (correct full purchase-receipt flow)" -ForegroundColor Gray
 Write-Host "  - Packing Run Step 2 'Next' button disabled until wrapper/box stock is sufficient" -ForegroundColor Gray
