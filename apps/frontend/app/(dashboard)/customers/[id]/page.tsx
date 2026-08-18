@@ -146,7 +146,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
               </tr>
             ))}
             {ledger.length === 0 && (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-[var(--foreground)]0">No ledger entries yet.</td></tr>
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-[var(--text-faint)]">No ledger entries yet.</td></tr>
             )}
           </tbody>
         </table>

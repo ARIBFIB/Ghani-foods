@@ -167,7 +167,7 @@ export default function NewBatchPage() {
             Rs. {estimatedTotalCost.toLocaleString(undefined, { maximumFractionDigits: 2 })}
           </div>
           {estimatedLeftoverCost > 0 && (
-            <div className="text-xs text-[var(--foreground)]0 mt-1">
+            <div className="text-xs text-[var(--text-faint)] mt-1">
               includes Rs. {estimatedLeftoverCost.toLocaleString(undefined, { maximumFractionDigits: 2 })} carried over from leftover
             </div>
           )}

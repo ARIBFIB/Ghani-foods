@@ -96,7 +96,7 @@ function NewInvoiceForm() {
           </select>
           {errors.customerId && <p className="text-xs text-red-400 mt-1">{errors.customerId.message}</p>}
           {selectedCustomer && (
-            <p className="text-xs text-[var(--foreground)]0 mt-1">
+            <p className="text-xs text-[var(--text-faint)] mt-1">
               Current balance: Rs. {Math.abs(selectedCustomer.currentBalance).toLocaleString()}{" "}
               {selectedCustomer.currentBalance > 0 ? "(owes)" : "(credit)"}
             </p>

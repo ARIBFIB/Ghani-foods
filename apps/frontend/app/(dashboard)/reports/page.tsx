@@ -215,7 +215,7 @@ export default function ReportsPage() {
           )}
 
           {pnl.lineData.length === 0 && (
-            <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-8 text-center text-[var(--foreground)]0 text-sm">
+            <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-8 text-center text-[var(--text-faint)] text-sm">
               No invoices in the selected date range.
             </div>
           )}

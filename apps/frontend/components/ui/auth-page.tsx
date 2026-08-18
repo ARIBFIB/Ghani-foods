@@ -63,12 +63,12 @@ export function AuthPage() {
             <div className="relative h-max">
               <Input
                 placeholder="you@ghanifoods.com"
-                className="peer ps-9 bg-[var(--surface)] border-[var(--surface-border)] text-[var(--foreground)] placeholder:text-[var(--foreground)]0"
+                className="peer ps-9 bg-[var(--surface)] border-[var(--surface-border)] text-[var(--foreground)] placeholder:text-[var(--text-faint)]"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
-              <div className="text-[var(--foreground)]0 pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3">
+              <div className="text-[var(--text-faint)] pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3">
                 <AtSignIcon className="size-4" aria-hidden="true" />
               </div>
             </div>
@@ -76,12 +76,12 @@ export function AuthPage() {
             <div className="relative h-max">
               <Input
                 placeholder="Password"
-                className="peer ps-9 bg-[var(--surface)] border-[var(--surface-border)] text-[var(--foreground)] placeholder:text-[var(--foreground)]0"
+                className="peer ps-9 bg-[var(--surface)] border-[var(--surface-border)] text-[var(--foreground)] placeholder:text-[var(--text-faint)]"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
-              <div className="text-[var(--foreground)]0 pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3">
+              <div className="text-[var(--text-faint)] pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3">
                 <LockIcon className="size-4" aria-hidden="true" />
               </div>
             </div>
@@ -93,7 +93,7 @@ export function AuthPage() {
             </Button>
           </form>
 
-          <p className="text-[var(--foreground)]0 mt-8 text-sm">
+          <p className="text-[var(--text-faint)] mt-8 text-sm">
             Demo build - any email/password combination signs you in.
           </p>
         </div>
