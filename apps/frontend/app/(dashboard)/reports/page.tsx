@@ -20,7 +20,8 @@ function exportCSV(filename: string, headers: string[], rows: (string | number)[
 
 export default function ReportsPage() {
   const rawMaterials = useStore((s) => s.rawMaterials);
-  const packagingMaterials = useStore((s) => s.packagingMaterials);
+  const wrappers = useStore((s) => s.wrappers);
+  const boxes = useStore((s) => s.boxes);
   const productionBatches = useStore((s) => s.productionBatches);
   const invoices = useStore((s) => s.invoices);
   const finishedCartons = useStore((s) => s.finishedCartons);
@@ -31,8 +32,9 @@ export default function ReportsPage() {
 
   const inventoryData = useMemo(() => [
     ...rawMaterials.map((m) => ({ name: m.name, stock: m.quantityInStock, threshold: m.lowStockThreshold, type: "Raw" })),
-    ...packagingMaterials.map((p) => ({ name: p.name, stock: p.stockQty, threshold: p.lowStockThreshold, type: "Packaging" })),
-  ], [rawMaterials, packagingMaterials]);
+    ...wrappers.map((w) => ({ name: w.name, stock: w.stockQty, threshold: w.lowStockThreshold, type: "Wrapper" })),
+    ...boxes.map((b) => ({ name: b.name, stock: b.stockQty, threshold: b.lowStockThreshold, type: "Box" })),
+  ], [rawMaterials, wrappers, boxes]);
 
   const yieldData = useMemo(() =>
     productionBatches.map((b) => ({

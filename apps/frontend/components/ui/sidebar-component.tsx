@@ -59,6 +59,7 @@ const ROUTE_PREFIXES: Array<[string, SectionId]> = [
   ["/suppliers", "suppliers"],
   ["/raw-materials", "raw-materials"],
   ["/packaging", "raw-materials"],
+  ["/packaging/carton-config", "raw-materials"],
   ["/batches", "batches"],
   ["/finished-cartons", "finished-cartons"],
   ["/customers", "customers"],
@@ -178,6 +179,7 @@ function getSidebarContent(activeSection: SectionId): SidebarContent {
           items: [
             { icon: <Folder size={16} className="text-[var(--foreground)]" />, label: "All Raw Materials", href: "/raw-materials" },
             { icon: <FolderOpen size={16} className="text-[var(--foreground)]" />, label: "Packaging Materials", href: "/packaging" },
+            { icon: <Archive size={16} className="text-[var(--foreground)]" />, label: "Carton Configurations", href: "/packaging/carton-config" },
           ],
         },
       ],

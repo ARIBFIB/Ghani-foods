@@ -16,15 +16,19 @@ import { useSidebar } from "@/lib/sidebar-context";
 function NotificationBell() {
   const [open, setOpen] = useState(false);
   const rawMaterials = useStore((s) => s.rawMaterials);
-  const packagingMaterials = useStore((s) => s.packagingMaterials);
+  const wrappers = useStore((s) => s.wrappers);
+  const boxes = useStore((s) => s.boxes);
 
   const alerts = [
     ...rawMaterials
       .filter((m) => m.quantityInStock < m.lowStockThreshold)
       .map((m) => ({ id: m.id, name: m.name, href: `/raw-materials/${m.id}`, qty: m.quantityInStock, threshold: m.lowStockThreshold })),
-    ...packagingMaterials
-      .filter((p) => p.stockQty < p.lowStockThreshold)
-      .map((p) => ({ id: p.id, name: p.name, href: `/packaging`, qty: p.stockQty, threshold: p.lowStockThreshold })),
+    ...wrappers
+      .filter((w) => w.stockQty < w.lowStockThreshold)
+      .map((w) => ({ id: w.id, name: w.name, href: `/packaging`, qty: w.stockQty, threshold: w.lowStockThreshold })),
+    ...boxes
+      .filter((b) => b.stockQty < b.lowStockThreshold)
+      .map((b) => ({ id: b.id, name: b.name, href: `/packaging`, qty: b.stockQty, threshold: b.lowStockThreshold })),
   ];
 
   return (
