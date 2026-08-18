@@ -1,4 +1,4 @@
-import { NavLink } from "@/components/ui/nav-link";
+import Link from "next/link";
 import { LottieLoader } from "@/components/ui/lottie-loader";
 
 export default function NotFound() {
@@ -9,12 +9,12 @@ export default function NotFound() {
       <p className="text-[var(--text-muted)] mt-2 max-w-sm">
         The page you're looking for doesn't exist or may have been moved.
       </p>
-      <NavLink
+      <Link
         href="/"
         className="mt-6 rounded-lg bg-neutral-900 dark:bg-neutral-50 px-5 py-2.5 text-sm font-medium text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity"
       >
         Back to Dashboard
-      </NavLink>
+      </Link>
     </div>
   );
 }
