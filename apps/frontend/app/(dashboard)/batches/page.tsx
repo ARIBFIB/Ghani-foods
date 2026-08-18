@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import Link from "next/link";
+import { NavLink } from "@/components/ui/nav-link";
 import { type ColumnDef } from "@tanstack/react-table";
 import { useStore, type ProductionBatch } from "@/lib/store";
 import { SortableTable } from "@/components/ui/sortable-table";
@@ -22,7 +22,7 @@ export default function BatchesPage() {
   const columns = useMemo<ColumnDef<ProductionBatch, unknown>[]>(() => [
     {
       accessorKey: "id", header: "Batch ID",
-      cell: ({ row }) => <Link href={`/batches/${row.original.id}`} className="text-[var(--foreground)] hover:underline">{row.original.id}</Link>,
+      cell: ({ row }) => <NavLink href={`/batches/${row.original.id}`} className="text-[var(--foreground)] hover:underline">{row.original.id}</NavLink>,
     },
     { accessorKey: "batchDate", header: "Date" },
     { accessorKey: "outputYieldKg", header: "Output Yield (kg)" },
@@ -45,9 +45,9 @@ export default function BatchesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-[var(--foreground)]">Production Batches</h1>
-        <Link href="/batches/new" className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
+        <NavLink href="/batches/new" className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
           + New Batch
-        </Link>
+        </NavLink>
       </div>
       <SortableTable data={productionBatches} columns={columns} globalFilterPlaceholder="Search batches..." />
     </div>

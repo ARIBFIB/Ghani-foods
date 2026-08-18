@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useNavigationLoading } from "@/lib/navigation-loading-context";
 import Image from "next/image";
 import { AtSignIcon, LockIcon } from "lucide-react";
 import { GhaniLogo } from "@/components/ui/ghani-logo";
@@ -11,6 +12,7 @@ const LOGIN_IMAGE_URL = "https://res.cloudinary.com/dr9dwesyo/image/upload/v1787
 
 export default function LoginPage() {
   const router = useRouter();
+  const { navigate } = useNavigationLoading();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -25,7 +27,7 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
     document.cookie = "ghanifoods-auth=1; path=/; max-age=86400";
-    router.push("/");
+    navigate("/");
   };
 
   return (

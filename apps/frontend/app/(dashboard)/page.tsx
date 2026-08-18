@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
-import Link from "next/link";
+import { NavLink } from "@/components/ui/nav-link";
 import { useRouter } from "next/navigation";
+import { useNavigationLoading } from "@/lib/navigation-loading-context";
 import { useStore } from "@/lib/store";
 
 function KpiCard({ label, value }: { label: string; value: string | number }) {
@@ -29,6 +30,7 @@ function StatusBadge({ status }: { status: "unpaid" | "partial" | "paid" }) {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { navigate } = useNavigationLoading();
   const rawMaterials = useStore((s) => s.rawMaterials);
   const wrappers = useStore((s) => s.wrappers);
   const boxes = useStore((s) => s.boxes);
@@ -72,13 +74,13 @@ export default function DashboardPage() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <Link href="/raw-materials" className="rounded-lg border border-neutral-400 dark:border-neutral-600 px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)] transition-colors">
+        <NavLink href="/raw-materials" className="rounded-lg border border-neutral-400 dark:border-neutral-600 px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)] transition-colors">
           + Add Raw Material
-        </Link>
-        <button onClick={() => router.push("/batches/new")} className="rounded-lg border border-neutral-400 dark:border-neutral-600 px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)] transition-colors">
+        </NavLink>
+        <button onClick={() => navigate("/batches/new")} className="rounded-lg border border-neutral-400 dark:border-neutral-600 px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)] transition-colors">
           + New Batch
         </button>
-        <button onClick={() => router.push("/invoices/new")} className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
+        <button onClick={() => navigate("/invoices/new")} className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
           + New Invoice
         </button>
       </div>
@@ -93,10 +95,10 @@ export default function DashboardPage() {
               <div className="px-4 py-6 text-center text-sm text-[var(--text-faint)]">All stock levels are healthy.</div>
             )}
             {lowStockItems.map((item) => (
-              <Link key={item.id} href={item.href} className="flex items-center justify-between px-4 py-3 hover:bg-[var(--surface-hover)]/60">
+              <NavLink key={item.id} href={item.href} className="flex items-center justify-between px-4 py-3 hover:bg-[var(--surface-hover)]/60">
                 <span className="text-sm text-[var(--foreground)]">{item.name}</span>
                 <span className="text-xs text-red-400">{item.qty} / {item.threshold}</span>
-              </Link>
+              </NavLink>
             ))}
           </div>
         </div>
@@ -104,14 +106,14 @@ export default function DashboardPage() {
         <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] overflow-hidden">
           <div className="px-4 py-3 border-b border-[var(--surface-border)] flex items-center justify-between">
             <h2 className="text-sm font-semibold text-[var(--foreground)]">Recent Invoices</h2>
-            <Link href="/invoices" className="text-xs text-[var(--text-muted)] hover:text-[var(--foreground)] hover:underline">View all</Link>
+            <NavLink href="/invoices" className="text-xs text-[var(--text-muted)] hover:text-[var(--foreground)] hover:underline">View all</NavLink>
           </div>
           <table className="w-full text-sm">
             <tbody>
               {recentInvoices.map((inv) => (
                 <tr key={inv.id} className="border-b border-[var(--surface-border)] last:border-0">
                   <td className="px-4 py-3">
-                    <Link href={`/invoices/${inv.id}`} className="text-[var(--foreground)] hover:underline">{inv.id}</Link>
+                    <NavLink href={`/invoices/${inv.id}`} className="text-[var(--foreground)] hover:underline">{inv.id}</NavLink>
                   </td>
                   <td className="px-4 py-3 text-[var(--text-secondary)]">{inv.customerName}</td>
                   <td className="px-4 py-3 text-[var(--text-secondary)]">Rs. {inv.totalAmount.toLocaleString()}</td>

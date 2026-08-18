@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useMemo } from "react";
-import Link from "next/link";
+import { NavLink } from "@/components/ui/nav-link";
 import { useStore } from "@/lib/store";
 
 export default function SupplierDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -23,7 +23,7 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
   if (!supplier) {
     return (
       <div className="space-y-4">
-        <Link href="/suppliers" className="text-sm text-[var(--text-muted)] hover:underline">&larr; Back to Suppliers</Link>
+        <NavLink href="/suppliers" className="text-sm text-[var(--text-muted)] hover:underline">&larr; Back to Suppliers</NavLink>
         <p className="text-[var(--text-muted)]">Supplier not found.</p>
       </div>
     );
@@ -32,7 +32,7 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
   return (
     <div className="space-y-6">
       <div className="text-sm text-[var(--text-muted)]">
-        <Link href="/suppliers" className="hover:underline text-[var(--text-secondary)]">Suppliers</Link>{" "}
+        <NavLink href="/suppliers" className="hover:underline text-[var(--text-secondary)]">Suppliers</NavLink>{" "}
         / <span className="text-[var(--foreground)]">{supplier.name}</span>
       </div>
 
@@ -73,7 +73,7 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
                   <td className="px-4 py-3 text-[var(--text-secondary)]">{r.purchaseDate}</td>
                   <td className="px-4 py-3 text-[var(--text-secondary)]">
                     {material ? (
-                      <Link href={`/raw-materials/${material.id}`} className="hover:underline text-[var(--foreground)]">{material.name}</Link>
+                      <NavLink href={`/raw-materials/${material.id}`} className="hover:underline text-[var(--foreground)]">{material.name}</NavLink>
                     ) : "-"}
                   </td>
                   <td className="px-4 py-3 text-[var(--text-secondary)]">{r.qty} {material?.unit ?? ""}</td>

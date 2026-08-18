@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import Link from "next/link";
+import { NavLink } from "@/components/ui/nav-link";
 import { type ColumnDef } from "@tanstack/react-table";
 import { useStore, type Invoice } from "@/lib/store";
 import { SortableTable } from "@/components/ui/sortable-table";
@@ -25,7 +25,7 @@ export default function InvoicesPage() {
   const columns = useMemo<ColumnDef<Invoice, unknown>[]>(() => [
     {
       accessorKey: "id", header: "Invoice #",
-      cell: ({ row }) => <Link href={`/invoices/${row.original.id}`} className="text-[var(--foreground)] hover:underline">{row.original.id}</Link>,
+      cell: ({ row }) => <NavLink href={`/invoices/${row.original.id}`} className="text-[var(--foreground)] hover:underline">{row.original.id}</NavLink>,
     },
     { accessorKey: "customerName", header: "Customer" },
     { accessorKey: "invoiceDate", header: "Date" },
@@ -43,9 +43,9 @@ export default function InvoicesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-[var(--foreground)]">Invoices</h1>
-        <Link href="/invoices/new" className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
+        <NavLink href="/invoices/new" className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
           + New Invoice
-        </Link>
+        </NavLink>
       </div>
       <SortableTable data={invoices} columns={columns} globalFilterPlaceholder="Search invoices..." />
     </div>

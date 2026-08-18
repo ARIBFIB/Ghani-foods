@@ -2,6 +2,7 @@
 
 import { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useNavigationLoading } from "@/lib/navigation-loading-context";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -12,6 +13,7 @@ type InvoiceLine = { id: string; itemId: string; qty: string; unitPrice: string 
 
 function NewInvoiceForm() {
   const router = useRouter();
+  const { navigate } = useNavigationLoading();
   const searchParams = useSearchParams();
   const preselectedCustomerId = searchParams.get("customerId") ?? "";
 
@@ -78,7 +80,7 @@ function NewInvoiceForm() {
 
     const newId = createInvoice({ customerId: values.customerId, lines: parsedLines });
     toast.success(`Invoice ${newId} created â€” stock deducted, ledger updated`);
-    router.push(`/invoices/${newId}`);
+    navigate(`/invoices/${newId}`);
   };
 
   const selectedCustomer = customers.find((c) => c.id === customerId);
@@ -159,7 +161,7 @@ function NewInvoiceForm() {
       </div>
 
       <div className="flex justify-end gap-2">
-        <button type="button" onClick={() => router.push("/invoices")} className="rounded-lg px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]">Cancel</button>
+        <button type="button" onClick={() => navigate("/invoices")} className="rounded-lg px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]">Cancel</button>
         <button type="submit" disabled={isSubmitting}
           className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:bg-neutral-200 disabled:opacity-50">
           {isSubmitting ? "Saving..." : "Save & Generate Invoice"}

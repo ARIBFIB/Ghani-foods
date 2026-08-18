@@ -1,8 +1,9 @@
 "use client";
 
 import { use, useMemo, useState } from "react";
-import Link from "next/link";
+import { NavLink } from "@/components/ui/nav-link";
 import { useRouter } from "next/navigation";
+import { useNavigationLoading } from "@/lib/navigation-loading-context";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -65,6 +66,7 @@ function RecordPaymentDialog({ open, onClose, customerId }: { open: boolean; onC
 export default function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const { navigate } = useNavigationLoading();
   const customer = useStore((s) => s.customers.find((c) => c.id === id));
   const allLedger = useStore((s) => s.ledgerEntries);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -74,7 +76,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   if (!customer) {
     return (
       <div className="space-y-4">
-        <Link href="/customers" className="text-sm text-[var(--text-muted)] hover:underline">&larr; Back to Customers</Link>
+        <NavLink href="/customers" className="text-sm text-[var(--text-muted)] hover:underline">&larr; Back to Customers</NavLink>
         <p className="text-[var(--text-muted)]">Customer not found.</p>
       </div>
     );
@@ -86,7 +88,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
   return (
     <div className="space-y-6">
       <div className="text-sm text-[var(--text-muted)]">
-        <Link href="/customers" className="hover:underline text-[var(--text-secondary)]">Customers</Link>{" "}
+        <NavLink href="/customers" className="hover:underline text-[var(--text-secondary)]">Customers</NavLink>{" "}
         / <span className="text-[var(--foreground)]">{customer.name}</span>
       </div>
 
@@ -116,7 +118,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
         <button onClick={() => setDialogOpen(true)} className="rounded-lg border border-neutral-400 dark:border-neutral-600 px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)]">
           + Record Payment
         </button>
-        <button onClick={() => router.push(`/invoices/new?customerId=${customer.id}`)} className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
+        <button onClick={() => navigate(`/invoices/new?customerId=${customer.id}`)} className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
           New Invoice for this Customer
         </button>
       </div>

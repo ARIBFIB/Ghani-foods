@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import { NavLink } from "@/components/ui/nav-link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -74,7 +74,7 @@ export default function CustomersPage() {
   const columns = useMemo<ColumnDef<Customer, unknown>[]>(() => [
     {
       accessorKey: "name", header: "Name",
-      cell: ({ row }) => <Link href={`/customers/${row.original.id}`} className="text-[var(--foreground)] hover:underline">{row.original.name}</Link>,
+      cell: ({ row }) => <NavLink href={`/customers/${row.original.id}`} className="text-[var(--foreground)] hover:underline">{row.original.name}</NavLink>,
     },
     { accessorKey: "phone", header: "Phone" },
     {

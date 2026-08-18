@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useMemo, useState } from "react";
-import Link from "next/link";
+import { NavLink } from "@/components/ui/nav-link";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -96,7 +96,7 @@ export default function RawMaterialDetailPage({ params }: { params: Promise<{ id
   if (!material) {
     return (
       <div className="space-y-4">
-        <Link href="/raw-materials" className="text-sm text-[var(--text-muted)] hover:underline">&larr; Back to Raw Materials</Link>
+        <NavLink href="/raw-materials" className="text-sm text-[var(--text-muted)] hover:underline">&larr; Back to Raw Materials</NavLink>
         <p className="text-[var(--text-muted)]">Raw material not found.</p>
       </div>
     );
@@ -107,7 +107,7 @@ export default function RawMaterialDetailPage({ params }: { params: Promise<{ id
   return (
     <div className="space-y-6">
       <div className="text-sm text-[var(--text-muted)]">
-        <Link href="/raw-materials" className="hover:underline text-[var(--text-secondary)]">Raw Materials</Link>{" "}
+        <NavLink href="/raw-materials" className="hover:underline text-[var(--text-secondary)]">Raw Materials</NavLink>{" "}
         / <span className="text-[var(--foreground)]">{material.name}</span>
       </div>
 
@@ -170,7 +170,7 @@ export default function RawMaterialDetailPage({ params }: { params: Promise<{ id
                   <td className="px-4 py-3 text-[var(--text-secondary)]">{r.purchaseDate}</td>
                   <td className="px-4 py-3 text-[var(--text-secondary)]">
                     {supplier ? (
-                      <Link href={`/suppliers/${supplier.id}`} className="hover:underline text-[var(--foreground)]">{supplier.name}</Link>
+                      <NavLink href={`/suppliers/${supplier.id}`} className="hover:underline text-[var(--foreground)]">{supplier.name}</NavLink>
                     ) : "-"}
                   </td>
                   <td className="px-4 py-3 text-[var(--text-secondary)]">{r.qty} {material.unit}</td>

@@ -2,12 +2,14 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useNavigationLoading } from "@/lib/navigation-loading-context";
 import { AtSignIcon, LockIcon, Grid2x2PlusIcon } from "lucide-react";
 import { Button } from "./button";
 import { Input } from "./input";
 
 export function AuthPage() {
   const router = useRouter();
+  const { navigate } = useNavigationLoading();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -20,7 +22,7 @@ export function AuthPage() {
     }
     // Dummy auth: any non-empty credentials succeed
     setError("");
-    router.push("/");
+    navigate("/");
   };
 
   return (

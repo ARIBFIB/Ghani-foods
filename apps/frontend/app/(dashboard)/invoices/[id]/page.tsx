@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useState } from "react";
-import Link from "next/link";
+import { NavLink } from "@/components/ui/nav-link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -63,7 +63,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   if (!invoice) {
     return (
       <div className="space-y-4">
-        <Link href="/invoices" className="text-sm text-[var(--text-muted)] hover:underline">&larr; Back to Invoices</Link>
+        <NavLink href="/invoices" className="text-sm text-[var(--text-muted)] hover:underline">&larr; Back to Invoices</NavLink>
         <p className="text-[var(--text-muted)]">Invoice not found.</p>
       </div>
     );
@@ -170,7 +170,7 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   return (
     <div className="space-y-6">
       <div className="text-sm text-[var(--text-muted)]">
-        <Link href="/invoices" className="hover:underline text-[var(--text-secondary)]">Invoices</Link>{" "}
+        <NavLink href="/invoices" className="hover:underline text-[var(--text-secondary)]">Invoices</NavLink>{" "}
         / <span className="text-[var(--foreground)]">{invoice.id}</span>
       </div>
 

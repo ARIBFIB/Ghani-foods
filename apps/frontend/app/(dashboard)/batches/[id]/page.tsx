@@ -1,8 +1,9 @@
 "use client";
 
 import { use, useState } from "react";
-import Link from "next/link";
+import { NavLink } from "@/components/ui/nav-link";
 import { useRouter } from "next/navigation";
+import { useNavigationLoading } from "@/lib/navigation-loading-context";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -69,13 +70,14 @@ function OverheadDialog({ open, onClose, batchId }: { open: boolean; onClose: ()
 export default function BatchDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const { navigate } = useNavigationLoading();
   const batch = useStore((s) => s.productionBatches.find((b) => b.id === id));
   const [dialogOpen, setDialogOpen] = useState(false);
 
   if (!batch) {
     return (
       <div className="space-y-4">
-        <Link href="/batches" className="text-sm text-[var(--text-muted)] hover:underline">&larr; Back to Batches</Link>
+        <NavLink href="/batches" className="text-sm text-[var(--text-muted)] hover:underline">&larr; Back to Batches</NavLink>
         <p className="text-[var(--text-muted)]">Batch not found.</p>
       </div>
     );
@@ -84,7 +86,7 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
   return (
     <div className="space-y-6">
       <div className="text-sm text-[var(--text-muted)]">
-        <Link href="/batches" className="hover:underline text-[var(--text-secondary)]">Batches</Link>{" "}
+        <NavLink href="/batches" className="hover:underline text-[var(--text-secondary)]">Batches</NavLink>{" "}
         / <span className="text-[var(--foreground)]">{batch.id}</span>
       </div>
 
@@ -122,7 +124,7 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
         {batch.leftoverSourceBatchId && batch.leftoverKgConsumed && (
           <div className="mt-2 text-xs text-blue-400">
             Includes {batch.leftoverKgConsumed} kg of leftover bulk product carried forward from{" "}
-            <Link href={`/batches/${batch.leftoverSourceBatchId}`} className="underline">{batch.leftoverSourceBatchId}</Link>{" "}
+            <NavLink href={`/batches/${batch.leftoverSourceBatchId}`} className="underline">{batch.leftoverSourceBatchId}</NavLink>{" "}
             (FIFO â€” cost blended into this batch's effective cost/kg).
           </div>
         )}
@@ -132,7 +134,7 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
         <button onClick={() => setDialogOpen(true)} className="rounded-lg border border-neutral-400 dark:border-neutral-600 px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)]">
           Allocate Month-End Overhead
         </button>
-        <button onClick={() => router.push(`/finished-cartons?batchId=${batch.id}`)} className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
+        <button onClick={() => navigate(`/finished-cartons?batchId=${batch.id}`)} className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
           Send to Packaging
         </button>
       </div>

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { NavLink } from "@/components/ui/nav-link";
 import { useRouter } from "next/navigation";
+import { useNavigationLoading } from "@/lib/navigation-loading-context";
 import {
   Notification,
   User as UserIcon,
@@ -58,7 +59,7 @@ function NotificationBell() {
                 <div className="px-4 py-6 text-center text-sm text-[var(--text-faint)]">All stock levels are healthy.</div>
               )}
               {alerts.map((a) => (
-                <Link
+                <NavLink
                   key={a.id}
                   href={a.href}
                   onClick={() => setOpen(false)}
@@ -66,7 +67,7 @@ function NotificationBell() {
                 >
                   <span className="text-sm text-[var(--foreground)]">{a.name}</span>
                   <span className="text-xs text-red-500">{a.qty} / {a.threshold}</span>
-                </Link>
+                </NavLink>
               ))}
             </div>
           </div>
@@ -79,11 +80,12 @@ function NotificationBell() {
 function UserMenu() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
+  const { navigate } = useNavigationLoading();
 
   const handleLogout = () => {
     setOpen(false);
     document.cookie = "ghanifoods-auth=; path=/; max-age=0";
-    router.push("/login");
+    navigate("/login");
   };
 
   return (
@@ -103,10 +105,10 @@ function UserMenu() {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div className="absolute right-0 z-50 mt-2 w-48 rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] shadow-lg overflow-hidden">
-            <Link href="/settings" onClick={() => setOpen(false)}
+            <NavLink href="/settings" onClick={() => setOpen(false)}
               className="block px-4 py-2.5 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)]">
               Settings
-            </Link>
+            </NavLink>
             <button onClick={handleLogout}
               className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-[var(--surface-hover)]">
               Log out
@@ -133,11 +135,11 @@ export function Topbar() {
       </button>
 
       <div className="flex items-center gap-2 sm:gap-3 ml-auto">
-        <Link href="/invoices/new"
+        <NavLink href="/invoices/new"
           className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity whitespace-nowrap">
           <span className="hidden sm:inline">+ New Invoice</span>
           <span className="sm:hidden">+ Invoice</span>
-        </Link>
+        </NavLink>
         <AnimatedThemeToggler />
         <NotificationBell />
         <UserMenu />

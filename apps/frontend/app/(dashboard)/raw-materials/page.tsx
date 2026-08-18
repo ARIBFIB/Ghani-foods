@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import { NavLink } from "@/components/ui/nav-link";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -173,9 +173,9 @@ export default function RawMaterialsPage() {
       accessorKey: "name",
       header: "Name",
       cell: ({ row }) => (
-        <Link href={`/raw-materials/${row.original.id}`} className="text-[var(--foreground)] hover:underline">
+        <NavLink href={`/raw-materials/${row.original.id}`} className="text-[var(--foreground)] hover:underline">
           {row.original.name}
-        </Link>
+        </NavLink>
       ),
     },
     { accessorKey: "unit", header: "Unit" },

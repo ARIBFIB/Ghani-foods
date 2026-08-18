@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import { NavLink } from "@/components/ui/nav-link";
 import { toast } from "sonner";
 import { useStore } from "@/lib/store";
 
@@ -108,7 +108,7 @@ function NewPackingRunDialog({ open, onClose }: { open: boolean; onClose: () => 
               {cartonConfigurations.length === 0 && (
                 <p className="text-xs text-red-400 mt-1">
                   No carton configurations exist yet. Create one under{" "}
-                  <Link href="/packaging/carton-config" className="underline">Packaging &rarr; Carton Configurations</Link>.
+                  <NavLink href="/packaging/carton-config" className="underline">Packaging &rarr; Carton Configurations</NavLink>.
                 </p>
               )}
             </div>
