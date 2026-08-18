@@ -17,8 +17,6 @@ function NewPackingRunDialog({ open, onClose }: { open: boolean; onClose: () => 
   const [configId, setConfigId] = useState(cartonConfigurations[0]?.id ?? "");
   const [cartonsProduced, setCartonsProduced] = useState("10");
 
-  if (!open) return null;
-
   const batch = productionBatches.find((b) => b.id === batchId);
   const config = cartonConfigurations.find((c) => c.id === configId);
   const wrapper = wrappers.find((w) => w.id === config?.wrapperId);
@@ -32,8 +30,10 @@ function NewPackingRunDialog({ open, onClose }: { open: boolean; onClose: () => 
   const insufficientBox = box ? boxesNeeded > box.stockQty : false;
 
   // Preview estimate - mirrors the store's internal calculation
+  // IMPORTANT: this hook must run on every render (even when the dialog is
+  // closed) - never put a conditional "return null" before a hook call.
   const preview = useMemo(() => {
-    if (!batch || !config || !wrapper || !box || cartons <= 0) return null;
+    if (!open || !batch || !config || !wrapper || !box || cartons <= 0) return null;
     const nominalKgPerPacket = 0.05;
     const estimatedKgNeeded = packetsNeeded * nominalKgPerPacket;
     const bulkKgUsed = Math.min(estimatedKgNeeded, batch.leftoverQtyKg);
@@ -42,7 +42,9 @@ function NewPackingRunDialog({ open, onClose }: { open: boolean; onClose: () => 
     const costPerBox = config.packetsPerBox * costPerPacket + box.unitCost;
     const costPerCarton = config.boxesPerCarton * costPerBox;
     return { bulkKgUsed, costPerPacket, costPerBox, costPerCarton };
-  }, [batch, config, wrapper, box, cartons, packetsNeeded]);
+  }, [open, batch, config, wrapper, box, cartons, packetsNeeded]);
+
+  if (!open) return null;
 
   const reset = () => {
     setStep(1);
