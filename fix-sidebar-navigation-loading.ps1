@@ -1,3 +1,169 @@
+# fix-sidebar-navigation-loading.ps1
+# Run from: D:\Rozmarrah-CUST\Saim Ashraf\Nimko\Working\Code\GhaniFoods
+# Usage: .\fix-sidebar-navigation-loading.ps1
+#
+# Adds a Lottie loading overlay (public/loading/loading.json) that shows
+# for the brief gap when switching sidebar tabs, so the screen never looks
+# blank/frozen during route changes.
+#
+# Creates:
+#   apps/frontend/lib/navigation-loading-context.tsx
+#   apps/frontend/components/ui/navigation-loading-overlay.tsx
+# Overwrites:
+#   apps/frontend/app/(dashboard)/layout.tsx
+#   apps/frontend/components/ui/sidebar-component.tsx
+
+$FrontendRoot = Join-Path (Get-Location) "apps\frontend"
+
+if (-not (Test-Path $FrontendRoot)) {
+    Write-Host "ERROR: Could not find apps\frontend under $(Get-Location)" -ForegroundColor Red
+    Write-Host "Make sure you run this script from the GhaniFoods project root." -ForegroundColor Yellow
+    exit 1
+}
+
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+
+function Write-Utf8NoBom($Path, $Content) {
+    $dir = Split-Path $Path -Parent
+    if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+    [System.IO.File]::WriteAllText($Path, $Content, $utf8NoBom)
+}
+
+Write-Host "=== Adding sidebar navigation loading overlay ===" -ForegroundColor Cyan
+
+# ---------------------------------------------------------------------------
+# 1. New file: lib/navigation-loading-context.tsx
+# ---------------------------------------------------------------------------
+$navContextPath = Join-Path $FrontendRoot "lib\navigation-loading-context.tsx"
+$navContextContent = @'
+"use client";
+
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+  type ReactNode,
+} from "react";
+import { useRouter } from "next/navigation";
+
+type NavigationLoadingContextValue = {
+  isLoading: boolean;
+  navigate: (href: string) => void;
+};
+
+const MIN_VISIBLE_MS = 300;
+
+const NavigationLoadingContext = createContext<NavigationLoadingContextValue | null>(null);
+
+export function NavigationLoadingProvider({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [minTimeElapsed, setMinTimeElapsed] = useState(true);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const navigate = (href: string) => {
+    setMinTimeElapsed(false);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => setMinTimeElapsed(true), MIN_VISIBLE_MS);
+    startTransition(() => {
+      router.push(href);
+    });
+  };
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  const isLoading = isPending || !minTimeElapsed;
+
+  return (
+    <NavigationLoadingContext.Provider value={{ isLoading, navigate }}>
+      {children}
+    </NavigationLoadingContext.Provider>
+  );
+}
+
+export function useNavigationLoading() {
+  const ctx = useContext(NavigationLoadingContext);
+  if (!ctx) throw new Error("useNavigationLoading must be used within NavigationLoadingProvider");
+  return ctx;
+}
+'@
+Write-Utf8NoBom $navContextPath $navContextContent
+Write-Host "  Created: lib\navigation-loading-context.tsx" -ForegroundColor Green
+
+# ---------------------------------------------------------------------------
+# 2. New file: components/ui/navigation-loading-overlay.tsx
+# ---------------------------------------------------------------------------
+$overlayPath = Join-Path $FrontendRoot "components\ui\navigation-loading-overlay.tsx"
+$overlayContent = @'
+"use client";
+
+import { useNavigationLoading } from "@/lib/navigation-loading-context";
+import { LottieLoader } from "@/components/ui/lottie-loader";
+
+export function NavigationLoadingOverlay() {
+  const { isLoading } = useNavigationLoading();
+
+  if (!isLoading) return null;
+
+  return (
+    <div className="fixed inset-0 z-[90] flex flex-col items-center justify-center bg-[var(--background)]/70 backdrop-blur-sm">
+      <LottieLoader src="/loading/loading.json" size={120} />
+    </div>
+  );
+}
+
+export default NavigationLoadingOverlay;
+'@
+Write-Utf8NoBom $overlayPath $overlayContent
+Write-Host "  Created: components\ui\navigation-loading-overlay.tsx" -ForegroundColor Green
+
+# ---------------------------------------------------------------------------
+# 3. Overwrite: app/(dashboard)/layout.tsx
+# ---------------------------------------------------------------------------
+$layoutPath = Join-Path $FrontendRoot "app\(dashboard)\layout.tsx"
+$layoutContent = @'
+import type { ReactNode } from "react";
+import { AppSidebar } from "@/components/ui/sidebar-component";
+import { Topbar } from "@/components/ui/topbar";
+import { SidebarProvider } from "@/lib/sidebar-context";
+import { NavigationLoadingProvider } from "@/lib/navigation-loading-context";
+import { NavigationLoadingOverlay } from "@/components/ui/navigation-loading-overlay";
+
+export default function DashboardLayout({ children }: { children: ReactNode }) {
+  return (
+    <NavigationLoadingProvider>
+      <SidebarProvider>
+        <div className="flex min-h-screen bg-[var(--background)]">
+          <AppSidebar />
+          <div className="flex-1 flex flex-col min-w-0">
+            <Topbar />
+            <main className="flex-1 p-4 sm:p-6 overflow-y-auto overflow-x-hidden text-[var(--foreground)]">
+              {children}
+            </main>
+          </div>
+        </div>
+        <NavigationLoadingOverlay />
+      </SidebarProvider>
+    </NavigationLoadingProvider>
+  );
+}
+'@
+Write-Utf8NoBom $layoutPath $layoutContent
+Write-Host "  Updated: app\(dashboard)\layout.tsx" -ForegroundColor Green
+
+# ---------------------------------------------------------------------------
+# 4. Overwrite: components/ui/sidebar-component.tsx
+#    (sidebar tab clicks now go through navigate() so the overlay shows)
+# ---------------------------------------------------------------------------
+$sidebarPath = Join-Path $FrontendRoot "components\ui\sidebar-component.tsx"
+$sidebarContent = @'
 "use client";
 
 import React, { useState } from "react";
@@ -572,3 +738,10 @@ export function AppSidebar() {
 }
 
 export default AppSidebar;
+'@
+Write-Utf8NoBom $sidebarPath $sidebarContent
+Write-Host "  Updated: components\ui\sidebar-component.tsx" -ForegroundColor Green
+
+Write-Host ""
+Write-Host "=== Done ===" -ForegroundColor Cyan
+Write-Host "Please review with 'git diff', test locally (npm run dev:frontend), then commit and redeploy." -ForegroundColor Yellow
