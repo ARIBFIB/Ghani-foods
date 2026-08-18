@@ -1,9 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { useStore } from "@/lib/store";
 
 function KpiCard({ label, value }: { label: string; value: string | number }) {
@@ -28,54 +27,6 @@ function StatusBadge({ status }: { status: "unpaid" | "partial" | "paid" }) {
   );
 }
 
-function AddRawMaterialDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const addRawMaterial = useStore((s) => s.addRawMaterial);
-  const [name, setName] = useState("");
-  const [unit, setUnit] = useState("kg");
-  const [threshold, setThreshold] = useState("50");
-
-  if (!open) return null;
-
-  const handleSave = () => {
-    if (!name.trim()) return;
-    addRawMaterial({ name: name.trim(), unit, lowStockThreshold: Number(threshold) || 0 });
-    toast.success(`Raw material "${name.trim()}" added`);
-    setName("");
-    setUnit("kg");
-    setThreshold("50");
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-4">
-      <div className="w-full max-w-sm rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5 space-y-4 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-lg font-semibold text-[var(--foreground)]">Add Raw Material</h2>
-        <div className="space-y-3">
-          <div>
-            <label className="text-sm text-[var(--text-muted)]">Name</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Atta (Flour)"
-              className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
-          </div>
-          <div>
-            <label className="text-sm text-[var(--text-muted)]">Unit of Purchase</label>
-            <input value={unit} onChange={(e) => setUnit(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
-          </div>
-          <div>
-            <label className="text-sm text-[var(--text-muted)]">Low Stock Threshold</label>
-            <input value={threshold} onChange={(e) => setThreshold(e.target.value)} type="number"
-              className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
-          </div>
-        </div>
-        <div className="flex justify-end gap-2 pt-2">
-          <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]">Cancel</button>
-          <button onClick={handleSave} className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">Save</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function DashboardPage() {
   const router = useRouter();
   const rawMaterials = useStore((s) => s.rawMaterials);
@@ -84,7 +35,6 @@ export default function DashboardPage() {
   const invoices = useStore((s) => s.invoices);
   const finishedCartons = useStore((s) => s.finishedCartons);
   const customers = useStore((s) => s.customers);
-  const [dialogOpen, setDialogOpen] = useState(false);
 
   const lowStockItems = useMemo(() => {
     const rawAlerts = rawMaterials
@@ -122,13 +72,13 @@ export default function DashboardPage() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <button onClick={() => setDialogOpen(true)} className="rounded-lg border border-neutral-400 dark:border-neutral-600 px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)] transition-colors">
+        <Link href="/raw-materials" className="rounded-lg border border-neutral-400 dark:border-neutral-600 px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)] transition-colors">
           + Add Raw Material
-        </button>
+        </Link>
         <button onClick={() => router.push("/batches/new")} className="rounded-lg border border-neutral-400 dark:border-neutral-600 px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)] transition-colors">
           + New Batch
         </button>
-        <button onClick={() => router.push("/invoices/new")} className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
+        <button onClick={() => router.push("/invoices/new")} className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
           + New Invoice
         </button>
       </div>
@@ -140,7 +90,7 @@ export default function DashboardPage() {
           </div>
           <div className="divide-y divide-[var(--surface-border)]">
             {lowStockItems.length === 0 && (
-              <div className="px-4 py-6 text-center text-sm text-[var(--foreground)]0">All stock levels are healthy.</div>
+              <div className="px-4 py-6 text-center text-sm text-[var(--text-faint)]">All stock levels are healthy.</div>
             )}
             {lowStockItems.map((item) => (
               <Link key={item.id} href={item.href} className="flex items-center justify-between px-4 py-3 hover:bg-[var(--surface-hover)]/60">
@@ -172,8 +122,6 @@ export default function DashboardPage() {
           </table>
         </div>
       </div>
-
-      <AddRawMaterialDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
     </div>
   );
 }

@@ -1,0 +1,255 @@
+# Phase4-Frontend-Fixes.ps1
+# Run from: D:\Rozmarrah-CUST\Saim Ashraf\Nimko\Working\Code\GhaniFoods
+# Usage:    .\Phase4-Frontend-Fixes.ps1
+#
+# PHASE 4 - Frontend-only bug fixes identified in review:
+#   1. Dashboard "+ Add Raw Material" quick-action used the OLD addRawMaterial-only
+#      flow (no supplier, no purchase date, no qty/cost) - inconsistent with the
+#      full purchase-receipt flow on /raw-materials. Fixed by replacing the dialog
+#      with a direct link to /raw-materials (where the correct full flow lives).
+#   2. Finished Cartons "New Packing Run" dialog let the user reach Step 3 and
+#      click Confirm even when wrapper/box stock was insufficient - it only
+#      showed a warning, and only failed on submit. Now the "Next" button on
+#      Step 2 is disabled until stock is sufficient.
+#   3. Carton Configuration dropdown in the Packing Run dialog didn't indicate
+#      which configs were already used in a prior packing run. Now shows "(used)".
+#
+# Safe to re-run: each fix checks for the old text before replacing, so running
+# this twice will just report "already applied" instead of double-patching.
+
+$ErrorActionPreference = "Stop"
+$ProjectRoot = Get-Location
+$AppDash = Join-Path $ProjectRoot "apps\frontend\app\(dashboard)"
+
+if (-not (Test-Path $AppDash)) {
+    Write-Host "ERROR: apps\frontend\app\(dashboard) not found. Run this script from the GhaniFoods root." -ForegroundColor Red
+    exit 1
+}
+
+function Write-Utf8NoBom($Path, $Content) {
+    $dir = Split-Path $Path -Parent
+    if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($Path, $Content, $utf8NoBom)
+}
+
+Write-Host "=== Phase 4: Frontend-only bug fixes ===" -ForegroundColor Cyan
+
+# ---------------------------------------------------------------------------
+# 1. app/(dashboard)/page.tsx - REWRITE (drop broken AddRawMaterialDialog,
+#    "+ Add Raw Material" now links straight to /raw-materials)
+# ---------------------------------------------------------------------------
+$dashboardContent = @'
+"use client";
+
+import { useMemo } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useStore } from "@/lib/store";
+
+function KpiCard({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="bg-[var(--surface)] border border-[var(--surface-border)] rounded-xl p-4">
+      <div className="text-[var(--text-muted)] text-sm">{label}</div>
+      <div className="text-2xl font-semibold text-[var(--foreground)] mt-1">{value}</div>
+    </div>
+  );
+}
+
+function StatusBadge({ status }: { status: "unpaid" | "partial" | "paid" }) {
+  const styles: Record<string, string> = {
+    paid: "bg-green-950 text-green-400 border border-green-900",
+    partial: "bg-amber-950 text-amber-400 border border-amber-900",
+    unpaid: "bg-red-950 text-red-400 border border-red-900",
+  };
+  return (
+    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[status]}`}>
+      {status[0].toUpperCase() + status.slice(1)}
+    </span>
+  );
+}
+
+export default function DashboardPage() {
+  const router = useRouter();
+  const rawMaterials = useStore((s) => s.rawMaterials);
+  const wrappers = useStore((s) => s.wrappers);
+  const boxes = useStore((s) => s.boxes);
+  const invoices = useStore((s) => s.invoices);
+  const finishedCartons = useStore((s) => s.finishedCartons);
+  const customers = useStore((s) => s.customers);
+
+  const lowStockItems = useMemo(() => {
+    const rawAlerts = rawMaterials
+      .filter((m) => m.quantityInStock < m.lowStockThreshold)
+      .map((m) => ({ id: m.id, name: m.name, href: `/raw-materials/${m.id}`, qty: m.quantityInStock, threshold: m.lowStockThreshold }));
+    const wrapperAlerts = wrappers
+      .filter((w) => w.stockQty < w.lowStockThreshold)
+      .map((w) => ({ id: w.id, name: w.name, href: `/packaging`, qty: w.stockQty, threshold: w.lowStockThreshold }));
+    const boxAlerts = boxes
+      .filter((b) => b.stockQty < b.lowStockThreshold)
+      .map((b) => ({ id: b.id, name: b.name, href: `/packaging`, qty: b.stockQty, threshold: b.lowStockThreshold }));
+    return [...rawAlerts, ...wrapperAlerts, ...boxAlerts];
+  }, [rawMaterials, wrappers, boxes]);
+
+  const kpis = useMemo(() => {
+    const totalRawMaterialValue = rawMaterials.reduce((sum, m) => sum + m.quantityInStock * m.avgUnitCost, 0);
+    const finishedCartonsReady = finishedCartons.reduce((sum, c) => sum + c.stockQty, 0);
+    const totalReceivables = customers.reduce((sum, c) => sum + Math.max(0, c.currentBalance), 0);
+    return { totalRawMaterialValue, finishedCartonsReady, totalReceivables };
+  }, [rawMaterials, finishedCartons, customers]);
+
+  const recentInvoices = invoices.slice(0, 5);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold">Dashboard</h1>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard label="Total Raw Material Value" value={`Rs. ${kpis.totalRawMaterialValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} />
+        <KpiCard label="Batches This Month" value={6} />
+        <KpiCard label="Finished Cartons Ready" value={kpis.finishedCartonsReady} />
+        <KpiCard label="Total Receivables" value={`Rs. ${kpis.totalReceivables.toLocaleString()}`} />
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <Link href="/raw-materials" className="rounded-lg border border-neutral-400 dark:border-neutral-600 px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)] transition-colors">
+          + Add Raw Material
+        </Link>
+        <button onClick={() => router.push("/batches/new")} className="rounded-lg border border-neutral-400 dark:border-neutral-600 px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)] transition-colors">
+          + New Batch
+        </button>
+        <button onClick={() => router.push("/invoices/new")} className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
+          + New Invoice
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] overflow-hidden">
+          <div className="px-4 py-3 border-b border-[var(--surface-border)]">
+            <h2 className="text-sm font-semibold text-[var(--foreground)]">Low Stock Alerts</h2>
+          </div>
+          <div className="divide-y divide-[var(--surface-border)]">
+            {lowStockItems.length === 0 && (
+              <div className="px-4 py-6 text-center text-sm text-[var(--text-faint)]">All stock levels are healthy.</div>
+            )}
+            {lowStockItems.map((item) => (
+              <Link key={item.id} href={item.href} className="flex items-center justify-between px-4 py-3 hover:bg-[var(--surface-hover)]/60">
+                <span className="text-sm text-[var(--foreground)]">{item.name}</span>
+                <span className="text-xs text-red-400">{item.qty} / {item.threshold}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] overflow-hidden">
+          <div className="px-4 py-3 border-b border-[var(--surface-border)] flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-[var(--foreground)]">Recent Invoices</h2>
+            <Link href="/invoices" className="text-xs text-[var(--text-muted)] hover:text-[var(--foreground)] hover:underline">View all</Link>
+          </div>
+          <table className="w-full text-sm">
+            <tbody>
+              {recentInvoices.map((inv) => (
+                <tr key={inv.id} className="border-b border-[var(--surface-border)] last:border-0">
+                  <td className="px-4 py-3">
+                    <Link href={`/invoices/${inv.id}`} className="text-[var(--foreground)] hover:underline">{inv.id}</Link>
+                  </td>
+                  <td className="px-4 py-3 text-[var(--text-secondary)]">{inv.customerName}</td>
+                  <td className="px-4 py-3 text-[var(--text-secondary)]">Rs. {inv.totalAmount.toLocaleString()}</td>
+                  <td className="px-4 py-3"><StatusBadge status={inv.status} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+'@
+
+$dashboardPath = Join-Path $AppDash "page.tsx"
+$dashboardExisting = if (Test-Path $dashboardPath) { [System.IO.File]::ReadAllText($dashboardPath) } else { "" }
+
+if ($dashboardExisting -match 'AddRawMaterialDialog') {
+    Write-Utf8NoBom -Path $dashboardPath -Content $dashboardContent
+    Write-Host "  [1/3] Rewrote app\(dashboard)\page.tsx (removed broken Add Raw Material dialog, now links to /raw-materials)" -ForegroundColor Green
+} else {
+    Write-Host "  [1/3] Dashboard page.tsx already fixed (no AddRawMaterialDialog found) - skipped" -ForegroundColor Yellow
+}
+
+# ---------------------------------------------------------------------------
+# 2 & 3. app/(dashboard)/finished-cartons/page.tsx - patch Next-button disable
+#         logic + "(used)" label on carton config dropdown
+# ---------------------------------------------------------------------------
+$finishedCartonsPath = Join-Path $AppDash "finished-cartons\page.tsx"
+if (Test-Path $finishedCartonsPath) {
+    $fcText = [System.IO.File]::ReadAllText($finishedCartonsPath)
+
+    # Fix 3: label used configs in the dropdown
+    $oldConfigOption = @'
+                  return (
+                    <option key={c.id} value={c.id}>
+                      {w?.name ?? "?"} x {c.packetsPerBox}/box - {b?.name ?? "?"} x {c.boxesPerCarton}/carton
+                    </option>
+                  );
+'@
+    $newConfigOption = @'
+                  return (
+                    <option key={c.id} value={c.id}>
+                      {w?.name ?? "?"} x {c.packetsPerBox}/box - {b?.name ?? "?"} x {c.boxesPerCarton}/carton{c.usedInPackingRun ? " (used)" : ""}
+                    </option>
+                  );
+'@
+    if ($fcText.Contains($oldConfigOption)) {
+        $fcText = $fcText.Replace($oldConfigOption, $newConfigOption)
+        Write-Host "  [2/3] Added '(used)' label to carton config dropdown in Packing Run dialog" -ForegroundColor Green
+    } else {
+        Write-Host "  [2/3] Could not find config dropdown block (already patched or edited) - skipped" -ForegroundColor Yellow
+    }
+
+    # Fix 2: disable Next button on Step 2 when stock is insufficient
+    $oldNextButton = @'
+            <button
+              onClick={() => setStep(step + 1)}
+              disabled={step === 2 && (!config || cartons <= 0)}
+              className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity disabled:opacity-50"
+            >
+              Next
+            </button>
+'@
+    $newNextButton = @'
+            <button
+              onClick={() => setStep(step + 1)}
+              disabled={step === 2 && (!config || cartons <= 0 || insufficientWrapper || insufficientBox)}
+              className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity disabled:opacity-50"
+            >
+              Next
+            </button>
+'@
+    if ($fcText.Contains($oldNextButton)) {
+        $fcText = $fcText.Replace($oldNextButton, $newNextButton)
+        Write-Host "  [3/3] 'Next' button on Step 2 now disabled when wrapper/box stock is insufficient" -ForegroundColor Green
+    } else {
+        Write-Host "  [3/3] Could not find Next button block (already patched or edited) - skipped" -ForegroundColor Yellow
+    }
+
+    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+    [System.IO.File]::WriteAllText($finishedCartonsPath, $fcText, $utf8NoBom)
+} else {
+    Write-Host "  [2/3] and [3/3] WARNING: finished-cartons\page.tsx not found, skipped" -ForegroundColor Yellow
+}
+
+Write-Host "`n=== Phase 4 complete ===" -ForegroundColor Green
+Write-Host ""
+Write-Host "DONE in this script:" -ForegroundColor Yellow
+Write-Host "  - Dashboard '+ Add Raw Material' now links to /raw-materials (correct full purchase-receipt flow)" -ForegroundColor Gray
+Write-Host "  - Packing Run Step 2 'Next' button disabled until wrapper/box stock is sufficient" -ForegroundColor Gray
+Write-Host "  - Carton config dropdown shows '(used)' next to configs already used in a prior packing run" -ForegroundColor Gray
+Write-Host ""
+Write-Host "Remaining known gaps (not fixed - larger scope, confirm before building):" -ForegroundColor Yellow
+Write-Host "  - No Edit/Delete for Suppliers, Wrappers, Boxes, Raw Materials, Carton Configurations" -ForegroundColor Gray
+Write-Host "  - Sidebar: 'Packaging Materials' and 'Carton Configurations' both sit under 'Raw Materials' section (cosmetic)" -ForegroundColor Gray
+Write-Host ""
+Write-Host "Next: run 'npm run build --workspace=apps/frontend' to confirm a clean build." -ForegroundColor Cyan

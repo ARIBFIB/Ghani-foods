@@ -98,7 +98,7 @@ function NewPackingRunDialog({ open, onClose }: { open: boolean; onClose: () => 
                   const b = boxes.find((bx) => bx.id === c.boxId);
                   return (
                     <option key={c.id} value={c.id}>
-                      {w?.name ?? "?"} x {c.packetsPerBox}/box - {b?.name ?? "?"} x {c.boxesPerCarton}/carton
+                      {w?.name ?? "?"} x {c.packetsPerBox}/box - {b?.name ?? "?"} x {c.boxesPerCarton}/carton{c.usedInPackingRun ? " (used)" : ""}
                     </option>
                   );
                 })}
@@ -157,7 +157,7 @@ function NewPackingRunDialog({ open, onClose }: { open: boolean; onClose: () => 
           {step < 3 ? (
             <button
               onClick={() => setStep(step + 1)}
-              disabled={step === 2 && (!config || cartons <= 0)}
+              disabled={step === 2 && (!config || cartons <= 0 || insufficientWrapper || insufficientBox)}
               className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity disabled:opacity-50"
             >
               Next
