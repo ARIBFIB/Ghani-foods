@@ -1,10 +1,9 @@
-﻿import type { ReactNode } from "react";
+import type { ReactNode } from "react";
 import { AppSidebar } from "@/components/ui/sidebar-component";
 import { Topbar } from "@/components/ui/topbar";
 import { SidebarProvider } from "@/lib/sidebar-context";
 import { NavigationLoadingProvider } from "@/lib/navigation-loading-context";
 import { NavigationLoadingOverlay } from "@/components/ui/navigation-loading-overlay";
-import { StoreHydrator } from "@/components/ui/store-hydrator";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
@@ -20,7 +19,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
         <NavigationLoadingOverlay />
-        <StoreHydrator />
       </SidebarProvider>
     </NavigationLoadingProvider>
   );
