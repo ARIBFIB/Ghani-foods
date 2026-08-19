@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { toast } from "sonner";
@@ -81,14 +81,18 @@ export function PurchaseReceiptDialog({
   const updateRow = (id: string, patch: Partial<ItemRow>) =>
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
 
-  const handleInlineAddSupplier = () => {
+  const handleInlineAddSupplier = async () => {
     if (!newSupplierName.trim() || !newSupplierPhone.trim()) return;
-    const id = addSupplier({ name: newSupplierName.trim(), phone: newSupplierPhone.trim() });
-    setSupplierId(id);
-    setNewSupplierName("");
-    setNewSupplierPhone("");
-    setShowAddSupplier(false);
-    toast.success(`Supplier "${newSupplierName.trim()}" added`);
+    try {
+      const id = await addSupplier({ name: newSupplierName.trim(), phone: newSupplierPhone.trim() });
+      setSupplierId(id);
+      setNewSupplierName("");
+      setNewSupplierPhone("");
+      setShowAddSupplier(false);
+      toast.success(`Supplier "${newSupplierName.trim()}" added`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to add supplier");
+    }
   };
 
   const runningTotal = rows.reduce((sum, r) => sum + (Number(r.qty) || 0) * (Number(r.cost) || 0), 0);
@@ -133,14 +137,16 @@ export function PurchaseReceiptDialog({
         );
         let newId = existing?.id;
         if (!newId) {
-          addRawMaterial({
-            name: row.newName.trim(),
-            unit: row.newUnit.trim(),
-            lowStockThreshold: Number(row.newThreshold) || 0,
-          });
-          newId = useStore
-            .getState()
-            .rawMaterials.find((m) => m.name.toLowerCase() === row.newName.trim().toLowerCase())?.id;
+          try {
+            newId = await addRawMaterial({
+              name: row.newName.trim(),
+              unit: row.newUnit.trim(),
+              lowStockThreshold: Number(row.newThreshold) || 0,
+            });
+          } catch (err) {
+            setFormError(err instanceof Error ? err.message : "Could not create the new raw material");
+            return;
+          }
         }
         if (!newId) {
           setFormError("Could not create the new raw material");
@@ -157,13 +163,18 @@ export function PurchaseReceiptDialog({
     }
 
     setSubmitting(true);
-    createPurchaseReceipt({ supplierId, purchaseDate, items: parsedItems });
-    const supplierName = suppliers.find((s) => s.id === supplierId)?.name ?? "supplier";
-    toast.success(
-      `Purchase receipt saved - ${parsedItems.length} item${parsedItems.length > 1 ? "s" : ""} from ${supplierName}`
-    );
-    setSubmitting(false);
-    resetAndClose();
+    try {
+      await createPurchaseReceipt({ supplierId, purchaseDate, items: parsedItems });
+      const supplierName = suppliers.find((s) => s.id === supplierId)?.name ?? "supplier";
+      toast.success(
+        `Purchase receipt saved - ${parsedItems.length} item${parsedItems.length > 1 ? "s" : ""} from ${supplierName}`
+      );
+      resetAndClose();
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : "Failed to save purchase receipt");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (

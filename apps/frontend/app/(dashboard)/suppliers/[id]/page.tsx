@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { Fragment, use, useMemo, useState } from "react";
+import { Fragment, use, useEffect, useMemo, useState } from "react";
 import { NavLink } from "@/components/ui/nav-link";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useStore } from "@/lib/store";
@@ -12,8 +12,13 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
   const allReceipts = useStore((s) => s.receipts);
   const receiptLines = useStore((s) => s.receiptLines);
   const rawMaterials = useStore((s) => s.rawMaterials);
+  const loadRawMaterialsModule = useStore((s) => s.loadRawMaterialsModule);
   const [expandedReceiptId, setExpandedReceiptId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  useEffect(() => {
+    loadRawMaterialsModule();
+  }, [loadRawMaterialsModule]);
 
   const receipts = useMemo(
     () => allReceipts.filter((r) => r.supplierId === id).sort((a, b) => b.purchaseDate.localeCompare(a.purchaseDate)),

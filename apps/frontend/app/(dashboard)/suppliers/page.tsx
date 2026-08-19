@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { NavLink } from "@/components/ui/nav-link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,9 +18,13 @@ function AddSupplierDialog({ open, onClose }: { open: boolean; onClose: () => vo
   });
   if (!open) return null;
   const onSubmit = async (values: SupplierFormValues) => {
-    addSupplier(values);
-    toast.success(`Supplier "${values.name}" added`);
-    reset(); onClose();
+    try {
+      await addSupplier(values);
+      toast.success(`Supplier "${values.name}" added`);
+      reset(); onClose();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to add supplier");
+    }
   };
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-4">
@@ -59,7 +63,12 @@ function AddSupplierDialog({ open, onClose }: { open: boolean; onClose: () => vo
 export default function SuppliersPage() {
   const suppliers = useStore((s) => s.suppliers);
   const receipts = useStore((s) => s.receipts);
+  const loadRawMaterialsModule = useStore((s) => s.loadRawMaterialsModule);
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  useEffect(() => {
+    loadRawMaterialsModule();
+  }, [loadRawMaterialsModule]);
 
   type Row = Supplier & { totalPurchases: number; lastPurchaseDate: string };
 

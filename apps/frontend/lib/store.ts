@@ -1,7 +1,30 @@
-"use client";
+﻿"use client";
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { createClient } from "@/lib/supabase/client";
+
+const supabase = createClient();
+
+function mapSupplierRow(row: any): Supplier {
+  return { id: row.id, name: row.name, phone: row.phone, address: row.address ?? undefined };
+}
+function mapRawMaterialRow(row: any): RawMaterial {
+  return {
+    id: row.id,
+    name: row.name,
+    unit: row.unit,
+    quantityInStock: Number(row.quantity_in_stock),
+    avgUnitCost: Number(row.avg_unit_cost),
+    lowStockThreshold: Number(row.low_stock_threshold),
+  };
+}
+function mapReceiptRow(row: any): PurchaseReceipt {
+  return { id: row.id, supplierId: row.supplier_id, purchaseDate: row.purchase_date };
+}
+function mapReceiptLineRow(row: any): PurchaseReceiptLine {
+  return { id: row.id, receiptId: row.receipt_id, rawMaterialId: row.raw_material_id, qty: Number(row.qty), cost: Number(row.cost) };
+}
 
 // =============================================================================
 // Types (BRS v1.2 / Frontend Spec v2.2 domain model)
@@ -343,15 +366,16 @@ type State = {
   settings: AppSettings;
 
   // Suppliers
-  addSupplier: (item: { name: string; phone: string; address?: string }) => string;
+  addSupplier: (item: { name: string; phone: string; address?: string }) => Promise<string>;
 
   // Raw materials + multi-item Purchase Receipts (FR-4 - FR-10)
-  addRawMaterial: (item: { name: string; unit: string; lowStockThreshold: number }) => string;
+  addRawMaterial: (item: { name: string; unit: string; lowStockThreshold: number }) => Promise<string>;
   createPurchaseReceipt: (input: {
     supplierId: string;
     purchaseDate: string;
     items: { rawMaterialId: string; qty: number; cost: number }[];
-  }) => string;
+  }) => Promise<string>;
+  loadRawMaterialsModule: () => Promise<void>;
 
   // Wrapper / Box - Define + Produce (FR-11 - FR-15)
   addWrapper: (item: { name: string; rawMaterialId: string; gramsPerUnit: number; lowStockThreshold: number }) => string;
@@ -417,58 +441,56 @@ export const useStore = create<State>()(
       payments: initialPayments,
       settings: initialSettings,
 
-      addSupplier: (item) => {
-        const id = `sup-${Date.now()}`;
-        set((s) => ({
-          suppliers: [...s.suppliers, { id, name: item.name, phone: item.phone, address: item.address }],
-        }));
-        return id;
+      addSupplier: async (item) => {
+        const { data, error } = await supabase
+          .from("suppliers")
+          .insert({ name: item.name, phone: item.phone, address: item.address ?? null })
+          .select()
+          .single();
+        if (error || !data) throw new Error(error?.message ?? "Failed to add supplier");
+        const supplier = mapSupplierRow(data);
+        set((s) => ({ suppliers: [...s.suppliers, supplier] }));
+        return supplier.id;
       },
 
-      addRawMaterial: (item) => {
-        const id = `rm-${Date.now()}`;
-        set((s) => ({
-          rawMaterials: [
-            ...s.rawMaterials,
-            { id, name: item.name, unit: item.unit, quantityInStock: 0, avgUnitCost: 0, lowStockThreshold: item.lowStockThreshold },
-          ],
-        }));
-        return id;
+      addRawMaterial: async (item) => {
+        const { data, error } = await supabase
+          .from("raw_materials")
+          .insert({ name: item.name, unit: item.unit, low_stock_threshold: item.lowStockThreshold })
+          .select()
+          .single();
+        if (error || !data) throw new Error(error?.message ?? "Failed to add raw material");
+        const material = mapRawMaterialRow(data);
+        set((s) => ({ rawMaterials: [...s.rawMaterials, material] }));
+        return material.id;
       },
 
-      // FR-5/FR-6/FR-7: one receipt header (Supplier, Purchase Date) with
-      // one or more line items. Each line independently recalculates its
-      // raw material's weighted-average cost:
-      //   New Avg Cost = ((ExistingQty * ExistingAvg) + (NewQty * NewCost)) / (ExistingQty + NewQty)
-      createPurchaseReceipt: (input) => {
-        const id = `rcpt-${Date.now()}`;
-        set((s) => {
-          let rawMaterials = s.rawMaterials;
-          const newLines: PurchaseReceiptLine[] = input.items.map((item, idx) => {
-            rawMaterials = rawMaterials.map((m) => {
-              if (m.id !== item.rawMaterialId) return m;
-              const newQty = m.quantityInStock + item.qty;
-              const newAvgCost = newQty > 0 ? (m.quantityInStock * m.avgUnitCost + item.qty * item.cost) / newQty : m.avgUnitCost;
-              return { ...m, quantityInStock: newQty, avgUnitCost: Number(newAvgCost.toFixed(2)) };
-            });
-            return {
-              id: `rline-${Date.now()}-${idx}`,
-              receiptId: id,
-              rawMaterialId: item.rawMaterialId,
-              qty: item.qty,
-              cost: item.cost,
-            };
-          });
-
-          const receipt: PurchaseReceipt = { id, supplierId: input.supplierId, purchaseDate: input.purchaseDate };
-
-          return {
-            rawMaterials,
-            receipts: [receipt, ...s.receipts],
-            receiptLines: [...newLines, ...s.receiptLines],
-          };
+      // FR-5/FR-6/FR-7: server-side RPC (fn_create_purchase_receipt) recalculates
+      // each affected raw material's weighted-average cost atomically.
+      createPurchaseReceipt: async (input) => {
+        const { data, error } = await supabase.rpc("fn_create_purchase_receipt", {
+          p_supplier_id: input.supplierId,
+          p_purchase_date: input.purchaseDate,
+          p_items: input.items.map((i) => ({ rawMaterialId: i.rawMaterialId, qty: i.qty, cost: i.cost })),
         });
-        return id;
+        if (error || !data) throw new Error(error?.message ?? "Failed to save purchase receipt");
+        await get().loadRawMaterialsModule();
+        return (data as any).receiptId as string;
+      },
+
+      loadRawMaterialsModule: async () => {
+        const [suppliersRes, rawMaterialsRes, receiptsRes, receiptLinesRes] = await Promise.all([
+          supabase.from("suppliers").select("*"),
+          supabase.from("raw_materials").select("*"),
+          supabase.from("purchase_receipts").select("*"),
+          supabase.from("purchase_receipt_lines").select("*"),
+        ]);
+        set({
+          suppliers: (suppliersRes.data ?? []).map(mapSupplierRow),
+          rawMaterials: (rawMaterialsRes.data ?? []).map(mapRawMaterialRow),
+          receipts: (receiptsRes.data ?? []).map(mapReceiptRow),
+          receiptLines: (receiptLinesRes.data ?? []).map(mapReceiptLineRow),
+        });
       },
 
       addWrapper: (item) => {

@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { NavLink } from "@/components/ui/nav-link";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useStore } from "@/lib/store";
@@ -11,6 +11,11 @@ export default function ReceiptsPage() {
   const receiptLines = useStore((s) => s.receiptLines);
   const suppliers = useStore((s) => s.suppliers);
   const rawMaterials = useStore((s) => s.rawMaterials);
+  const loadRawMaterialsModule = useStore((s) => s.loadRawMaterialsModule);
+
+  useEffect(() => {
+    loadRawMaterialsModule();
+  }, [loadRawMaterialsModule]);
 
   const [supplierFilter, setSupplierFilter] = useState("");
   const [materialFilter, setMaterialFilter] = useState("");

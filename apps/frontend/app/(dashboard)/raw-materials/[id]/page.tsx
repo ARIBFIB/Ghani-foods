@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { use, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import { NavLink } from "@/components/ui/nav-link";
 import { useStore } from "@/lib/store";
 import { PurchaseReceiptDialog } from "@/components/ui/purchase-receipt-dialog";
@@ -11,7 +11,12 @@ export default function RawMaterialDetailPage({ params }: { params: Promise<{ id
   const receipts = useStore((s) => s.receipts);
   const receiptLines = useStore((s) => s.receiptLines);
   const suppliers = useStore((s) => s.suppliers);
+  const loadRawMaterialsModule = useStore((s) => s.loadRawMaterialsModule);
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  useEffect(() => {
+    loadRawMaterialsModule();
+  }, [loadRawMaterialsModule]);
 
   const history = useMemo(() => {
     return receiptLines

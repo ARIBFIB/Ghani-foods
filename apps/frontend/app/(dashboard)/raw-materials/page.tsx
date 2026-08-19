@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { NavLink } from "@/components/ui/nav-link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -31,10 +31,14 @@ function AddRawMaterialMasterDialog({ open, onClose }: { open: boolean; onClose:
   if (!open) return null;
 
   const onSubmit = async (values: RawMaterialMasterFormValues) => {
-    addRawMaterial(values);
-    toast.success(`Raw material "${values.name}" added - record a purchase to add stock`);
-    reset();
-    onClose();
+    try {
+      await addRawMaterial(values);
+      toast.success(`Raw material "${values.name}" added - record a purchase to add stock`);
+      reset();
+      onClose();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to add raw material");
+    }
   };
 
   return (
@@ -81,6 +85,11 @@ export default function RawMaterialsPage() {
   const receipts = useStore((s) => s.receipts);
   const receiptLines = useStore((s) => s.receiptLines);
   const suppliers = useStore((s) => s.suppliers);
+  const loadRawMaterialsModule = useStore((s) => s.loadRawMaterialsModule);
+
+  useEffect(() => {
+    loadRawMaterialsModule();
+  }, [loadRawMaterialsModule]);
 
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
