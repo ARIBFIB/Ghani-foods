@@ -119,9 +119,9 @@ export default function NewBatchPage() {
     });
 
     if (useLeftoverFirst) {
-      toast.success(`Batch ${newId} created — raw material stock deducted and ${leftoverKgUsed} kg leftover from ${leftoverBatchId} consumed`);
+      toast.success(`Batch ${newId} created â€” raw material stock deducted and ${leftoverKgUsed} kg leftover from ${leftoverBatchId} consumed`);
     } else {
-      toast.success(`Batch ${newId} created — raw material stock deducted`);
+      toast.success(`Batch ${newId} created â€” raw material stock deducted`);
     }
     navigate(`/batches/${newId}`);
   };
@@ -147,7 +147,7 @@ export default function NewBatchPage() {
                   <select value={row.rawMaterialId} onChange={(e) => updateRow(row.id, { rawMaterialId: e.target.value })}
                     className="flex-1 rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]">
                     {rawMaterials.map((m) => (
-                      <option key={m.id} value={m.id}>{m.name} ({m.unit}) — {m.quantityInStock} in stock</option>
+                      <option key={m.id} value={m.id}>{m.name} ({m.unit}) â€” {m.quantityInStock} in stock</option>
                     ))}
                   </select>
                   <input value={row.qty} onChange={(e) => updateRow(row.id, { qty: e.target.value })} type="number" placeholder="Qty"
@@ -225,7 +225,7 @@ export default function NewBatchPage() {
               >
                 <option value="">Select leftover batch...</option>
                 {leftoverBatches.map((b) => (
-                  <option key={b.id} value={b.id}>{b.id} — {b.leftoverQtyKg} kg available @ Rs. {b.bulkCostPerKg}/kg</option>
+                  <option key={b.id} value={b.id}>{b.id} â€” {b.leftoverQtyKg} kg available @ Rs. {b.bulkCostPerKg}/kg</option>
                 ))}
               </select>
             </div>

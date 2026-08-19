@@ -13,7 +13,7 @@ import {
 // meaning or derivation is not immediately obvious (BRS v1.2 note; Frontend
 // spec v2.2 section 5.13: "shadcn Tooltip, lucide Info 14px, hover on
 // desktop, tap-to-toggle on touch"). `open` is controlled so the trigger's
-// onClick can explicitly flip it — touchscreens don't fire hover, so
+// onClick can explicitly flip it â€” touchscreens don't fire hover, so
 // relying on Radix's default hover-only behavior would leave touch users
 // with no way to see the tooltip at all.
 export function InfoTip({ text }: { text: string }) {

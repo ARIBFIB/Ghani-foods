@@ -125,7 +125,7 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
           <div className="mt-2 text-xs text-blue-400">
             Includes {batch.leftoverKgConsumed} kg of leftover bulk product carried forward from{" "}
             <NavLink href={`/batches/${batch.leftoverSourceBatchId}`} className="underline">{batch.leftoverSourceBatchId}</NavLink>{" "}
-            (FIFO — cost blended into this batch's effective cost/kg).
+            (FIFO â€” cost blended into this batch's effective cost/kg).
           </div>
         )}
       </div>

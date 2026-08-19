@@ -114,7 +114,7 @@ function RecordPaymentDialog({ open, onClose, customerId }: { open: boolean; onC
 }
 
 function DirectionBadge({ direction }: { direction: LedgerDirection | null }) {
-  if (!direction) return <span className="text-[var(--text-faint)]">—</span>;
+  if (!direction) return <span className="text-[var(--text-faint)]">â€”</span>;
   return direction === "received" ? (
     <span className="rounded-full bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-400">+ Received</span>
   ) : (
