@@ -87,7 +87,7 @@ function NewPackingRunDialog({ open, onClose }: { open: boolean; onClose: () => 
     setCartonsProduced("10");
   };
 
-  const handleConfirm = async () => {
+  const handleConfirm = () => {
     if (!batch || !config) return;
     if (cartons <= 0) {
       toast.error("Enter a valid number of cartons");
@@ -105,14 +105,10 @@ function NewPackingRunDialog({ open, onClose }: { open: boolean; onClose: () => 
       toast.error(`Not enough ${box?.name} in stock`);
       return;
     }
-    try {
-      await createPackingRun({ batchId, configId, cartonsProduced: cartons });
-      toast.success(`Packing run confirmed - ${cartons} cartons added to ready stock`);
-      reset();
-      onClose();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to confirm packing run");
-    }
+    createPackingRun({ batchId, configId, cartonsProduced: cartons });
+    toast.success(`Packing run confirmed - ${cartons} cartons added to ready stock`);
+    reset();
+    onClose();
   };
 
   return (

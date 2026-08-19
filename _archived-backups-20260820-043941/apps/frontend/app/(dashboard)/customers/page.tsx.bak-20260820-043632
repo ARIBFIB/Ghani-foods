@@ -28,13 +28,9 @@ function AddCustomerDialog({ open, onClose }: { open: boolean; onClose: () => vo
   });
   if (!open) return null;
   const onSubmit = async (values: CustomerFormValues) => {
-    try {
-      await addCustomer(values);
-      toast.success(`Customer "${values.name}" added`);
-      reset(); onClose();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to add customer");
-    }
+    addCustomer(values);
+    toast.success(`Customer "${values.name}" added`);
+    reset(); onClose();
   };
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-4">

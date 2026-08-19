@@ -28,18 +28,14 @@ function RecordPaymentDialog({ open, onClose }: { open: boolean; onClose: () => 
   if (!open) return null;
 
   const onSubmit = async (values: PaymentFormValues) => {
-    try {
-      await recordLedgerEntry(values.customerId, values.amount, values.direction, values.note ?? "");
-      toast.success(
-        values.direction === "received"
-          ? `Payment of Rs. ${values.amount.toLocaleString()} received`
-          : `Rs. ${values.amount.toLocaleString()} recorded as given / credit adjustment`
-      );
-      reset();
-      onClose();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to record payment");
-    }
+    recordLedgerEntry(values.customerId, values.amount, values.direction, values.note ?? "");
+    toast.success(
+      values.direction === "received"
+        ? `Payment of Rs. ${values.amount.toLocaleString()} received`
+        : `Rs. ${values.amount.toLocaleString()} recorded as given / credit adjustment`
+    );
+    reset();
+    onClose();
   };
 
   return (

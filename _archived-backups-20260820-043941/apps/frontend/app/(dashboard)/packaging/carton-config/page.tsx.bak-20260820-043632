@@ -60,14 +60,10 @@ function AddConfigDialog({ open, onClose }: { open: boolean; onClose: () => void
   const costPerCarton = (Number(boxesPerCarton) || 0) * costPerBoxAssembled;
 
   const onSubmit = async (values: CartonConfigFormValues) => {
-    try {
-      await addCartonConfiguration(values);
-      toast.success("Carton configuration created");
-      reset();
-      onClose();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to create carton configuration");
-    }
+    addCartonConfiguration(values);
+    toast.success("Carton configuration created");
+    reset();
+    onClose();
   };
 
   return (

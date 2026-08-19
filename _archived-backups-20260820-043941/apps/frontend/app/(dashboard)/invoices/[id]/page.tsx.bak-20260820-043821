@@ -31,14 +31,10 @@ function RecordPaymentDialog({ open, onClose, customerId, customerName }: { open
   if (!open) return null;
 
   const onSubmit = async (values: PaymentAmountValues) => {
-    try {
-      await recordLedgerEntry(customerId, values.amount, "received", "Payment against invoice");
-      toast.success(`Payment of Rs. ${values.amount.toLocaleString()} recorded for ${customerName}`);
-      reset();
-      onClose();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to record payment");
-    }
+    recordLedgerEntry(customerId, values.amount, "received", "Payment against invoice");
+    toast.success(`Payment of Rs. ${values.amount.toLocaleString()} recorded for ${customerName}`);
+    reset();
+    onClose();
   };
 
   return (

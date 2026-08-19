@@ -140,7 +140,7 @@ function NewInvoiceForm() {
       return;
     }
 
-    const newId = await createInvoice({ customerId: values.customerId, lines: parsedLines });
+    const newId = createInvoice({ customerId: values.customerId, lines: parsedLines });
     toast.success(`Invoice ${newId} created \u2014 stock deducted, ledger updated`);
     navigate(`/invoices/${newId}`);
   };

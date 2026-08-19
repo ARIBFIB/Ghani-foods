@@ -30,12 +30,8 @@ export default function SettingsPage() {
   });
 
   const onSubmit = async (values: SettingsFormValues) => {
-    try {
-      await updateSettings(values);
-      toast.success("Settings saved");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save settings");
-    }
+    updateSettings(values);
+    toast.success("Settings saved");
   };
 
   return (

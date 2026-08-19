@@ -4,7 +4,6 @@ import { useState } from "react";
 import { NavLink } from "@/components/ui/nav-link";
 import { useRouter } from "next/navigation";
 import { useNavigationLoading } from "@/lib/navigation-loading-context";
-import { createClient } from "@/lib/supabase/client";
 import {
   Notification,
   User as UserIcon,
@@ -83,10 +82,9 @@ function UserMenu() {
   const router = useRouter();
   const { navigate } = useNavigationLoading();
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     setOpen(false);
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    document.cookie = "ghanifoods-auth=; path=/; max-age=0";
     navigate("/login");
   };
 
