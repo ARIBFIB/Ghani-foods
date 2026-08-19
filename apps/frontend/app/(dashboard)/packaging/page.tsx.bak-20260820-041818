@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useMemo, useState } from "react";
 import { NavLink } from "@/components/ui/nav-link";
@@ -142,7 +142,7 @@ function ProduceDialog({ target, onClose }: { target: ProduceTarget; onClose: ()
   const insufficient = gramsToConsume > availableGrams;
 
   const onSubmit = async (values: ProductionRunFormValues) => {
-    const result = kind === "wrapper" ? await produceWrapper(item.id, values.quantityProduced) : await produceBox(item.id, values.quantityProduced);
+    const result = kind === "wrapper" ? produceWrapper(item.id, values.quantityProduced) : produceBox(item.id, values.quantityProduced);
     if (!result.ok) {
       toast.error(result.reason ?? "Could not complete production run");
       return;
