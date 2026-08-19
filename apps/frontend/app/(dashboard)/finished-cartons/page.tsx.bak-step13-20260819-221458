@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { NavLink } from "@/components/ui/nav-link";
 import { toast } from "sonner";
-import { useStore, computePackagingUnitCost } from "@/lib/store";
+import { useStore } from "@/lib/store";
 import { InfoTip } from "@/components/ui/info-tip";
 
 // Mirrors the store's internal createPackingRun estimate exactly, so the
@@ -43,11 +43,8 @@ function NewPackingRunDialog({ open, onClose }: { open: boolean; onClose: () => 
 
   const batch = productionBatches.find((b) => b.id === batchId);
   const config = cartonConfigurations.find((c) => c.id === configId);
-  const rawMaterials = useStore((s) => s.rawMaterials);
   const wrapper = wrappers.find((w) => w.id === config?.wrapperId);
   const box = boxes.find((b) => b.id === config?.boxId);
-  const wrapperRawMaterial = rawMaterials.find((m) => m.id === wrapper?.rawMaterialId);
-  const boxRawMaterial = rawMaterials.find((m) => m.id === box?.rawMaterialId);
 
   const cartons = Number(cartonsProduced) || 0;
   const boxesNeeded = config ? cartons * config.boxesPerCarton : 0;
@@ -72,10 +69,8 @@ function NewPackingRunDialog({ open, onClose }: { open: boolean; onClose: () => 
     if (!open || !batch || !config || !wrapper || !box || cartons <= 0) return null;
     const bulkKgUsed = Math.min(bulkKgNeeded, batch.leftoverQtyKg);
     const bulkCostShare = batch.bulkCostPerKg * bulkKgUsed;
-    const wrapperUnitCostValue = computePackagingUnitCost(wrapper.gramsPerUnit, wrapperRawMaterial);
-    const boxUnitCostValue = computePackagingUnitCost(box.gramsPerUnit, boxRawMaterial);
-    const costPerPacket = packetsNeeded > 0 ? bulkCostShare / packetsNeeded + wrapperUnitCostValue : wrapperUnitCostValue;
-    const costPerBox = config.packetsPerBox * costPerPacket + boxUnitCostValue;
+    const costPerPacket = packetsNeeded > 0 ? bulkCostShare / packetsNeeded + wrapper.unitCost : wrapper.unitCost;
+    const costPerBox = config.packetsPerBox * costPerPacket + box.unitCost;
     const costPerCarton = config.boxesPerCarton * costPerBox;
     return { bulkKgUsed, costPerPacket, costPerBox, costPerCarton };
   }, [open, batch, config, wrapper, box, cartons, packetsNeeded, bulkKgNeeded]);

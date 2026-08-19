@@ -202,7 +202,7 @@ function unitToGramsMultiplier(unit: string): number {
   return 1;
 }
 
-export function computePackagingUnitCost(gramsPerUnit: number, rawMaterial: RawMaterial | undefined): number {
+function computePackagingUnitCost(gramsPerUnit: number, rawMaterial: RawMaterial | undefined): number {
   if (!rawMaterial) return 0;
   const multiplier = unitToGramsMultiplier(rawMaterial.unit);
   const costPerGram = rawMaterial.avgUnitCost / multiplier;
