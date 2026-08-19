@@ -1,3 +1,52 @@
+# step4-carton-config-name.ps1
+# Run from: D:\Rozmarrah-CUST\Saim Ashraf\Nimko\Working\Code\GhaniFoods
+# Usage: .\step4-carton-config-name.ps1
+#
+# STEP 4 of the v1.2/v2.2 gap-closure plan.
+# Overwrites:
+#   apps\frontend\app\(dashboard)\packaging\carton-config\page.tsx
+#
+# What changes:
+#   - "New Carton Configuration" dialog gains a required "Configuration Name"
+#     text input (first field in the form), wired to the already-updated
+#     cartonConfigSchema.name (lib/schemas.ts) and store.addCartonConfiguration
+#     (lib/store.ts) - both already accept/require `name` as of step1, this
+#     script only adds the missing UI input + table column.
+#   - Table gains a "Name" column (shown first) so configurations are listed
+#     by their client-given name instead of only by Wrapper/Box combo.
+#   - Live preview line under the form now also echoes the name back, e.g.
+#     "Carton A - 48pk" yields 48 packets per carton, so the client can
+#     sanity-check the name against the combo before saving.
+#
+# This script only touches the Carton Configuration page. lib/store.ts and
+# lib/schemas.ts already expose `name` on CartonConfiguration / cartonConfigSchema
+# / addCartonConfiguration (done in step1) - nothing there needs to change.
+#
+# Uses single-quoted PowerShell here-strings (@'...'@) so TSX/TS special
+# characters (backticks, ${}, quotes) are written literally with no
+# interpolation, then writes UTF8-without-BOM via WriteAllText - same
+# encoding-safety goal as export-code.ps1's Read-FileSmart, just for writes.
+
+$ErrorActionPreference = "Stop"
+$ProjectRoot = Get-Location
+$Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+
+function Write-FileSmart($relativePath, $content) {
+    $fullPath = Join-Path $ProjectRoot $relativePath
+    $dir = Split-Path $fullPath -Parent
+    if (-not (Test-Path $dir)) {
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    }
+    [System.IO.File]::WriteAllText($fullPath, $content, $Utf8NoBom)
+    Write-Host "  Wrote: $relativePath" -ForegroundColor Green
+}
+
+Write-Host "=== Step 4: Carton Configuration Name field (BRS v1.2 / Spec v2.2) ===" -ForegroundColor Cyan
+
+# ---------------------------------------------------------------------------
+# apps/frontend/app/(dashboard)/packaging/carton-config/page.tsx
+# ---------------------------------------------------------------------------
+$cartonConfigPageContent = @'
 "use client";
 
 import { useMemo, useState } from "react";
@@ -8,7 +57,6 @@ import { type ColumnDef } from "@tanstack/react-table";
 import { useStore, type CartonConfiguration } from "@/lib/store";
 import { cartonConfigSchema, type CartonConfigFormValues } from "@/lib/schemas";
 import { SortableTable } from "@/components/ui/sortable-table";
-import { InfoTip } from "@/components/ui/info-tip";
 
 function StatusBadge({ used }: { used: boolean }) {
   return (
@@ -23,18 +71,7 @@ function StatusBadge({ used }: { used: boolean }) {
 function AddConfigDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const wrappers = useStore((s) => s.wrappers);
   const boxes = useStore((s) => s.boxes);
-  const rawMaterials = useStore((s) => s.rawMaterials);
   const addCartonConfiguration = useStore((s) => s.addCartonConfiguration);
-
-  // Packaging cost build-up (BRS v1.2 sec 1.1; Frontend spec v2.2 sec 5.13
-  // "Carton Configuration cost preview"). Grams-per-unit is always in
-  // grams; the underlying Raw Material's avgUnitCost is per its stock
-  // `unit`. Assume that unit is "kg" unless it is literally "g".
-  const costPerGram = (rawMaterialId: string) => {
-    const rm = rawMaterials.find((r) => r.id === rawMaterialId);
-    if (!rm) return 0;
-    return rm.unit === "g" ? rm.avgUnitCost : rm.avgUnitCost / 1000;
-  };
 
   const { register, handleSubmit, control, watch, reset, formState: { errors, isSubmitting } } = useForm<CartonConfigFormValues>({
     resolver: zodResolver(cartonConfigSchema),
@@ -50,14 +87,6 @@ function AddConfigDialog({ open, onClose }: { open: boolean; onClose: () => void
   if (!open) return null;
 
   const totalPacketsPerCarton = (Number(packetsPerBox) || 0) * (Number(boxesPerCarton) || 0);
-
-  const selectedWrapper = wrappers.find((w) => w.id === wrapperId);
-  const selectedBox = boxes.find((b) => b.id === boxId);
-  const costPerWrapper = selectedWrapper ? selectedWrapper.gramsPerUnit * costPerGram(selectedWrapper.rawMaterialId) : 0;
-  const costPerBox = selectedBox ? selectedBox.gramsPerUnit * costPerGram(selectedBox.rawMaterialId) : 0;
-  const costPerPacket = costPerWrapper;
-  const costPerBoxAssembled = costPerBox + (Number(packetsPerBox) || 0) * costPerWrapper;
-  const costPerCarton = (Number(boxesPerCarton) || 0) * costPerBoxAssembled;
 
   const onSubmit = async (values: CartonConfigFormValues) => {
     addCartonConfiguration(values);
@@ -128,21 +157,6 @@ function AddConfigDialog({ open, onClose }: { open: boolean; onClose: () => void
             <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--background)] p-3 text-xs text-[var(--text-muted)]">
               {name?.trim() ? <span className="text-[var(--foreground)] font-medium">"{name.trim()}"</span> : "This configuration"} yields{" "}
               <span className="text-[var(--foreground)] font-medium">{totalPacketsPerCarton} packets</span> per carton.
-            </div>
-          )}
-
-          {wrapperId && boxId && totalPacketsPerCarton > 0 && (
-            <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--background)] p-3 text-xs text-[var(--text-muted)] space-y-1.5">
-              <div className="flex items-center text-[var(--foreground)] font-medium">
-                Cost Build-Up
-                <InfoTip text="Derived from each Wrapper/Box's grams-per-unit x its raw material's current weighted-average cost. Wrapper cost = per packet. Box cost + (Packets/Box x Wrapper cost) = per box. That x Boxes/Carton = per carton. Excludes bulk product cost, which varies per batch." />
-              </div>
-              <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                <span>Cost / Wrapper (Packet)</span><span className="text-right text-[var(--foreground)]">Rs. {costPerPacket.toFixed(2)}</span>
-                <span>Cost / Box</span><span className="text-right text-[var(--foreground)]">Rs. {costPerBox.toFixed(2)}</span>
-                <span>Cost / Box (assembled)</span><span className="text-right text-[var(--foreground)]">Rs. {costPerBoxAssembled.toFixed(2)}</span>
-                <span className="font-medium">Cost / Carton</span><span className="text-right text-[var(--foreground)] font-medium">Rs. {costPerCarton.toFixed(2)}</span>
-              </div>
             </div>
           )}
         </div>
@@ -223,3 +237,12 @@ export default function CartonConfigPage() {
     </div>
   );
 }
+'@
+
+Write-FileSmart "apps\frontend\app\(dashboard)\packaging\carton-config\page.tsx" $cartonConfigPageContent
+
+Write-Host ""
+Write-Host "=== Step 4 complete ===" -ForegroundColor Cyan
+Write-Host "Carton Configuration form + table now include the Name field (BRS v1.2 item 1 / Spec v2.2 revision note 1)." -ForegroundColor Yellow
+Write-Host 'This relies on lib/store.ts + lib/schemas.ts already being at v1.2/v2.2 (step1) - both already have `name`.' -ForegroundColor Yellow
+Write-Host "Next: cd into apps\frontend and run your dev server to verify, then proceed to step 5 (Packing Run Needed vs Available preview)." -ForegroundColor Yellow

@@ -1,3 +1,57 @@
+# step3-packaging-define-produce.ps1
+# Run from: D:\Rozmarrah-CUST\Saim Ashraf\Nimko\Working\Code\GhaniFoods
+# Usage: .\step3-packaging-define-produce.ps1
+#
+# STEP 3 of the v1.2/v2.2 gap-closure plan.
+# Overwrites:
+#   apps\frontend\app\(dashboard)\packaging\page.tsx
+#
+# What changes:
+#   - "+ Add Wrapper" / "+ Add Box" (old unitCost-based restock model) are
+#     replaced with "+ Define Wrapper" / "+ Define Box" dialogs that require
+#     an underlying Raw Material + Grams per Unit (FR-11 - FR-13), using the
+#     already-updated store.addWrapper / store.addBox actions.
+#   - The old single "Restock" action/dialog is replaced with a "Produce"
+#     dialog per row that takes only a quantity, shows a live-calculated
+#     "grams to be consumed" preview against current raw-material stock,
+#     and disables Confirm with a warning if stock is insufficient
+#     (FR-14, FR-15), using store.produceWrapper / store.produceBox.
+#   - Table gains "Underlying Raw Material" and "Derived Unit Cost" columns
+#     (via store.wrapperUnitCost / store.boxUnitCost).
+#   - Adds the info-tooltip ("i" icon) pattern on the Grams per Unit field.
+#   - "Carton Configurations" button relabeled "Define Carton Configuration"
+#     per spec section 5.6.
+#
+# This script only touches the Packaging page. lib/store.ts and
+# lib/schemas.ts are assumed already updated by step1 (they already expose
+# addWrapper/produceWrapper/addBox/produceBox/wrapperUnitCost/boxUnitCost
+# and wrapperDefinitionSchema/boxDefinitionSchema/productionRunSchema).
+#
+# Uses single-quoted PowerShell here-strings (@'...'@) so TSX/TS special
+# characters (backticks, ${}, quotes) are written literally with no
+# interpolation, then writes UTF8-without-BOM via WriteAllText - same
+# encoding-safety goal as export-code.ps1's Read-FileSmart, just for writes.
+
+$ErrorActionPreference = "Stop"
+$ProjectRoot = Get-Location
+$Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+
+function Write-FileSmart($relativePath, $content) {
+    $fullPath = Join-Path $ProjectRoot $relativePath
+    $dir = Split-Path $fullPath -Parent
+    if (-not (Test-Path $dir)) {
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    }
+    [System.IO.File]::WriteAllText($fullPath, $content, $Utf8NoBom)
+    Write-Host "  Wrote: $relativePath" -ForegroundColor Green
+}
+
+Write-Host "=== Step 3: Packaging (Wrapper/Box) Define + Produce rewrite (BRS v1.2 / Spec v2.2) ===" -ForegroundColor Cyan
+
+# ---------------------------------------------------------------------------
+# apps/frontend/app/(dashboard)/packaging/page.tsx
+# ---------------------------------------------------------------------------
+$packagingPageContent = @'
 "use client";
 
 import { useMemo, useState } from "react";
@@ -295,3 +349,12 @@ export default function PackagingPage() {
     </div>
   );
 }
+'@
+
+Write-FileSmart "apps\frontend\app\(dashboard)\packaging\page.tsx" $packagingPageContent
+
+Write-Host ""
+Write-Host "=== Step 3 complete ===" -ForegroundColor Cyan
+Write-Host "Packaging page now uses raw-material-linked Define + Produce dialogs (FR-11 - FR-15)." -ForegroundColor Yellow
+Write-Host "This relies on lib/store.ts + lib/schemas.ts already being at v1.2/v2.2 (step1)." -ForegroundColor Yellow
+Write-Host "Next: cd into apps\frontend and run your dev server to verify, then proceed to step 4 (Carton Configuration Name field)." -ForegroundColor Yellow

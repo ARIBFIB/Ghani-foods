@@ -1,6 +1,7 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { NavLink } from "@/components/ui/nav-link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,7 +15,12 @@ const paymentAmountSchema = z.object({
 type PaymentAmountValues = z.infer<typeof paymentAmountSchema>;
 
 function RecordPaymentDialog({ open, onClose, customerId, customerName }: { open: boolean; onClose: () => void; customerId: string; customerName: string }) {
-  const recordPayment = useStore((s) => s.recordPayment);
+  // NOTE: this dialog still only records a "received" payment with no
+  // direction selector. The full +/- direction UI (BRS v1.2 item 6 /
+  // Spec v2.2 5.12) is Step 7 scope. This wiring is switched from the
+  // removed s.recordPayment() to the real s.recordLedgerEntry() so the
+  // page compiles against the current store in the meantime.
+  const recordLedgerEntry = useStore((s) => s.recordLedgerEntry);
   const {
     register,
     handleSubmit,
@@ -25,7 +31,7 @@ function RecordPaymentDialog({ open, onClose, customerId, customerName }: { open
   if (!open) return null;
 
   const onSubmit = async (values: PaymentAmountValues) => {
-    recordPayment(customerId, values.amount, "Payment against invoice");
+    recordLedgerEntry(customerId, values.amount, "received", "Payment against invoice");
     toast.success(`Payment of Rs. ${values.amount.toLocaleString()} recorded for ${customerName}`);
     reset();
     onClose();
@@ -34,7 +40,7 @@ function RecordPaymentDialog({ open, onClose, customerId, customerName }: { open
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-4">
       <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-sm rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5 space-y-4 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-lg font-semibold text-[var(--foreground)]">Record Payment â€” {customerName}</h2>
+        <h2 className="text-lg font-semibold text-[var(--foreground)]">Record Payment \u2014 {customerName}</h2>
         <div>
           <label className="text-sm text-[var(--text-muted)]">Amount</label>
           <input {...register("amount")} type="number" step="any"
@@ -50,6 +56,42 @@ function RecordPaymentDialog({ open, onClose, customerId, customerName }: { open
         </div>
       </form>
     </div>
+  );
+}
+
+// "<- Back" (Spec v2.2 5.10): router.back() when we can tell the visit came
+// from within this app (document.referrer on the same origin), otherwise a
+// same-tab fallback push to /invoices. document.referrer is only available
+// client-side, so this is computed in an effect and defaults to the safe
+// fallback (push) until it resolves.
+function BackButton() {
+  const router = useRouter();
+  const [cameFromApp, setCameFromApp] = useState(false);
+
+  useEffect(() => {
+    try {
+      setCameFromApp(Boolean(document.referrer) && document.referrer.startsWith(window.location.origin));
+    } catch {
+      setCameFromApp(false);
+    }
+  }, []);
+
+  const handleBack = () => {
+    if (cameFromApp) {
+      router.back();
+    } else {
+      router.push("/invoices");
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleBack}
+      className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-400 dark:border-neutral-600 px-3 py-1.5 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)] print:hidden"
+    >
+      &larr; Back
+    </button>
   );
 }
 
@@ -169,9 +211,12 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
 
   return (
     <div className="space-y-6">
-      <div className="text-sm text-[var(--text-muted)]">
-        <NavLink href="/invoices" className="hover:underline text-[var(--text-secondary)]">Invoices</NavLink>{" "}
-        / <span className="text-[var(--foreground)]">{invoice.id}</span>
+      <div className="flex items-center justify-between print:hidden">
+        <div className="text-sm text-[var(--text-muted)]">
+          <NavLink href="/invoices" className="hover:underline text-[var(--text-secondary)]">Invoices</NavLink>{" "}
+          / <span className="text-[var(--foreground)]">{invoice.id}</span>
+        </div>
+        <BackButton />
       </div>
 
       <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-6 print:border-0">
@@ -200,7 +245,12 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
               {invoice.items.length > 0 ? (
                 invoice.items.map((line, idx) => (
                   <tr key={idx}>
-                    <td className="px-4 py-2 text-[var(--text-secondary)]">{line.itemName}</td>
+                    <td className="px-4 py-2 text-[var(--text-secondary)]">
+                      {line.itemName}
+                      {line.priceSourceNote && (
+                        <div className="mt-0.5 text-xs text-[var(--text-faint)]">{line.priceSourceNote}</div>
+                      )}
+                    </td>
                     <td className="px-4 py-2 text-[var(--text-secondary)]">{line.qty}</td>
                     <td className="px-4 py-2 text-[var(--text-secondary)]">Rs. {line.unitPrice.toLocaleString()}</td>
                     <td className="px-4 py-2 text-[var(--text-secondary)]">Rs. {line.subtotal.toLocaleString()}</td>

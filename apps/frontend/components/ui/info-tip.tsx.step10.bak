@@ -1,0 +1,16 @@
+// Shared "i" info-tooltip used next to any field or calculated value whose
+// meaning or derivation is not immediately obvious (BRS v1.2 note; Frontend
+// spec v2.2 section 5.13). Hover on desktop, tap-to-toggle on touch via the
+// native title attribute â€” kept intentionally lightweight (no extra deps).
+export function InfoTip({ text }: { text: string }) {
+  return (
+    <span
+      title={text}
+      className="ml-1 inline-flex h-3.5 w-3.5 shrink-0 cursor-help select-none items-center justify-center rounded-full border border-[var(--text-faint)] text-[9px] leading-none text-[var(--text-faint)] align-middle"
+    >
+      i
+    </span>
+  );
+}
+
+export default InfoTip;

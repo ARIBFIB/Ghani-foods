@@ -6,19 +6,6 @@ import { type ColumnDef } from "@tanstack/react-table";
 import { useStore, type Invoice } from "@/lib/store";
 import { SortableTable } from "@/components/ui/sortable-table";
 
-function StatusBadge({ status }: { status: "unpaid" | "partial" | "paid" }) {
-  const styles: Record<string, string> = {
-    paid: "bg-green-950 text-green-400 border border-green-900",
-    partial: "bg-amber-950 text-amber-400 border border-amber-900",
-    unpaid: "bg-red-950 text-red-400 border border-red-900",
-  };
-  return (
-    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${styles[status]}`}>
-      {status[0].toUpperCase() + status.slice(1)}
-    </span>
-  );
-}
-
 export default function InvoicesPage() {
   const invoices = useStore((s) => s.invoices);
 
@@ -34,8 +21,8 @@ export default function InvoicesPage() {
       cell: ({ getValue }) => `Rs. ${(getValue() as number).toLocaleString()}`,
     },
     {
-      accessorKey: "status", header: "Status", enableSorting: false,
-      cell: ({ row }) => <StatusBadge status={row.original.status} />,
+      id: "items", header: "Items", enableSorting: false,
+      cell: ({ row }) => `${row.original.items.length} line${row.original.items.length === 1 ? "" : "s"}`,
     },
   ], []);
 
@@ -47,6 +34,9 @@ export default function InvoicesPage() {
           + New Invoice
         </NavLink>
       </div>
+      <p className="text-xs text-[var(--text-faint)]">
+        Invoices no longer carry a Paid / Unpaid / Partial status. Payment tracking happens on each customer&apos;s ledger - open a customer to record or review payments.
+      </p>
       <SortableTable data={invoices} columns={columns} globalFilterPlaceholder="Search invoices..." />
     </div>
   );

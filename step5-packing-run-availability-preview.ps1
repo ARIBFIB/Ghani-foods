@@ -1,10 +1,65 @@
+# step5-packing-run-availability-preview.ps1
+# Run from: D:\Rozmarrah-CUST\Saim Ashraf\Nimko\Working\Code\GhaniFoods
+# Usage: .\step5-packing-run-availability-preview.ps1
+#
+# STEP 5 of the v1.2/v2.2 gap-closure plan.
+# Overwrites:
+#   apps\frontend\app\(dashboard)\finished-cartons\page.tsx
+#
+# What changes (BRS v1.2 item 5 / Spec v2.2 revision note 4, SSD section 8):
+#   - The packing-run dialog's "Needed vs Available" figures used to only
+#     cover Boxes and Wrappers, and only ever appeared once you'd already
+#     picked a config (never for Bulk Material, and never phrased as a
+#     paired needed/available row).
+#   - Step 2 of the dialog now shows a single always-visible panel with
+#     THREE paired rows - Bulk Material, Boxes, Wrapper - each showing
+#     "Needed" against "Currently Available", for every packing run,
+#     not only when there's a shortage. Shortfalls are still highlighted
+#     in red and still disable "Next" / "Confirm", but the panel itself
+#     is shown unconditionally as soon as a batch + config + carton count
+#     are selected.
+#   - Bulk material "needed" now uses the same nominalKgPerPacket=0.05
+#     estimate the store's createPackingRun already uses internally, so
+#     the preview and the actual deduction agree.
+#   - Step 3 (final review) repeats the same three-row needed/available
+#     summary above the cost build-up, so nothing needs to be re-checked
+#     by memory before confirming.
+#
+# This script only touches the Finished Cartons page. lib/store.ts already
+# exposes createPackingRun with the exact same nominalKgPerPacket constant
+# and cost build-up logic - nothing there needs to change for this step.
+#
+# Uses single-quoted PowerShell here-strings (@'...'@) so TSX/TS special
+# characters (backticks, ${}, quotes) are written literally with no
+# interpolation, then writes UTF8-without-BOM via WriteAllText - same
+# encoding-safety goal as export-code.ps1's Read-FileSmart, just for writes.
+
+$ErrorActionPreference = "Stop"
+$ProjectRoot = Get-Location
+$Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+
+function Write-FileSmart($relativePath, $content) {
+    $fullPath = Join-Path $ProjectRoot $relativePath
+    $dir = Split-Path $fullPath -Parent
+    if (-not (Test-Path $dir)) {
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    }
+    [System.IO.File]::WriteAllText($fullPath, $content, $Utf8NoBom)
+    Write-Host "  Wrote: $relativePath" -ForegroundColor Green
+}
+
+Write-Host "=== Step 5: Packing Run Needed vs Available preview (BRS v1.2 / Spec v2.2) ===" -ForegroundColor Cyan
+
+# ---------------------------------------------------------------------------
+# apps/frontend/app/(dashboard)/finished-cartons/page.tsx
+# ---------------------------------------------------------------------------
+$finishedCartonsPageContent = @'
 "use client";
 
 import { useMemo, useState } from "react";
 import { NavLink } from "@/components/ui/nav-link";
 import { toast } from "sonner";
 import { useStore } from "@/lib/store";
-import { InfoTip } from "@/components/ui/info-tip";
 
 // Mirrors the store's internal createPackingRun estimate exactly, so the
 // preview shown here never disagrees with what actually gets deducted.
@@ -149,10 +204,7 @@ function NewPackingRunDialog({ open, onClose }: { open: boolean; onClose: () => 
 
             {showAvailabilityPanel && (
               <div className="space-y-2">
-                <div className="flex items-center text-xs font-medium text-[var(--text-muted)]">
-                  Needed vs. Available
-                  <InfoTip text="How much of each input the requested Cartons Produced will consume, versus how much is currently in stock. All three must be sufficient before you can confirm." />
-                </div>
+                <div className="text-xs font-medium text-[var(--text-muted)]">Needed vs. Available</div>
                 <AvailabilityRow label="Bulk Material" needed={bulkKgNeeded} available={bulkAvailable} unit="kg" />
                 <AvailabilityRow label="Boxes" needed={boxesNeeded} available={boxAvailable} unit="pcs" />
                 <AvailabilityRow label="Wrapper" needed={packetsNeeded} available={wrapperAvailable} unit="pcs" />
@@ -169,10 +221,7 @@ function NewPackingRunDialog({ open, onClose }: { open: boolean; onClose: () => 
         {step === 3 && (
           <div className="space-y-3">
             <div className="space-y-2">
-              <div className="flex items-center text-xs font-medium text-[var(--text-muted)]">
-                Needed vs. Available
-                <InfoTip text="How much of each input the requested Cartons Produced will consume, versus how much is currently in stock. All three must be sufficient before you can confirm." />
-              </div>
+              <div className="text-xs font-medium text-[var(--text-muted)]">Needed vs. Available</div>
               <AvailabilityRow label="Bulk Material" needed={bulkKgNeeded} available={bulkAvailable} unit="kg" />
               <AvailabilityRow label="Boxes" needed={boxesNeeded} available={boxAvailable} unit="pcs" />
               <AvailabilityRow label="Wrapper" needed={packetsNeeded} available={wrapperAvailable} unit="pcs" />
@@ -193,10 +242,7 @@ function NewPackingRunDialog({ open, onClose }: { open: boolean; onClose: () => 
                     <span className="text-[var(--foreground)]">Rs. {preview.costPerBox.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="inline-flex items-center text-[var(--text-muted)]">
-                      Est. Cost / Carton
-                      <InfoTip text="Cost per packet (bulk share + wrapper) x packets per box, plus box cost, x boxes per carton." />
-                    </span>
+                    <span className="text-[var(--text-muted)]">Est. Cost / Carton</span>
                     <span className="text-[var(--foreground)] font-semibold">Rs. {preview.costPerCarton.toFixed(2)}</span>
                   </div>
                 </>
@@ -318,3 +364,12 @@ export default function FinishedCartonsPage() {
     </div>
   );
 }
+'@
+
+Write-FileSmart "apps\frontend\app\(dashboard)\finished-cartons\page.tsx" $finishedCartonsPageContent
+
+Write-Host ""
+Write-Host "=== Step 5 complete ===" -ForegroundColor Cyan
+Write-Host "Packing Run dialog now shows an always-visible Needed vs Available panel for Bulk Material, Boxes, and Wrapper (BRS v1.2 item 5 / Spec v2.2 revision note 4)." -ForegroundColor Yellow
+Write-Host "Confirm/Next are disabled whenever any of the three is short, same as before, but the panel itself is no longer shortage-only." -ForegroundColor Yellow
+Write-Host "Next: cd into apps\frontend and run your dev server to verify, then proceed to step 6 (Invoices - live price-source note, remove paid/unpaid badge, Back button)." -ForegroundColor Yellow

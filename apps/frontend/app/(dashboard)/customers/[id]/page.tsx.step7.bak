@@ -7,42 +7,29 @@ import { useNavigationLoading } from "@/lib/navigation-loading-context";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { useStore, type LedgerDirection } from "@/lib/store";
+import { useStore } from "@/lib/store";
 import { z } from "zod";
 
 const paymentAmountSchema = z.object({
   amount: z.coerce.number().positive("Amount must be greater than 0"),
-  direction: z.enum(["received", "given"], {
-    required_error: "Select a direction",
-  }),
   note: z.string().trim().optional(),
 });
 type PaymentAmountValues = z.infer<typeof paymentAmountSchema>;
 
 function RecordPaymentDialog({ open, onClose, customerId }: { open: boolean; onClose: () => void; customerId: string }) {
-  const recordLedgerEntry = useStore((s) => s.recordLedgerEntry);
+  const recordPayment = useStore((s) => s.recordPayment);
   const {
     register,
     handleSubmit,
     reset,
-    watch,
-    setValue,
     formState: { errors, isSubmitting },
-  } = useForm<PaymentAmountValues>({
-    resolver: zodResolver(paymentAmountSchema),
-    defaultValues: { amount: 0, direction: "received", note: "" },
-  });
-  const direction = watch("direction");
+  } = useForm<PaymentAmountValues>({ resolver: zodResolver(paymentAmountSchema) });
 
   if (!open) return null;
 
   const onSubmit = async (values: PaymentAmountValues) => {
-    recordLedgerEntry(customerId, values.amount, values.direction, values.note ?? "");
-    toast.success(
-      values.direction === "received"
-        ? `Payment of Rs. ${values.amount.toLocaleString()} received`
-        : `Rs. ${values.amount.toLocaleString()} recorded as given / credit adjustment`
-    );
+    recordPayment(customerId, values.amount, values.note ?? "");
+    toast.success(`Payment of Rs. ${values.amount.toLocaleString()} recorded`);
     reset();
     onClose();
   };
@@ -59,45 +46,8 @@ function RecordPaymentDialog({ open, onClose, customerId }: { open: boolean; onC
             {errors.amount && <p className="text-xs text-red-400 mt-1">{errors.amount.message}</p>}
           </div>
           <div>
-            <div className="flex items-center gap-1.5">
-              <label className="text-sm text-[var(--text-muted)]">Direction</label>
-              <span
-                title='Received = payment received from customer, reduces what they owe. Given = amount given to customer (refund) or a credit adjustment in their favor.'
-                className="flex h-3.5 w-3.5 cursor-help items-center justify-center rounded-full border border-[var(--text-faint)] text-[9px] leading-none text-[var(--text-faint)]"
-              >
-                i
-              </span>
-            </div>
-            <div className="mt-1 grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setValue("direction", "received", { shouldValidate: true })}
-                className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
-                  direction === "received"
-                    ? "border-green-500 bg-green-500/10 text-green-400"
-                    : "border-[var(--surface-border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
-                }`}
-              >
-                + Received from customer
-              </button>
-              <button
-                type="button"
-                onClick={() => setValue("direction", "given", { shouldValidate: true })}
-                className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
-                  direction === "given"
-                    ? "border-red-500 bg-red-500/10 text-red-400"
-                    : "border-[var(--surface-border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
-                }`}
-              >
-                âˆ’ Given / credit adjustment
-              </button>
-            </div>
-            <input type="hidden" {...register("direction")} />
-            {errors.direction && <p className="text-xs text-red-400 mt-1">{errors.direction.message}</p>}
-          </div>
-          <div>
             <label className="text-sm text-[var(--text-muted)]">Note</label>
-            <input {...register("note")} placeholder='e.g. "cash refund", "damaged stock credit"'
+            <input {...register("note")}
               className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
           </div>
         </div>
@@ -110,15 +60,6 @@ function RecordPaymentDialog({ open, onClose, customerId }: { open: boolean; onC
         </div>
       </form>
     </div>
-  );
-}
-
-function DirectionBadge({ direction }: { direction: LedgerDirection | null }) {
-  if (!direction) return <span className="text-[var(--text-faint)]">â€”</span>;
-  return direction === "received" ? (
-    <span className="rounded-full bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-400">+ Received</span>
-  ) : (
-    <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-400">âˆ’ Given</span>
   );
 }
 
@@ -189,30 +130,25 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
             <tr className="border-b border-[var(--surface-border)] bg-[var(--surface)] text-left text-[var(--text-muted)]">
               <th className="px-4 py-3 font-medium">Date</th>
               <th className="px-4 py-3 font-medium">Type</th>
-              <th className="px-4 py-3 font-medium">Direction</th>
               <th className="px-4 py-3 font-medium">Note</th>
               <th className="px-4 py-3 font-medium">Amount</th>
               <th className="px-4 py-3 font-medium">Running Balance</th>
             </tr>
           </thead>
           <tbody>
-            {ledger.map((l) => {
-              const isDebit = l.type === "invoice";
-              return (
-                <tr key={l.id} className="border-b border-[var(--surface-border)] last:border-0 hover:bg-[var(--surface)]/60">
-                  <td className="px-4 py-3 text-[var(--text-secondary)]">{l.date}</td>
-                  <td className="px-4 py-3 text-[var(--text-secondary)] capitalize">{l.type}</td>
-                  <td className="px-4 py-3"><DirectionBadge direction={l.direction} /></td>
-                  <td className="px-4 py-3 text-[var(--text-secondary)]">{l.note}</td>
-                  <td className={`px-4 py-3 ${isDebit ? "text-red-400" : "text-green-400"}`}>
-                    {isDebit ? "+" : "âˆ’"} Rs. {l.amount.toLocaleString()}
-                  </td>
-                  <td className="px-4 py-3 text-[var(--text-secondary)]">Rs. {l.runningBalance.toLocaleString()}</td>
-                </tr>
-              );
-            })}
+            {ledger.map((l) => (
+              <tr key={l.id} className="border-b border-[var(--surface-border)] last:border-0 hover:bg-[var(--surface)]/60">
+                <td className="px-4 py-3 text-[var(--text-secondary)]">{l.date}</td>
+                <td className="px-4 py-3 text-[var(--text-secondary)] capitalize">{l.type}</td>
+                <td className="px-4 py-3 text-[var(--text-secondary)]">{l.note}</td>
+                <td className={`px-4 py-3 ${l.amount >= 0 ? "text-red-400" : "text-green-400"}`}>
+                  {l.amount >= 0 ? "+" : ""}Rs. {l.amount.toLocaleString()}
+                </td>
+                <td className="px-4 py-3 text-[var(--text-secondary)]">Rs. {l.runningBalance.toLocaleString()}</td>
+              </tr>
+            ))}
             {ledger.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-[var(--text-faint)]">No ledger entries yet.</td></tr>
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-[var(--text-faint)]">No ledger entries yet.</td></tr>
             )}
           </tbody>
         </table>

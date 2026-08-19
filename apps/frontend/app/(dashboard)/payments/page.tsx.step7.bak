@@ -11,33 +11,17 @@ import { SortableTable } from "@/components/ui/sortable-table";
 
 function RecordPaymentDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const customers = useStore((s) => s.customers);
-  const recordLedgerEntry = useStore((s) => s.recordLedgerEntry);
-  const {
-    register,
-    handleSubmit,
-    reset,
-    watch,
-    setValue,
-    formState: { errors, isSubmitting },
-  } = useForm<PaymentFormValues>({
+  const recordPayment = useStore((s) => s.recordPayment);
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<PaymentFormValues>({
     resolver: zodResolver(paymentSchema),
-    defaultValues: { customerId: customers[0]?.id ?? "", amount: 0, direction: "received", note: "" },
+    defaultValues: { customerId: customers[0]?.id ?? "", amount: 0, note: "" },
   });
-  const direction = watch("direction");
-
   if (!open) return null;
-
   const onSubmit = async (values: PaymentFormValues) => {
-    recordLedgerEntry(values.customerId, values.amount, values.direction, values.note ?? "");
-    toast.success(
-      values.direction === "received"
-        ? `Payment of Rs. ${values.amount.toLocaleString()} received`
-        : `Rs. ${values.amount.toLocaleString()} recorded as given / credit adjustment`
-    );
-    reset();
-    onClose();
+    recordPayment(values.customerId, values.amount, values.note ?? "");
+    toast.success(`Payment of Rs. ${values.amount.toLocaleString()} recorded`);
+    reset(); onClose();
   };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-3 sm:p-4">
       <form onSubmit={handleSubmit(onSubmit)} className="w-full max-w-sm rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5 space-y-4 max-h-[90vh] overflow-y-auto">
@@ -58,45 +42,8 @@ function RecordPaymentDialog({ open, onClose }: { open: boolean; onClose: () => 
             {errors.amount && <p className="text-xs text-red-400 mt-1">{errors.amount.message}</p>}
           </div>
           <div>
-            <div className="flex items-center gap-1.5">
-              <label className="text-sm text-[var(--text-muted)]">Direction</label>
-              <span
-                title='Received = payment received from customer, reduces what they owe. Given = amount given to customer (refund) or a credit adjustment in their favor.'
-                className="flex h-3.5 w-3.5 cursor-help items-center justify-center rounded-full border border-[var(--text-faint)] text-[9px] leading-none text-[var(--text-faint)]"
-              >
-                i
-              </span>
-            </div>
-            <div className="mt-1 grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setValue("direction", "received", { shouldValidate: true })}
-                className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
-                  direction === "received"
-                    ? "border-green-500 bg-green-500/10 text-green-400"
-                    : "border-[var(--surface-border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
-                }`}
-              >
-                + Received from customer
-              </button>
-              <button
-                type="button"
-                onClick={() => setValue("direction", "given", { shouldValidate: true })}
-                className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
-                  direction === "given"
-                    ? "border-red-500 bg-red-500/10 text-red-400"
-                    : "border-[var(--surface-border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
-                }`}
-              >
-                âˆ’ Given / credit adjustment
-              </button>
-            </div>
-            <input type="hidden" {...register("direction")} />
-            {errors.direction && <p className="text-xs text-red-400 mt-1">{errors.direction.message}</p>}
-          </div>
-          <div>
             <label className="text-sm text-[var(--text-muted)]">Note</label>
-            <input {...register("note")} placeholder='e.g. "cash refund", "damaged stock credit"'
+            <input {...register("note")}
               className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
           </div>
         </div>
@@ -119,23 +66,8 @@ export default function PaymentsPage() {
     { accessorKey: "paidAt", header: "Date" },
     { accessorKey: "customerName", header: "Customer", cell: ({ getValue }) => <span className="text-[var(--foreground)]">{getValue() as string}</span> },
     {
-      accessorKey: "direction", header: "Direction",
-      cell: ({ getValue }) => {
-        const dir = getValue() as Payment["direction"];
-        return dir === "received" ? (
-          <span className="rounded-full bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-400">+ Received</span>
-        ) : (
-          <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-400">âˆ’ Given</span>
-        );
-      },
-    },
-    {
       accessorKey: "amount", header: "Amount",
-      cell: ({ row }) => (
-        <span className={row.original.direction === "received" ? "text-green-400" : "text-red-400"}>
-          {row.original.direction === "received" ? "+" : "âˆ’"} Rs. {(row.original.amount as number).toLocaleString()}
-        </span>
-      ),
+      cell: ({ getValue }) => <span className="text-green-400">Rs. {(getValue() as number).toLocaleString()}</span>,
     },
     { accessorKey: "note", header: "Note" },
   ], []);

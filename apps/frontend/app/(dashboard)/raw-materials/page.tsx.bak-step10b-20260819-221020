@@ -140,12 +140,7 @@ export default function RawMaterialsPage() {
               <th className="px-4 py-3 font-medium">Name</th>
               <th className="px-4 py-3 font-medium">Unit</th>
               <th className="px-4 py-3 font-medium">Qty in Stock</th>
-              <th className="px-4 py-3 font-medium">
-                <span className="inline-flex items-center">
-                  Avg Unit Cost
-                  <InfoTip text="Weighted average cost per unit across all purchase receipts for this raw material, recalculated on every new receipt." />
-                </span>
-              </th>
+              <th\\ className="px-4\\ py-3\\ font-medium">\\r\\n\\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ <span\\ className="inline-flex\\ items-center">\\r\\n\\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ Avg\\ Unit\\ Cost\\r\\n\\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ <InfoTip\\ text="Weighted\\ average\\ cost\\ per\\ unit\\ across\\ all\\ purchase\\ receipts\\ for\\ this\\ raw\\ material,\\ recalculated\\ on\\ every\\ new\\ receipt\\."\\ />\\r\\n\\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ </span>\\r\\n\\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ \\ </th>
               <th className="px-4 py-3 font-medium">Threshold</th>
               <th className="px-4 py-3 font-medium">Status</th>
             </tr>

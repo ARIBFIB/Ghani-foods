@@ -9,7 +9,6 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { rawMaterialMasterSchema, type RawMaterialMasterFormValues } from "@/lib/schemas";
 import { PurchaseReceiptDialog } from "@/components/ui/purchase-receipt-dialog";
-import { InfoTip } from "@/components/ui/info-tip";
 
 function StatusBadge({ isLow }: { isLow: boolean }) {
   return (
@@ -140,12 +139,7 @@ export default function RawMaterialsPage() {
               <th className="px-4 py-3 font-medium">Name</th>
               <th className="px-4 py-3 font-medium">Unit</th>
               <th className="px-4 py-3 font-medium">Qty in Stock</th>
-              <th className="px-4 py-3 font-medium">
-                <span className="inline-flex items-center">
-                  Avg Unit Cost
-                  <InfoTip text="Weighted average cost per unit across all purchase receipts for this raw material, recalculated on every new receipt." />
-                </span>
-              </th>
+              <th className="px-4 py-3 font-medium">Avg Unit Cost</th>
               <th className="px-4 py-3 font-medium">Threshold</th>
               <th className="px-4 py-3 font-medium">Status</th>
             </tr>
