@@ -1,20 +1,8 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+﻿import { type NextRequest } from "next/server";
+import { updateSession } from "@/lib/supabase/middleware";
 
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  if (pathname.startsWith("/login") || pathname.startsWith("/_next") || pathname.startsWith("/api")) {
-    return NextResponse.next();
-  }
-
-  const isAuthed = request.cookies.get("ghanifoods-auth");
-  if (!isAuthed) {
-    const loginUrl = new URL("/login", request.url);
-    return NextResponse.redirect(loginUrl);
-  }
-
-  return NextResponse.next();
+  return updateSession(request);
 }
 
 export const config = {

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -6,17 +6,19 @@ import Image from "next/image";
 import { AtSignIcon, LockIcon } from "lucide-react";
 import { GhaniLogo } from "@/components/ui/ghani-logo";
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
+import { createClient } from "@/lib/supabase/client";
 
 const LOGIN_IMAGE_URL = "https://res.cloudinary.com/dr9dwesyo/image/upload/v1787001758/ghanifoods/ghani-nimko-bag.png";
 
 export default function LoginPage() {
   const router = useRouter();
+  const supabase = createClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) {
       setError("Please enter both email and password.");
@@ -24,8 +26,19 @@ export default function LoginPage() {
     }
     setLoading(true);
     setError("");
-    document.cookie = "ghanifoods-auth=1; path=/; max-age=86400";
+
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+
+    setLoading(false);
+    if (signInError) {
+      setError(signInError.message);
+      return;
+    }
     router.push("/");
+    router.refresh();
   };
 
   return (
@@ -128,10 +141,6 @@ export default function LoginPage() {
               {loading ? "Signing in..." : "Sign In"}
             </button>
           </form>
-
-          <p className="text-[var(--text-faint)] mt-6 sm:mt-8 text-xs sm:text-sm">
-            Demo build - any email / password combination signs you in.
-          </p>
         </div>
       </div>
     </main>
