@@ -1,3 +1,43 @@
+#
+# fix-toast-position-and-color.ps1
+# --------------------------------
+# Run this from: D:\Rozmarrah-CUST\Saim Ashraf\Nimko\Working\Code\GhaniFoods
+#
+# Pre-requisite: update-toast-design.ps1 already chal chuki honi chahiye
+# (taake apps/frontend/components/ui/toast.tsx aur globals.css setup ho
+# chuki hon).
+#
+# What this does:
+#   apps/frontend/components/ui/toast.tsx ko update karti hai:
+#     1. Position: bottom-right -> TOP-right (stacking ab neeche ki taraf
+#        badhegi, jaisa top-right toasts mein hota hai)
+#     2. Success color: blue-700 hata kar message jaisa dark/theme-based
+#        color (bg-geist-background / text-gray-1000) laga diya - light
+#        mode mein white/dark-text, dark mode mein black/light-text.
+#        Error (red-800) aur Warning (amber-800) waise hi rahenge.
+#
+#   Koi page ka code nahi chhedti - toast.success()/error() calls waise
+#   hi chalenge.
+#
+# Safe to re-run. Modified file ki backup <file>.bak-<timestamp> banegi.
+#
+
+$ErrorActionPreference = "Stop"
+$root = Get-Location
+$stamp = Get-Date -Format "yyyyMMdd-HHmmss"
+Write-Host "Running in: $root" -ForegroundColor Cyan
+
+$toastPath = Join-Path $root "apps\frontend\components\ui\toast.tsx"
+
+if (-not (Test-Path -LiteralPath $toastPath)) {
+    Write-Host "ERROR: Could not find $toastPath" -ForegroundColor Red
+    exit 1
+}
+
+Copy-Item -LiteralPath $toastPath -Destination "$toastPath.bak-$stamp"
+Write-Host "Backed up -> toast.tsx.bak-$stamp" -ForegroundColor DarkGray
+
+$toastComponent = @'
 "use client";
 
 import { ReactNode, useEffect, useState } from "react";
@@ -233,3 +273,11 @@ export const toast = {
 };
 
 export default toast;
+'@
+
+Set-Content -LiteralPath $toastPath -Value $toastComponent -NoNewline
+Write-Host "toast.tsx -> position moved to top-right, success color now dark/theme-based (like message)." -ForegroundColor Green
+
+Write-Host ""
+Write-Host "Done." -ForegroundColor Green
+Write-Host "success = bg-geist-background/text-gray-1000 (theme-adaptive dark), error = red-800, warning = amber-800" -ForegroundColor DarkGray

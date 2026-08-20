@@ -114,18 +114,16 @@ const ToastContainer = () => {
   const lastVisibleCount = 3;
   const lastVisibleStart = Math.max(0, toasts.length - lastVisibleCount);
 
-  // Top-right stacking: newest toast sits at the top (offset 0), older
-  // toasts get pushed DOWN by the accumulated height of the ones above them.
   const getFinalTransform = (index: number, length: number) => {
     if (index === length - 1) return "none";
     const offset = length - 1 - index;
-    let translateY = 0;
+    let translateY = toasts[length - 1]?.measuredHeight || 63;
     for (let i = length - 1; i > index; i--) {
-      translateY += isHovered ? (toasts[i]?.measuredHeight || 63) + 10 : 20;
+      translateY += isHovered ? (toasts[i - 1]?.measuredHeight || 63) + 10 : 20;
     }
     const z = -offset;
     const scale = isHovered ? 1 : 1 - 0.05 * offset;
-    return `translate3d(0, ${translateY}px, ${z}px) scale(${scale})`;
+    return `translate3d(0, calc(100% - ${translateY}px), ${z}px) scale(${scale})`;
   };
 
   const handleMouseEnter = () => {
@@ -143,7 +141,7 @@ const ToastContainer = () => {
 
   return (
     <div
-      className="fixed top-4 right-4 z-[9999] pointer-events-none w-[420px] max-w-[calc(100vw-2rem)]"
+      className="fixed bottom-4 right-4 z-[9999] pointer-events-none w-[420px] max-w-[calc(100vw-2rem)]"
       style={{ height: containerHeight }}
     >
       <div
@@ -159,10 +157,10 @@ const ToastContainer = () => {
               key={toast.id}
               ref={measureRef(toast)}
               className={clsx(
-                "absolute right-0 top-0 shadow-menu rounded-xl leading-[21px] p-4 h-fit",
+                "absolute right-0 bottom-0 shadow-menu rounded-xl leading-[21px] p-4 h-fit",
                 {
                   message: "bg-geist-background text-gray-1000",
-                  success: "bg-geist-background text-gray-1000",
+                  success: "bg-blue-700 text-contrast-fg",
                   warning: "bg-amber-800 text-gray-1000 dark:text-gray-100",
                   error: "bg-red-800 text-contrast-fg"
                 }[toast.type],
@@ -174,7 +172,7 @@ const ToastContainer = () => {
                 transition: "all .35s cubic-bezier(.25,.75,.6,.98)",
                 transform: shownIds.includes(toast.id)
                   ? getFinalTransform(index, toasts.length)
-                  : "translate3d(0, -100%, 150px) scale(1)"
+                  : "translate3d(0, 100%, 150px) scale(1)"
               }}
             >
               <div className="flex items-start justify-between gap-4 text-[.875rem]">
@@ -189,7 +187,7 @@ const ToastContainer = () => {
                     className={
                       {
                         message: "fill-gray-1000",
-                        success: "fill-gray-1000",
+                        success: "fill-contrast-fg",
                         warning: "fill-gray-1000 dark:fill-gray-100",
                         error: "fill-contrast-fg"
                       }[toast.type]
