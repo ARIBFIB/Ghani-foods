@@ -4,6 +4,7 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { getClient, jsonResponse, envelopeError, envelopeSuccess } from "../_shared/client.ts";
 
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
