@@ -12,13 +12,13 @@ export default function ReceiptsPage() {
   const receiptLines = useStore((s) => s.receiptLines);
   const suppliers = useStore((s) => s.suppliers);
   const rawMaterials = useStore((s) => s.rawMaterials);
-  const loadRawMaterialsModule = useStore((s) => s.loadRawMaterialsModule);
+  // const loadRawMaterialsModule = useStore((s) => s.loadRawMaterialsModule);
   const deleteReceipt = useStore((s) => s.deleteReceipt);
   const updateReceipt = useStore((s) => s.updateReceipt);
 
   useEffect(() => {
     loadRawMaterialsModule();
-  }, [loadRawMaterialsModule]);
+  }, []);
 
   const [search, setSearch] = useState("");
   const [supplierFilter, setSupplierFilter] = useState("");
