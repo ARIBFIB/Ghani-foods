@@ -27,6 +27,7 @@ export default function ReceiptsPage() {
   const [toDate, setToDate] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const loadRawMaterialsModule = useStore((s) => s.loadRawMaterialsModule);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const handleRefresh = async () => {
     if (isRefreshing) return;
