@@ -20,17 +20,11 @@ const CONFIRMATION_PHRASE = "DELETE ALL DATA";
 // This list intentionally excludes auth.users / any admin / profile tables.
 // ---------------------------------------------------------------------
 const DELETE_ORDER: string[] = [
-  // -- deepest children first --
-  "customer_ledger_entries",   // FK -> customers
-  "customer_item_prices",      // FK -> customers, finished_cartons
-  "invoice_items",              // FK -> invoices
-  "invoices",                   // FK -> customers
-  "payments",                   // FK -> invoices / customers
-  "batch_consumptions",         // FK -> production_batches, raw_materials
-  "box_production_runs",        // FK -> boxes
-  "wrapper_production_runs",    // FK -> wrappers
-  "purchase_receipt_lines",     // FK -> purchase_receipts, raw_materials
-  "purchase_receipts",          // FK -> suppliers
+  "invoice_items",
+  "invoices",
+  "payments",
+  "purchase_receipt_lines",
+  "purchase_receipts",
   "production_batches",
   "wrappers",
   "boxes",
