@@ -41,7 +41,6 @@ export default function SettingsPage() {
   };
 
   return (
-    <>
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-2xl">
       <h1 className="text-xl font-semibold text-[var(--foreground)]">Settings</h1>
 
@@ -95,9 +94,5 @@ export default function SettingsPage() {
         {isSubmitting ? "Saving..." : "Save Settings"}
       </button>
     </form>
-
-      <ExportDataPanel />
-      <DangerZonePanel />
-    </>
   );
 }
