@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { usePathname } from "next/navigation";
@@ -208,12 +208,6 @@ function getSidebarContent(activeSection: SectionId): SidebarContent {
           items: [
             { icon: <Task size={16} className="text-[var(--foreground)]" />, label: "All Batches", href: "/batches" },
             { icon: <AddLarge size={16} className="text-[var(--foreground)]" />, label: "New Batch", href: "/batches/new" },
-          ],
-        },
-        {
-          title: "Costs",
-          items: [
-            { icon: <Report size={16} className="text-[var(--foreground)]" />, label: "Monthly Expenses", href: "/monthly-expenses" },
           ],
         },
       ],

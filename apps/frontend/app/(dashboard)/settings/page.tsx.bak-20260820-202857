@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,7 +15,6 @@ const settingsSchema = z.object({
   invoiceFooterText: z.string().trim(),
   defaultProfitMarginPercent: z.coerce.number().min(0, "Cannot be negative"),
   lowStockThresholdDefault: z.coerce.number().min(0, "Cannot be negative"),
-  overheadAllocationMethod: z.enum(["equal", "proportional_kg"]),
 });
 type SettingsFormValues = z.infer<typeof settingsSchema>;
 
@@ -122,18 +121,6 @@ export default function SettingsPage() {
               <input {...register("lowStockThresholdDefault")} type="number"
                 className="mt-1 w-48 rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
               {errors.lowStockThresholdDefault && <p className="text-xs text-red-400 mt-1">{errors.lowStockThresholdDefault.message}</p>}
-            </div>
-
-            <div>
-              <label className="text-sm text-[var(--text-muted)]">Monthly Overhead Allocation Method</label>
-              <select {...register("overheadAllocationMethod")}
-                className="mt-1 w-full sm:w-64 rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]">
-                <option value="equal">Equal split across batches</option>
-                <option value="proportional_kg">Proportional to output (kg)</option>
-              </select>
-              <p className="text-xs text-[var(--text-faint)] mt-1">
-                Default method pre-selected on the Monthly Expenses page when splitting electricity/gas/rent across batches.
-              </p>
             </div>
           </div>
 

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { create } from "zustand";
 import { createClient } from "@/lib/supabase/client";
@@ -166,7 +166,6 @@ function mapSettingsRow(row: any): AppSettings {
     invoiceFooterText: row.invoice_footer_text ?? "",
     defaultProfitMarginPercent: Number(row.default_profit_margin_percent),
     lowStockThresholdDefault: Number(row.low_stock_threshold_default),
-    overheadAllocationMethod: (row.overhead_allocation_method ?? "equal") as "equal" | "proportional_kg",
   };
 }
 
@@ -304,7 +303,6 @@ export type AppSettings = {
   invoiceFooterText: string;
   defaultProfitMarginPercent: number;
   lowStockThresholdDefault: number;
-  overheadAllocationMethod: "equal" | "proportional_kg";
 };
 
 // =============================================================================
@@ -331,7 +329,6 @@ const emptySettings: AppSettings = {
   invoiceFooterText: "",
   defaultProfitMarginPercent: 20,
   lowStockThresholdDefault: 50,
-  overheadAllocationMethod: "equal",
 };
 
 // =============================================================================
@@ -775,7 +772,6 @@ export const useStore = create<State>()((set, get) => ({
     if (patch.invoiceFooterText !== undefined) payload.invoice_footer_text = patch.invoiceFooterText;
     if (patch.defaultProfitMarginPercent !== undefined) payload.default_profit_margin_percent = patch.defaultProfitMarginPercent;
     if (patch.lowStockThresholdDefault !== undefined) payload.low_stock_threshold_default = patch.lowStockThresholdDefault;
-    if (patch.overheadAllocationMethod !== undefined) payload.overhead_allocation_method = patch.overheadAllocationMethod;
 
     const { data, error } = await supabase.from("app_settings").upsert(payload).select().single();
     if (error || !data) throw new Error(error?.message ?? "Failed to update settings");

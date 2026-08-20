@@ -1,4 +1,4 @@
-﻿import { z } from "zod";
+import { z } from "zod";
 
 // ---------------------------------------------------------------------------
 // Suppliers & Raw Material master
@@ -100,23 +100,6 @@ export const overheadSchema = z.object({
   rent: z.coerce.number().min(0, "Cannot be negative"),
 });
 export type OverheadFormValues = z.infer<typeof overheadSchema>;
-
-// ---------------------------------------------------------------------------
-// Batch Expenses & Monthly Overhead (0007)
-// ---------------------------------------------------------------------------
-
-export const batchExpenseSchema = z.object({
-  name: z.string().trim().min(1, "Expense name is required"),
-  amount: z.coerce.number().min(0, "Cannot be negative"),
-});
-export type BatchExpenseFormValues = z.infer<typeof batchExpenseSchema>;
-
-export const monthlyExpenseSchema = z.object({
-  month: z.string().min(1, "Month is required"),
-  name: z.string().trim().min(1, "Expense name is required"),
-  amount: z.coerce.number().min(0, "Cannot be negative"),
-});
-export type MonthlyExpenseFormValues = z.infer<typeof monthlyExpenseSchema>;
 
 // ---------------------------------------------------------------------------
 // Packing Run - carton count only, everything else derived (FR-23 - FR-29)
