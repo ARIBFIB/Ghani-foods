@@ -20,7 +20,6 @@ export default function ReceiptsPage() {
     loadRawMaterialsModule();
   }, [loadRawMaterialsModule]);
 
-  const [search, setSearch] = useState("");
   const [supplierFilter, setSupplierFilter] = useState("");
   const [materialFilter, setMaterialFilter] = useState("");
   const [fromDate, setFromDate] = useState("");
@@ -41,16 +40,11 @@ export default function ReceiptsPage() {
         const itemNames = lines.map((l) => rawMaterials.find((m) => m.id === l.rawMaterialId)?.name ?? "?");
         return { receipt: r, lines, supplier, totalValue, itemNames };
       })
-      .filter(({ receipt, lines, supplier, itemNames }) => {
+      .filter(({ receipt, lines }) => {
         if (supplierFilter && receipt.supplierId !== supplierFilter) return false;
         if (materialFilter && !lines.some((l) => l.rawMaterialId === materialFilter)) return false;
         if (fromDate && receipt.purchaseDate < fromDate) return false;
         if (toDate && receipt.purchaseDate > toDate) return false;
-        if (search.trim()) {
-          const q = search.trim().toLowerCase();
-          const haystack = `${supplier?.name ?? ""} ${itemNames.join(" ")}`.toLowerCase();
-          if (!haystack.includes(q)) return false;
-        }
         return true;
       })
       .sort((a, b) => b.receipt.purchaseDate.localeCompare(a.receipt.purchaseDate));
@@ -117,13 +111,6 @@ export default function ReceiptsPage() {
           + Record Purchase
         </button>
       </div>
-
-      <input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search receipts by supplier or raw material..."
-        className="w-full max-w-sm rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--text-faint)] outline-none focus:border-[var(--surface-border-strong)]"
-      />
 
       <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-end gap-3 rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-4">
         <div>

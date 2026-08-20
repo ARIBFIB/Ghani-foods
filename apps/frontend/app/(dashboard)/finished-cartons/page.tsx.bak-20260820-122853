@@ -242,16 +242,8 @@ export default function FinishedCartonsPage() {
   const productionBatches = useStore((s) => s.productionBatches);
   const [tab, setTab] = useState<"ready" | "leftover">("ready");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [search, setSearch] = useState("");
 
   const leftoverBatches = productionBatches.filter((b) => b.leftoverQtyKg > 0);
-  const filteredCartons = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return cartons;
-    return cartons.filter(
-      (c) => c.name.toLowerCase().includes(q) || String(c.sourceBatchId).toLowerCase().includes(q)
-    );
-  }, [cartons, search]);
 
   return (
     <div className="space-y-6">
@@ -271,15 +263,6 @@ export default function FinishedCartonsPage() {
         </button>
       </div>
 
-      {tab === "ready" && (
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search finished cartons..."
-          className="w-full max-w-sm rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--text-faint)] outline-none focus:border-[var(--surface-border-strong)]"
-        />
-      )}
-
       {tab === "ready" ? (
         <div className="overflow-x-auto rounded-xl border border-[var(--surface-border)]">
           <table className="w-full text-sm">
@@ -296,7 +279,7 @@ export default function FinishedCartonsPage() {
               </tr>
             </thead>
             <tbody>
-              {filteredCartons.map((c) => (
+              {cartons.map((c) => (
                 <tr key={c.id} className="border-b border-[var(--surface-border)] last:border-0 hover:bg-[var(--surface)]/60">
                   <td className="px-4 py-3 text-[var(--foreground)]">{c.name}</td>
                   <td className="px-4 py-3 text-[var(--text-secondary)]">{c.sourceBatchId}</td>
@@ -308,10 +291,8 @@ export default function FinishedCartonsPage() {
                   <td className="px-4 py-3 text-[var(--text-secondary)]">{c.stockQty}</td>
                 </tr>
               ))}
-              {filteredCartons.length === 0 && (
-                <tr><td colSpan={8} className="px-4 py-8 text-center text-[var(--text-faint)]">
-                  {search ? "No finished cartons match your search." : "No finished cartons yet."}
-                </td></tr>
+              {cartons.length === 0 && (
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-[var(--text-faint)]">No finished cartons yet.</td></tr>
               )}
             </tbody>
           </table>

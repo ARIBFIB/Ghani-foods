@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { toast } from "sonner";
@@ -110,11 +110,6 @@ export function PurchaseReceiptDialog({
     }
 
     const parsedItems: { rawMaterialId: string; qty: number; cost: number }[] = [];
-    // Tracks new-material names created earlier in *this* submit so a second
-    // line with the same new name reuses the id instead of creating a duplicate
-    // raw_materials row (rawMaterials from the store won't reflect the insert
-    // until the next render, which is too late for this loop).
-    const createdThisSubmit = new Map<string, string>();
 
     for (const row of rows) {
       const qty = Number(row.qty);
@@ -137,9 +132,10 @@ export function PurchaseReceiptDialog({
           setFormError("Enter a unit for the new raw material");
           return;
         }
-        const nameKey = row.newName.trim().toLowerCase();
-        const existing = rawMaterials.find((m) => m.name.toLowerCase() === nameKey);
-        let newId = existing?.id ?? createdThisSubmit.get(nameKey);
+        const existing = rawMaterials.find(
+          (m) => m.name.toLowerCase() === row.newName.trim().toLowerCase()
+        );
+        let newId = existing?.id;
         if (!newId) {
           try {
             newId = await addRawMaterial({
@@ -147,7 +143,6 @@ export function PurchaseReceiptDialog({
               unit: row.newUnit.trim(),
               lowStockThreshold: Number(row.newThreshold) || 0,
             });
-            createdThisSubmit.set(nameKey, newId);
           } catch (err) {
             setFormError(err instanceof Error ? err.message : "Could not create the new raw material");
             return;

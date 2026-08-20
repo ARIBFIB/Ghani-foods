@@ -368,12 +368,6 @@ type State = {
     purchaseDate: string;
     items: { rawMaterialId: string; qty: number; cost: number }[];
   }) => Promise<string>;
-  deleteReceipt: (receiptId: string) => Promise<void>;
-  updateReceipt: (receiptId: string, input: {
-    supplierId: string;
-    purchaseDate: string;
-    items: { rawMaterialId: string; qty: number; cost: number }[];
-  }) => Promise<void>;
 
   // Wrapper / Box
   loadPackagingModule: () => Promise<void>;
@@ -512,23 +506,6 @@ export const useStore = create<State>()((set, get) => ({
     if (error || !data) throw new Error(error?.message ?? "Failed to save purchase receipt");
     await get().loadRawMaterialsModule();
     return (data as any).receiptId as string;
-  },
-
-  deleteReceipt: async (receiptId) => {
-    const { error } = await supabase.rpc("fn_delete_purchase_receipt", { p_receipt_id: receiptId });
-    if (error) throw new Error(error.message ?? "Failed to delete receipt");
-    await get().loadRawMaterialsModule();
-  },
-
-  updateReceipt: async (receiptId, input) => {
-    const { error } = await supabase.rpc("fn_update_purchase_receipt", {
-      p_receipt_id: receiptId,
-      p_supplier_id: input.supplierId,
-      p_purchase_date: input.purchaseDate,
-      p_items: input.items.map((i) => ({ rawMaterialId: i.rawMaterialId, qty: i.qty, cost: i.cost })),
-    });
-    if (error) throw new Error(error.message ?? "Failed to update receipt");
-    await get().loadRawMaterialsModule();
   },
 
   // ---------------------------------------------------------------------

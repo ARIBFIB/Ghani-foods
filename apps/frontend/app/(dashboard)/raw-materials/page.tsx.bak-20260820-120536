@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { NavLink } from "@/components/ui/nav-link";
@@ -58,14 +58,8 @@ function AddRawMaterialMasterDialog({ open, onClose }: { open: boolean; onClose:
           </div>
           <div>
             <label className="text-sm text-[var(--text-muted)]">Unit</label>
-            <select {...register("unit")}
-              className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]">
-              <option value="kg">kg</option>
-              <option value="g">g</option>
-              <option value="litre">litre</option>
-              <option value="ml">ml</option>
-              <option value="piece">piece</option>
-            </select>
+            <input {...register("unit")} placeholder="kg, g, litre..."
+              className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
             {errors.unit && <p className="text-xs text-red-400 mt-1">{errors.unit.message}</p>}
           </div>
           <div>

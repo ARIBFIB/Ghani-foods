@@ -1,3 +1,59 @@
+#
+# add-batch-unit-conversion.ps1
+# --------------------------------
+# Run this from: D:\Rozmarrah-CUST\Saim Ashraf\Nimko\Working\Code\GhaniFoods
+#
+# Client requests handled:
+#   "While making batch quantity bhi Poche and even if the item has been put
+#    in kg ham wahan grams select kar k bhi add kar saken"
+#
+# What changed in apps/frontend/app/(dashboard)/batches/new/page.tsx:
+#   1. BUG FIX: createBatch() was called without "await" (same class of bug
+#      as the invoices/new page had). This meant the batch ID used in the
+#      success toast and in navigate(`/batches/${newId}`) was a Promise
+#      object, not a real ID - so after saving a batch you would NOT land
+#      on the correct batch detail page.
+#   2. NEW: each raw-material row in the consumption table now has a unit
+#      selector. If the material's base unit is "kg", you can enter the
+#      quantity in kg OR g (auto-converts to kg before saving). Same for
+#      litre/ml. A small "= 0.5 kg" hint shows the converted amount live.
+#      Materials with a base unit that has no smaller unit (e.g. "piece")
+#      just show that unit, no dropdown.
+#   3. Stock-sufficiency validation and the estimated cost now correctly
+#      use the CONVERTED (base-unit) quantity, not the raw typed number -
+#      so entering "500" while unit=g against a material with 0.4 kg in
+#      stock is correctly flagged as insufficient (0.5 kg > 0.4 kg), not
+#      compared as 500 > 0.4.
+#
+# No backend/database changes needed for this one - conversion happens in
+# the frontend before the existing fn_create_production_batch RPC is called,
+# so the batch is still recorded in the material's real base unit.
+#
+# Safe to re-run - already-applied file is skipped.
+#
+
+$ErrorActionPreference = "Stop"
+$root = Get-Location
+$stamp = Get-Date -Format "yyyyMMdd-HHmmss"
+Write-Host "Running in: $root" -ForegroundColor Cyan
+
+$pagePath = Join-Path $root "apps\frontend\app\(dashboard)\batches\new\page.tsx"
+
+if (-not (Test-Path -LiteralPath $pagePath)) {
+    Write-Host "ERROR: Could not find $pagePath" -ForegroundColor Red
+    exit 1
+}
+
+$existing = Get-Content -Raw -LiteralPath $pagePath
+if ($existing -match [regex]::Escape("UNIT_CONVERSIONS")) {
+    Write-Host "batches/new/page.tsx already has unit conversion - skipping." -ForegroundColor Yellow
+    exit 0
+}
+
+Copy-Item -LiteralPath $pagePath -Destination "$pagePath.bak-$stamp"
+Write-Host "Backed up -> page.tsx.bak-$stamp"
+
+@'
 "use client";
 
 import { useMemo, useState } from "react";
@@ -319,3 +375,17 @@ export default function NewBatchPage() {
     </form>
   );
 }
+
+'@ | Set-Content -LiteralPath $pagePath -NoNewline
+
+Write-Host "Replaced: apps\frontend\app\(dashboard)\batches\new\page.tsx" -ForegroundColor Green
+Write-Host ""
+Write-Host "Done. Next steps:" -ForegroundColor Cyan
+Write-Host "  1. cd apps\frontend; npm run dev"
+Write-Host "  2. Go to Batches -> New Batch."
+Write-Host "  3. Pick a raw material whose unit is kg -> a unit dropdown (kg/g)"
+Write-Host "     should appear next to the quantity field."
+Write-Host "  4. Enter 500 with unit = g -> you should see a hint '= 0.5 kg'"
+Write-Host "     under the row, and stock/cost calculations should use 0.5 kg."
+Write-Host "  5. Save the batch -> confirm you land on the correct"
+Write-Host "     /batches/<real-id> page (not /batches/[object Promise])."

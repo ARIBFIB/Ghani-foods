@@ -1,9 +1,8 @@
-"use client";
+﻿"use client";
 
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { NavLink } from "@/components/ui/nav-link";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { toast } from "sonner";
 import { useStore } from "@/lib/store";
 import { PurchaseReceiptDialog } from "@/components/ui/purchase-receipt-dialog";
 
@@ -13,24 +12,17 @@ export default function ReceiptsPage() {
   const suppliers = useStore((s) => s.suppliers);
   const rawMaterials = useStore((s) => s.rawMaterials);
   const loadRawMaterialsModule = useStore((s) => s.loadRawMaterialsModule);
-  const deleteReceipt = useStore((s) => s.deleteReceipt);
-  const updateReceipt = useStore((s) => s.updateReceipt);
 
   useEffect(() => {
     loadRawMaterialsModule();
   }, [loadRawMaterialsModule]);
 
-  const [search, setSearch] = useState("");
   const [supplierFilter, setSupplierFilter] = useState("");
   const [materialFilter, setMaterialFilter] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editRows, setEditRows] = useState<{ id: string; rawMaterialId: string; qty: string; cost: string }[]>([]);
-  const [savingEdit, setSavingEdit] = useState(false);
 
   const rows = useMemo(() => {
     return receipts
@@ -41,73 +33,17 @@ export default function ReceiptsPage() {
         const itemNames = lines.map((l) => rawMaterials.find((m) => m.id === l.rawMaterialId)?.name ?? "?");
         return { receipt: r, lines, supplier, totalValue, itemNames };
       })
-      .filter(({ receipt, lines, supplier, itemNames }) => {
+      .filter(({ receipt, lines }) => {
         if (supplierFilter && receipt.supplierId !== supplierFilter) return false;
         if (materialFilter && !lines.some((l) => l.rawMaterialId === materialFilter)) return false;
         if (fromDate && receipt.purchaseDate < fromDate) return false;
         if (toDate && receipt.purchaseDate > toDate) return false;
-        if (search.trim()) {
-          const q = search.trim().toLowerCase();
-          const haystack = `${supplier?.name ?? ""} ${itemNames.join(" ")}`.toLowerCase();
-          if (!haystack.includes(q)) return false;
-        }
         return true;
       })
       .sort((a, b) => b.receipt.purchaseDate.localeCompare(a.receipt.purchaseDate));
   }, [receipts, receiptLines, suppliers, rawMaterials, supplierFilter, materialFilter, fromDate, toDate]);
 
   const hasFilters = !!(supplierFilter || materialFilter || fromDate || toDate);
-
-  const startEdit = (receiptId: string, lines: { id: string; rawMaterialId: string; qty: number; cost: number }[]) => {
-    setEditingId(receiptId);
-    setExpandedId(receiptId);
-    setEditRows(lines.map((l) => ({ id: l.id, rawMaterialId: l.rawMaterialId, qty: String(l.qty), cost: String(l.cost) })));
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-    setEditRows([]);
-  };
-
-  const saveEdit = async (receiptId: string, supplierId: string, purchaseDate: string) => {
-    for (const row of editRows) {
-      const qty = Number(row.qty);
-      const cost = Number(row.cost);
-      if (!qty || qty <= 0) { toast.error("Every line needs a quantity greater than 0"); return; }
-      if (!cost || cost <= 0) { toast.error("Every line needs a cost greater than 0"); return; }
-    }
-    setSavingEdit(true);
-    try {
-      await updateReceipt(receiptId, {
-        supplierId,
-        purchaseDate,
-        items: editRows.map((r) => ({ rawMaterialId: r.rawMaterialId, qty: Number(r.qty), cost: Number(r.cost) })),
-      });
-      toast.success("Receipt updated");
-      setEditingId(null);
-      setEditRows([]);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update receipt");
-    } finally {
-      setSavingEdit(false);
-    }
-  };
-
-  const handleDelete = async (receiptId: string) => {
-    if (!window.confirm("Delete this receipt? This will reverse its effect on raw material stock. This cannot be undone.")) {
-      return;
-    }
-    setDeletingId(receiptId);
-    try {
-      await deleteReceipt(receiptId);
-      toast.success("Receipt deleted");
-      if (expandedId === receiptId) setExpandedId(null);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete receipt");
-    } finally {
-      setDeletingId(null);
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -117,13 +53,6 @@ export default function ReceiptsPage() {
           + Record Purchase
         </button>
       </div>
-
-      <input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search receipts by supplier or raw material..."
-        className="w-full max-w-sm rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--text-faint)] outline-none focus:border-[var(--surface-border-strong)]"
-      />
 
       <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-end gap-3 rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-4">
         <div>
@@ -164,7 +93,7 @@ export default function ReceiptsPage() {
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-[var(--surface-border)]">
-        <table className="w-full min-w-[720px] text-sm">
+        <table className="w-full min-w-[640px] text-sm">
           <thead>
             <tr className="border-b border-[var(--surface-border)] bg-[var(--surface)] text-left text-[var(--text-muted)]">
               <th className="px-4 py-3 font-medium w-8"></th>
@@ -172,16 +101,14 @@ export default function ReceiptsPage() {
               <th className="px-4 py-3 font-medium">Supplier</th>
               <th className="px-4 py-3 font-medium">Items</th>
               <th className="px-4 py-3 font-medium">Total Value</th>
-              <th className="px-4 py-3 font-medium text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-[var(--text-faint)]">No receipts match these filters.</td></tr>
+              <tr><td colSpan={5} className="px-4 py-8 text-center text-[var(--text-faint)]">No receipts match these filters.</td></tr>
             )}
             {rows.map(({ receipt, lines, supplier, totalValue, itemNames }) => {
               const isExpanded = expandedId === receipt.id;
-              const isEditing = editingId === receipt.id;
               const summary = itemNames.length > 2
                 ? `${itemNames.length} items: ${itemNames.slice(0, 2).join(", ")}, +${itemNames.length - 2}`
                 : `${itemNames.length} item${itemNames.length !== 1 ? "s" : ""}: ${itemNames.join(", ")}`;
@@ -201,30 +128,11 @@ export default function ReceiptsPage() {
                     </td>
                     <td className="px-4 py-3 text-[var(--text-secondary)]">{summary}</td>
                     <td className="px-4 py-3 text-[var(--text-secondary)]">Rs. {totalValue.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => (isEditing ? cancelEdit() : startEdit(receipt.id, lines))}
-                          className="rounded-lg px-2.5 py-1 text-xs text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
-                        >
-                          {isEditing ? "Cancel" : "Edit"}
-                        </button>
-                        <button
-                          type="button"
-                          disabled={deletingId === receipt.id}
-                          onClick={() => handleDelete(receipt.id)}
-                          className="rounded-lg px-2.5 py-1 text-xs text-red-500 hover:bg-red-500/10 disabled:opacity-50"
-                        >
-                          {deletingId === receipt.id ? "Deleting..." : "Delete"}
-                        </button>
-                      </div>
-                    </td>
                   </tr>
                   {isExpanded && (
                     <tr className="border-b border-[var(--surface-border)] last:border-0 bg-[var(--background)]">
                       <td></td>
-                      <td colSpan={5} className="px-4 py-3">
+                      <td colSpan={4} className="px-4 py-3">
                         <table className="w-full text-xs">
                           <thead>
                             <tr className="text-left text-[var(--text-muted)]">
@@ -235,7 +143,7 @@ export default function ReceiptsPage() {
                             </tr>
                           </thead>
                           <tbody>
-                            {!isEditing && lines.map((l) => {
+                            {lines.map((l) => {
                               const material = rawMaterials.find((m) => m.id === l.rawMaterialId);
                               return (
                                 <tr key={l.id} className="border-t border-[var(--surface-border)]">
@@ -250,50 +158,8 @@ export default function ReceiptsPage() {
                                 </tr>
                               );
                             })}
-                            {isEditing && editRows.map((row, idx) => {
-                              const material = rawMaterials.find((m) => m.id === row.rawMaterialId);
-                              return (
-                                <tr key={row.id} className="border-t border-[var(--surface-border)]">
-                                  <td className="py-2 text-[var(--text-secondary)]">{material?.name ?? "-"}</td>
-                                  <td className="py-2">
-                                    <input
-                                      type="number"
-                                      value={row.qty}
-                                      onChange={(e) => setEditRows((rs) => rs.map((r, i) => (i === idx ? { ...r, qty: e.target.value } : r)))}
-                                      className="w-20 rounded-md border border-[var(--surface-border)] bg-[var(--background)] px-2 py-1 text-xs text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]"
-                                    /> <span className="text-[var(--text-faint)]">{material?.unit ?? ""}</span>
-                                  </td>
-                                  <td className="py-2">
-                                    <input
-                                      type="number"
-                                      value={row.cost}
-                                      onChange={(e) => setEditRows((rs) => rs.map((r, i) => (i === idx ? { ...r, cost: e.target.value } : r)))}
-                                      className="w-24 rounded-md border border-[var(--surface-border)] bg-[var(--background)] px-2 py-1 text-xs text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]"
-                                    />
-                                  </td>
-                                  <td className="py-2 text-[var(--text-secondary)]">
-                                    Rs. {((Number(row.qty) || 0) * (Number(row.cost) || 0)).toLocaleString()}
-                                  </td>
-                                </tr>
-                              );
-                            })}
                           </tbody>
                         </table>
-                        {isEditing && (
-                          <div className="flex justify-end gap-2 pt-3">
-                            <button type="button" onClick={cancelEdit} className="rounded-lg px-3 py-1.5 text-xs text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]">
-                              Cancel
-                            </button>
-                            <button
-                              type="button"
-                              disabled={savingEdit}
-                              onClick={() => saveEdit(receipt.id, receipt.supplierId, receipt.purchaseDate)}
-                              className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-3 py-1.5 text-xs font-medium text-neutral-50 dark:text-neutral-950 hover:opacity-90 disabled:opacity-50"
-                            >
-                              {savingEdit ? "Saving..." : "Save changes"}
-                            </button>
-                          </div>
-                        )}
                       </td>
                     </tr>
                   )}
