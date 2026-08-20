@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useNavigationLoading } from "@/lib/navigation-loading-context";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "@/components/ui/toast";
+import { toast } from "sonner";
 import { Info } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { invoiceHeaderSchema, type InvoiceHeaderFormValues } from "@/lib/schemas";

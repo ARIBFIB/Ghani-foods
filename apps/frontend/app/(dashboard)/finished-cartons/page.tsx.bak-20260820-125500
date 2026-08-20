@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { NavLink } from "@/components/ui/nav-link";
-import { toast } from "@/components/ui/toast";
+import { toast } from "sonner";
 import { useStore, computePackagingUnitCost } from "@/lib/store";
 import { InfoTip } from "@/components/ui/info-tip";
 

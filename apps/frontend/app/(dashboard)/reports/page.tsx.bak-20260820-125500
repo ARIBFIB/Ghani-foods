@@ -6,7 +6,7 @@ import {
   Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
 import { useStore } from "@/lib/store";
-import { toast } from "@/components/ui/toast";
+import { toast } from "sonner";
 
 function exportCSV(filename: string, headers: string[], rows: (string | number)[][]) {
   const lines = [headers.join(","), ...rows.map((r) => r.map((v) => `"${v}"`).join(","))];

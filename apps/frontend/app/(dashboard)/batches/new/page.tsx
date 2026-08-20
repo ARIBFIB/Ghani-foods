@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useNavigationLoading } from "@/lib/navigation-loading-context";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "sonner";
+import { toast } from "@/components/ui/toast";
 import { useStore } from "@/lib/store";
 import { batchSchema, type BatchFormValues } from "@/lib/schemas";
 

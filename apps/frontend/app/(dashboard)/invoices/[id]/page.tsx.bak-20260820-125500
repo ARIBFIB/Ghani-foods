@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { NavLink } from "@/components/ui/nav-link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "@/components/ui/toast";
+import { toast } from "sonner";
 import { useStore } from "@/lib/store";
 import { z } from "zod";
 

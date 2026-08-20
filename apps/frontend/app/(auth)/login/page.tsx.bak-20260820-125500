@@ -7,7 +7,7 @@ import { AtSignIcon, LockIcon } from "lucide-react";
 import { GhaniLogo } from "@/components/ui/ghani-logo";
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
 import { createClient } from "@/lib/supabase/client";
-import { toast } from "@/components/ui/toast";
+import { toast } from "sonner";
 
 const LOGIN_IMAGE_URL = "https://res.cloudinary.com/dr9dwesyo/image/upload/v1787001758/ghanifoods/ghani-nimko-bag.png";
 
