@@ -106,7 +106,7 @@ app.get("/api/reports/pnl", (_req, res) => {
 
 app.get("/api/settings", (_req, res) => res.json(data.settings));
 app.patch("/api/settings", (req, res) => {
-  Object.assign(data.settings, req.body);
+  data.settings = { ...data.settings, ...req.body };
   res.json(data.settings);
 });
 
