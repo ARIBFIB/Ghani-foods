@@ -20,12 +20,12 @@ const CONFIRMATION_PHRASE = "DELETE ALL DATA";
 // This list intentionally excludes auth.users / any admin / profile tables.
 // ---------------------------------------------------------------------
 const DELETE_ORDER: string[] = [
-  "invoice_items",
+  "invoice_lines",
   "invoices",
   "payments",
-  "purchase_receipt_lines",
-  "purchase_receipts",
-  "production_batches",
+  "receipt_lines",
+  "receipts",
+  "batches",
   "wrappers",
   "boxes",
   "carton_configurations",
