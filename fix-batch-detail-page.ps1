@@ -1,4 +1,46 @@
-﻿"use client";
+<#
+  fix-batch-detail-page.ps1
+  ------------------------------------------------------------------
+  Run this from the project ROOT:
+    D:\Rozmarrah-CUST\Saim Ashraf\Nimko\Working\Code\GhaniFoods
+
+  Everything else (schemas.ts, store.ts, settings page, sidebar link,
+  monthly-expenses page, disabled batches-overhead function) is
+  ALREADY applied and confirmed correct in your current codebase.
+
+  The ONLY file still on the old version is:
+    apps/frontend/app/(dashboard)/batches/[id]/page.tsx
+  It still shows the old "Allocate Month-End Overhead" dialog
+  (fn_allocate_overhead) instead of the new "Add Expense" dialog
+  (fn_add_batch_expense) + batch_expenses / monthly overhead share
+  display. This script replaces ONLY that one file.
+
+  SAFETY: the existing file is backed up to <file>.bak-<timestamp>
+  before being overwritten.
+------------------------------------------------------------------#>
+
+$ErrorActionPreference = "Stop"
+$root = Get-Location
+$ts = Get-Date -Format "yyyyMMdd-HHmmss"
+
+Write-Host "==================================================" -ForegroundColor Cyan
+Write-Host "  Fixing batches/[id]/page.tsx (final remaining file)" -ForegroundColor Cyan
+Write-Host "==================================================" -ForegroundColor Cyan
+Write-Host "Root: $root`n"
+
+$batchDetailPath = Join-Path $root "apps\frontend\app\(dashboard)\batches\[id]\page.tsx"
+
+if (-not (Test-Path -LiteralPath $batchDetailPath)) {
+    Write-Error "File not found: $batchDetailPath"
+    exit 1
+}
+
+$bak = "$batchDetailPath.bak-$ts"
+Copy-Item -LiteralPath $batchDetailPath -Destination $bak -Force
+Write-Host "Backed up -> $bak" -ForegroundColor DarkGray
+
+$batchDetailContent = @'
+"use client";
 
 import { use, useEffect, useState } from "react";
 import { NavLink } from "@/components/ui/nav-link";
@@ -228,7 +270,7 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
             <NavLink href={`/batches/${batch.leftoverSourceBatchId}`} className="underline">
               {batch.leftoverSourceBatchId}
             </NavLink>{" "}
-            (FIFO â€” cost blended into this batch's effective cost/kg).
+            (FIFO — cost blended into this batch's effective cost/kg).
           </div>
         )}
       </div>
@@ -309,3 +351,24 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
     </div>
   );
 }
+'@
+
+Set-Content -LiteralPath $batchDetailPath -Value $batchDetailContent -NoNewline -Encoding UTF8
+Write-Host "OK   [batches/[id]/page.tsx rewritten]" -ForegroundColor Green
+
+Write-Host "`n==================================================" -ForegroundColor Cyan
+Write-Host "  DONE" -ForegroundColor Cyan
+Write-Host "==================================================" -ForegroundColor Cyan
+Write-Host @"
+
+Next steps:
+  1. cd apps\frontend
+  2. npm run build     (verify it compiles)
+  3. Spot-check in browser:
+       /batches/<id>  -> should show "Add Expense" button,
+                          expense list, and Monthly Overhead Share
+                          section (NOT "Allocate Month-End Overhead")
+
+If anything looks off, the old file is backed up at:
+  $bak
+"@ -ForegroundColor Yellow
