@@ -6,8 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "@/components/ui/toast";
 import { useStore } from "@/lib/store";
-import { ExportDataPanel } from "@/components/ui/export-data-panel";
-import { DangerZonePanel } from "@/components/ui/danger-zone-panel";
 
 const settingsSchema = z.object({
   businessName: z.string().trim().min(2, "Business name required"),

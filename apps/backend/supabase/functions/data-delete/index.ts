@@ -1,0 +1,119 @@
+// apps/backend/supabase/functions/data-delete/index.ts
+//
+// Deletes ALL business data (never auth/admin/user tables).
+// Requires an exact confirmation phrase. Makes a full xlsx backup to
+// storage before deleting, in case the user needs to recover.
+//
+// Request body: { confirmationText: string }
+// Response: { deleted: Record<string, number>, backupUrl: string }
+
+import { createClient } from "npm:@supabase/supabase-js@2";
+import ExcelJS from "npm:exceljs@4";
+import { corsHeaders } from "../_shared/cors.ts";
+
+const CONFIRMATION_PHRASE = "DELETE ALL DATA";
+
+// ---------------------------------------------------------------------
+// IMPORTANT: adjust table names to match your real schema.
+// Order matters: children (tables with foreign keys) must be listed
+// BEFORE the parents they reference, so deletes don't violate FK constraints.
+// This list intentionally excludes auth.users / any admin / profile tables.
+// ---------------------------------------------------------------------
+const DELETE_ORDER: string[] = [
+  "invoice_lines",
+  "invoices",
+  "payments",
+  "receipt_lines",
+  "receipts",
+  "batches",
+  "wrappers",
+  "boxes",
+  "carton_configurations",
+  "finished_cartons",
+  "raw_materials",
+  "suppliers",
+  "customers",
+];
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceKey);
+
+    const body = await req.json();
+    const { confirmationText } = body as { confirmationText: string };
+
+    if (confirmationText !== CONFIRMATION_PHRASE) {
+      return new Response(
+        JSON.stringify({ error: `Confirmation text must exactly match "${CONFIRMATION_PHRASE}"` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // -----------------------------------------------------------------
+    // 1. Backup everything to xlsx before deleting anything
+    // -----------------------------------------------------------------
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "GhaniFoods";
+    workbook.created = new Date();
+
+    const snapshots: Record<string, Record<string, unknown>[]> = {};
+
+    for (const table of DELETE_ORDER) {
+      const { data, error } = await supabase.from(table).select("*");
+      if (error) throw new Error(`Backup fetch failed for ${table}: ${error.message}`);
+      snapshots[table] = data ?? [];
+
+      const sheet = workbook.addWorksheet(table.slice(0, 31));
+      if (data && data.length > 0) {
+        const headers = Object.keys(data[0]);
+        sheet.addRow(headers).font = { bold: true };
+        for (const row of data) sheet.addRow(headers.map((h) => (row as Record<string, unknown>)[h] ?? ""));
+      } else {
+        sheet.addRow(["(no data)"]);
+      }
+    }
+
+    const buf = await workbook.xlsx.writeBuffer();
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const backupPath = `exports/GhaniFoods-pre-delete-backup-${timestamp}.xlsx`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("exports")
+      .upload(backupPath, new Uint8Array(buf as ArrayBuffer), {
+        contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        upsert: true,
+      });
+    if (uploadError) throw new Error(`Backup upload failed: ${uploadError.message}`);
+
+    const { data: signed, error: signError } = await supabase.storage
+      .from("exports")
+      .createSignedUrl(backupPath, 3600); // 1 hour - give the user time to grab it
+    if (signError) throw new Error(`Backup signed URL failed: ${signError.message}`);
+
+    // -----------------------------------------------------------------
+    // 2. Delete, in FK-safe order. Never touches auth/admin tables.
+    // -----------------------------------------------------------------
+    const deleted: Record<string, number> = {};
+
+    for (const table of DELETE_ORDER) {
+      const count = snapshots[table]?.length ?? 0;
+      // Delete-all trick: match a condition that's always true for the primary key.
+      const { error } = await supabase.from(table).delete().not("id", "is", null);
+      if (error) throw new Error(`Delete failed for ${table}: ${error.message}`);
+      deleted[table] = count;
+    }
+
+    return new Response(JSON.stringify({ deleted, backupUrl: signed.signedUrl }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "Delete failed" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});
