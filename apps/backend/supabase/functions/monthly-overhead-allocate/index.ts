@@ -1,6 +1,8 @@
-// Create a production batch (FR-20/21) with optional leftover carry-forward
-// and optional named other-expenses (labour, packaging, misc, etc.)
-// POST /functions/v1/batches
+// Allocates a month's accumulative expenses across that month's batches.
+// POST /functions/v1/monthly-overhead-allocate
+// body: { month: "2026-08-01", method?: "equal" | "proportional_kg" }
+// If method is omitted, uses app_settings.overhead_allocation_method.
+// Safe to re-run for the same month - replaces the previous allocation.
 import { corsHeaders } from "../_shared/cors.ts";
 import { getClient, statusForPgError, jsonResponse, envelopeError, envelopeSuccess } from "../_shared/client.ts";
 
@@ -11,23 +13,21 @@ Deno.serve(async (req: Request) => {
     const body = await req.json();
     const supabase = getClient(req);
 
-    const rpcParams = {
-    p_consumptions: body.consumptions,
-    p_output_yield_kg: body.outputYieldKg,
-    p_wastage_kg: body.wastageKg ?? 0,
-    p_leftover_batch_id: body.leftoverBatchId ?? null,
-    p_leftover_kg_used: body.leftoverKgUsed ?? null,
-    p_other_expenses: body.otherExpenses ?? [],
-    };
+    if (!body.month) {
+      return jsonResponse(envelopeError("month is required (YYYY-MM-DD)", "BAD_REQUEST"), 400, corsHeaders);
+    }
 
-    const { data, error } = await supabase.rpc("fn_create_production_batch", rpcParams);
+    const { data, error } = await supabase.rpc("fn_allocate_monthly_overhead", {
+      p_month: body.month,
+      p_method: body.method ?? null,
+    });
 
     if (error) {
       const status = statusForPgError(error.message);
       return jsonResponse(envelopeError(error.message, error.code ?? "DB_ERROR"), status, corsHeaders);
     }
 
-    return jsonResponse(envelopeSuccess(data), 201, corsHeaders);
+    return jsonResponse(envelopeSuccess(data), 200, corsHeaders);
   } catch (err) {
     return jsonResponse(envelopeError(err instanceof Error ? err.message : "Unknown error", "BAD_REQUEST"), 400, corsHeaders);
   }

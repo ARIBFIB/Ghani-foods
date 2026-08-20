@@ -1,6 +1,8 @@
-// Create a production batch (FR-20/21) with optional leftover carry-forward
-// and optional named other-expenses (labour, packaging, misc, etc.)
-// POST /functions/v1/batches
+// Add a single named expense (labour, packaging, misc, etc.) to an
+// EXISTING batch. For expenses added at batch-creation time, pass them
+// via `otherExpenses` on POST /functions/v1/batches instead.
+// POST /functions/v1/batch-expenses
+// body: { batchId: string, name: string, amount: number }
 import { corsHeaders } from "../_shared/cors.ts";
 import { getClient, statusForPgError, jsonResponse, envelopeError, envelopeSuccess } from "../_shared/client.ts";
 
@@ -11,16 +13,11 @@ Deno.serve(async (req: Request) => {
     const body = await req.json();
     const supabase = getClient(req);
 
-    const rpcParams = {
-    p_consumptions: body.consumptions,
-    p_output_yield_kg: body.outputYieldKg,
-    p_wastage_kg: body.wastageKg ?? 0,
-    p_leftover_batch_id: body.leftoverBatchId ?? null,
-    p_leftover_kg_used: body.leftoverKgUsed ?? null,
-    p_other_expenses: body.otherExpenses ?? [],
-    };
-
-    const { data, error } = await supabase.rpc("fn_create_production_batch", rpcParams);
+    const { data, error } = await supabase.rpc("fn_add_batch_expense", {
+      p_batch_id: body.batchId,
+      p_name: body.name,
+      p_amount: body.amount ?? 0,
+    });
 
     if (error) {
       const status = statusForPgError(error.message);
