@@ -403,7 +403,6 @@ type State = {
     wastageKg: number;
     leftoverBatchId?: string;
     leftoverKgUsed?: number;
-    otherExpenses?: { name: string; amount: number }[];
   }) => Promise<string>;
   allocateOverhead: (batchId: string, electricity: number, gas: number, rent: number) => Promise<void>;
 
@@ -638,7 +637,6 @@ export const useStore = create<State>()((set, get) => ({
       p_wastage_kg: input.wastageKg,
       p_leftover_batch_id: input.leftoverBatchId ?? null,
       p_leftover_kg_used: input.leftoverKgUsed ?? null,
-      p_other_expenses: input.otherExpenses ?? [],
     });
     if (error || !data) throw new Error(error?.message ?? "Failed to create production batch");
     await Promise.all([get().loadProductionBatches(), get().loadRawMaterialsModule()]);
