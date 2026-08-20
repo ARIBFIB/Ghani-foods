@@ -37,3 +37,29 @@ body {
   animation: none;
   mix-blend-mode: normal;
 }
+
+/* ---- Toast component design tokens (added by update-toast-design.ps1) ---- */
+@theme inline {
+  --color-gray-1000: var(--ds-gray-1000);
+  --color-background-100: var(--ds-background-100);
+  --color-contrast-fg: var(--ds-contrast-fg);
+  --color-geist-background: var(--geist-background);
+  --shadow-menu: var(--ds-shadow-menu);
+}
+
+:root {
+  --ds-contrast-fg: #ffffff;
+  --geist-background: #fff;
+  --ds-shadow-menu: 0 0 0 1px rgba(0, 0, 0, 0.08), 0px 1px 1px rgba(0, 0, 0, 0.02),
+    0px 4px 8px -4px rgba(0, 0, 0, 0.04), 0px 16px 24px -8px rgba(0, 0, 0, 0.06);
+  --ds-gray-1000: hsla(0, 0%, 9%, 1);
+  --ds-background-100: hsla(0, 0%, 100%, 1);
+}
+
+.dark {
+  --geist-background: #000;
+  --ds-shadow-menu: 0 0 0 1px rgba(255, 255, 255, 0.145), 0px 1px 1px rgba(0, 0, 0, 0.02),
+    0px 4px 8px -4px rgba(0, 0, 0, 0.04), 0px 16px 24px -8px rgba(0, 0, 0, 0.06);
+  --ds-gray-1000: hsla(0, 0%, 93%, 1);
+  --ds-background-100: hsla(0, 0%, 4%, 1);
+}
