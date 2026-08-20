@@ -1,3 +1,52 @@
+#
+# fix-settings-export-tab.ps1
+# ----------------------------
+# Run this from: D:\Rozmarrah-CUST\Saim Ashraf\Nimko\Working\Code\GhaniFoods
+#
+# Fixes: Settings page tabs (sidebar > Settings > Business Profile / Export & Data)
+#        were not actually switching content - everything (Business Profile form,
+#        Export panel, Danger Zone) rendered on top of each other on one page.
+#
+# This script:
+#   1. Updates settings/page.tsx to use a ?tab= query param to show ONLY the
+#      selected tab's content (profile OR export).
+#   2. Updates sidebar-component.tsx so "Business Profile" links to
+#      /settings?tab=profile and "Export & Data" links to /settings?tab=export.
+#
+# NOTE: "Security" and "Notifications" sidebar items are left untouched for now
+#       (no href yet) - as requested, those will be handled separately.
+#
+# Safe to re-run. Backups made before any edit: <file>.bak-<timestamp>
+#
+
+$ErrorActionPreference = "Stop"
+$root = Get-Location
+$stamp = Get-Date -Format "yyyyMMdd-HHmmss"
+Write-Host "Running in: $root" -ForegroundColor Cyan
+
+function Backup-File($path) {
+    if (Test-Path -LiteralPath $path) {
+        Copy-Item -LiteralPath $path -Destination "$path.bak-$stamp"
+        Write-Host "  Backed up -> $(Split-Path $path -Leaf).bak-$stamp" -ForegroundColor DarkGray
+    } else {
+        Write-Host "  ERROR: File not found: $path" -ForegroundColor Red
+        exit 1
+    }
+}
+
+# -----------------------------------------------------------------
+# 1. settings/page.tsx - add tab switching via ?tab= query param
+# -----------------------------------------------------------------
+$settingsPagePath = Join-Path $root "apps\frontend\app\(dashboard)\settings\page.tsx"
+
+if (-not (Test-Path -LiteralPath $settingsPagePath)) {
+    Write-Host "ERROR: Could not find $settingsPagePath" -ForegroundColor Red
+    exit 1
+}
+
+Backup-File $settingsPagePath
+
+$newSettingsPage = @'
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -143,3 +192,52 @@ export default function SettingsPage() {
     </div>
   );
 }
+'@
+
+Set-Content -LiteralPath $settingsPagePath -Value $newSettingsPage -NoNewline
+Write-Host "settings/page.tsx -> updated with tab switching (Business Profile / Export & Data)." -ForegroundColor Green
+
+# -----------------------------------------------------------------
+# 2. sidebar-component.tsx - point Business Profile / Export & Data
+#    to the correct ?tab= query params
+# -----------------------------------------------------------------
+$sidebarPath = Join-Path $root "apps\frontend\components\ui\sidebar-component.tsx"
+
+if (-not (Test-Path -LiteralPath $sidebarPath)) {
+    Write-Host "ERROR: Could not find $sidebarPath" -ForegroundColor Red
+    exit 1
+}
+
+$sidebarContent = Get-Content -Raw -LiteralPath $sidebarPath
+
+$oldBlock = '            { icon: <SettingsIcon size={16} className="text-[var(--foreground)]" />, label: "Business Profile", href: "/settings" },
+            { icon: <Security size={16} className="text-[var(--foreground)]" />, label: "Security" },
+            { icon: <Notification size={16} className="text-[var(--foreground)]" />, label: "Notifications" },
+            { icon: <Download size={16} className="text-[var(--foreground)]" />, label: "Export & Data", href: "/settings" },'
+
+$newBlock = '            { icon: <SettingsIcon size={16} className="text-[var(--foreground)]" />, label: "Business Profile", href: "/settings?tab=profile" },
+            { icon: <Security size={16} className="text-[var(--foreground)]" />, label: "Security" },
+            { icon: <Notification size={16} className="text-[var(--foreground)]" />, label: "Notifications" },
+            { icon: <Download size={16} className="text-[var(--foreground)]" />, label: "Export & Data", href: "/settings?tab=export" },'
+
+if ($sidebarContent -match [regex]::Escape('href: "/settings?tab=export"')) {
+    Write-Host "sidebar-component.tsx already has the fixed Export & Data link - skipping." -ForegroundColor Yellow
+}
+elseif ($sidebarContent -match [regex]::Escape($oldBlock)) {
+    Backup-File $sidebarPath
+    $updatedSidebar = $sidebarContent.Replace($oldBlock, $newBlock)
+    Set-Content -LiteralPath $sidebarPath -Value $updatedSidebar -NoNewline
+    Write-Host "sidebar-component.tsx -> Business Profile / Export & Data links updated." -ForegroundColor Green
+}
+else {
+    Write-Host "WARNING: Could not find the expected settings menu block in sidebar-component.tsx." -ForegroundColor Yellow
+    Write-Host "The file may have changed since this script was written - please update the link manually:" -ForegroundColor Yellow
+    Write-Host '  Business Profile -> href: "/settings?tab=profile"' -ForegroundColor Yellow
+    Write-Host '  Export & Data    -> href: "/settings?tab=export"' -ForegroundColor Yellow
+}
+
+Write-Host ""
+Write-Host "Done." -ForegroundColor Green
+Write-Host "Sidebar > Settings > Business Profile ab /settings?tab=profile khole ga," -ForegroundColor Green
+Write-Host "aur Export & Data /settings?tab=export khole ga - sirf wahi tab ka content dikhega." -ForegroundColor Green
+Write-Host "Security aur Notifications abhi tak wese hi hain (unwired) - agli baar fix karenge." -ForegroundColor DarkGray

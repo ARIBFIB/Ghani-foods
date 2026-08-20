@@ -261,10 +261,10 @@ function getSidebarContent(activeSection: SectionId): SidebarContent {
         {
           title: "Workspace",
           items: [
-            { icon: <SettingsIcon size={16} className="text-[var(--foreground)]" />, label: "Business Profile", href: "/settings?tab=profile" },
+            { icon: <SettingsIcon size={16} className="text-[var(--foreground)]" />, label: "Business Profile", href: "/settings" },
             { icon: <Security size={16} className="text-[var(--foreground)]" />, label: "Security" },
             { icon: <Notification size={16} className="text-[var(--foreground)]" />, label: "Notifications" },
-            { icon: <Download size={16} className="text-[var(--foreground)]" />, label: "Export & Data", href: "/settings?tab=export" },
+            { icon: <Download size={16} className="text-[var(--foreground)]" />, label: "Export & Data", href: "/settings" },
           ],
         },
       ],
