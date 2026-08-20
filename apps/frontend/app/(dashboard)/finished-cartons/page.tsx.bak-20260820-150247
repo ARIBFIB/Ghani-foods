@@ -1,6 +1,5 @@
 "use client";
 
-import { RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { NavLink } from "@/components/ui/nav-link";
 import { toast } from "@/components/ui/toast";
@@ -240,20 +239,6 @@ function NewPackingRunDialog({ open, onClose }: { open: boolean; onClose: () => 
 
 export default function FinishedCartonsPage() {
   const cartons = useStore((s) => s.finishedCartons);
-  const loadFinishedCartons = useStore((s) => s.loadFinishedCartons);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const handleRefresh = async () => {
-    if (isRefreshing) return;
-    setIsRefreshing(true);
-    try {
-      await loadFinishedCartons();
-      toast.success("Table refreshed");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to refresh");
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
   const productionBatches = useStore((s) => s.productionBatches);
   const [tab, setTab] = useState<"ready" | "leftover">("ready");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -271,12 +256,7 @@ export default function FinishedCartonsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h1 className="text-xl font-semibold text-[var(--foreground)]">Finished Cartons</h1>
-          <button type="button" onClick={handleRefresh} disabled={isRefreshing} title="Refresh table" aria-label="Refresh table" className="shrink-0 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] p-2 text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)] disabled:opacity-50 transition-colors">
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
-          </button>
-        </div>
+        <h1 className="text-xl font-semibold text-[var(--foreground)]">Finished Cartons</h1>
         <button onClick={() => setDialogOpen(true)} className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
           + New Packing Run
         </button>

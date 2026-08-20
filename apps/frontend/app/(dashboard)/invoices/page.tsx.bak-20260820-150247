@@ -8,7 +8,6 @@ import { SortableTable } from "@/components/ui/sortable-table";
 
 export default function InvoicesPage() {
   const invoices = useStore((s) => s.invoices);
-  const loadCustomersModule = useStore((s) => s.loadCustomersModule);
 
   const columns = useMemo<ColumnDef<Invoice, unknown>[]>(() => [
     {
@@ -38,7 +37,7 @@ export default function InvoicesPage() {
       <p className="text-xs text-[var(--text-faint)]">
         Invoices no longer carry a Paid / Unpaid / Partial status. Payment tracking happens on each customer&apos;s ledger - open a customer to record or review payments.
       </p>
-      <SortableTable data={invoices} columns={columns} globalFilterPlaceholder="Search invoices..." onRefresh={loadCustomersModule} />
+      <SortableTable data={invoices} columns={columns} globalFilterPlaceholder="Search invoices..." />
     </div>
   );
 }

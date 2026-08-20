@@ -5,7 +5,7 @@ import { NavLink } from "@/components/ui/nav-link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "@/components/ui/toast";
-import { ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { rawMaterialMasterSchema, type RawMaterialMasterFormValues } from "@/lib/schemas";
 import { PurchaseReceiptDialog } from "@/components/ui/purchase-receipt-dialog";
@@ -23,20 +23,6 @@ function StatusBadge({ isLow }: { isLow: boolean }) {
 
 function AddRawMaterialMasterDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const addRawMaterial = useStore((s) => s.addRawMaterial);
-  const loadRawMaterialsModule = useStore((s) => s.loadRawMaterialsModule);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const handleRefresh = async () => {
-    if (isRefreshing) return;
-    setIsRefreshing(true);
-    try {
-      await loadRawMaterialsModule();
-      toast.success("Table refreshed");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to refresh");
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<RawMaterialMasterFormValues>({
     resolver: zodResolver(rawMaterialMasterSchema),
     defaultValues: { name: "", unit: "kg", lowStockThreshold: 50 },
@@ -143,12 +129,7 @@ export default function RawMaterialsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-2">
-          <h1 className="text-xl font-semibold text-[var(--foreground)]">Raw Materials</h1>
-          <button type="button" onClick={handleRefresh} disabled={isRefreshing} title="Refresh table" aria-label="Refresh table" className="shrink-0 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] p-2 text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)] disabled:opacity-50 transition-colors">
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
-          </button>
-        </div>
+        <h1 className="text-xl font-semibold text-[var(--foreground)]">Raw Materials</h1>
         <div className="flex items-center gap-2">
           <button onClick={() => setAddOpen(true)} className="rounded-lg border border-neutral-400 dark:border-neutral-600 px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)]">
             + Add Raw Material

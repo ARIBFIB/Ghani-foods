@@ -73,7 +73,6 @@ function AddCustomerDialog({ open, onClose }: { open: boolean; onClose: () => vo
 
 export default function CustomersPage() {
   const items = useStore((s) => s.customers);
-  const loadCustomersModule = useStore((s) => s.loadCustomersModule);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const columns = useMemo<ColumnDef<Customer, unknown>[]>(() => [
@@ -96,7 +95,7 @@ export default function CustomersPage() {
           + Add Customer
         </button>
       </div>
-      <SortableTable data={items} columns={columns} globalFilterPlaceholder="Search customers..." onRefresh={loadCustomersModule} />
+      <SortableTable data={items} columns={columns} globalFilterPlaceholder="Search customers..." />
       <AddCustomerDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
     </div>
   );

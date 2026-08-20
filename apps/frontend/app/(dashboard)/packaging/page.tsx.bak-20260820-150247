@@ -204,7 +204,6 @@ export default function PackagingPage() {
   const rawMaterials = useStore((s) => s.rawMaterials);
   const wrapperUnitCost = useStore((s) => s.wrapperUnitCost);
   const boxUnitCost = useStore((s) => s.boxUnitCost);
-  const loadPackagingModule = useStore((s) => s.loadPackagingModule);
 
   const [tab, setTab] = useState<"wrappers" | "boxes">("wrappers");
   const [defineOpen, setDefineOpen] = useState<PackagingKind | null>(null);
@@ -286,9 +285,9 @@ export default function PackagingPage() {
       </div>
 
       {tab === "wrappers" ? (
-        <SortableTable data={wrappers} columns={wrapperColumns} globalFilterPlaceholder="Search wrappers..." onRefresh={loadPackagingModule} />
+        <SortableTable data={wrappers} columns={wrapperColumns} globalFilterPlaceholder="Search wrappers..." />
       ) : (
-        <SortableTable data={boxes} columns={boxColumns} globalFilterPlaceholder="Search boxes..." onRefresh={loadPackagingModule} />
+        <SortableTable data={boxes} columns={boxColumns} globalFilterPlaceholder="Search boxes..." />
       )}
 
       <DefineDialog kind={defineOpen ?? "wrapper"} open={defineOpen !== null} onClose={() => setDefineOpen(null)} />

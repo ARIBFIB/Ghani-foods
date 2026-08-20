@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { NavLink } from "@/components/ui/nav-link";
-import { ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "@/components/ui/toast";
 import { useStore } from "@/lib/store";
 import { PurchaseReceiptDialog } from "@/components/ui/purchase-receipt-dialog";
@@ -27,20 +27,6 @@ export default function ReceiptsPage() {
   const [toDate, setToDate] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const loadRawMaterialsModule = useStore((s) => s.loadRawMaterialsModule);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const handleRefresh = async () => {
-    if (isRefreshing) return;
-    setIsRefreshing(true);
-    try {
-      await loadRawMaterialsModule();
-      toast.success("Table refreshed");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to refresh");
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editRows, setEditRows] = useState<{ id: string; rawMaterialId: string; qty: string; cost: string }[]>([]);
@@ -126,12 +112,7 @@ export default function ReceiptsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-2">
-          <h1 className="text-xl font-semibold text-[var(--foreground)]">Receipts</h1>
-          <button type="button" onClick={handleRefresh} disabled={isRefreshing} title="Refresh table" aria-label="Refresh table" className="shrink-0 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] p-2 text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)] disabled:opacity-50 transition-colors">
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
-          </button>
-        </div>
+        <h1 className="text-xl font-semibold text-[var(--foreground)]">Receipts</h1>
         <button onClick={() => setDialogOpen(true)} className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
           + Record Purchase
         </button>

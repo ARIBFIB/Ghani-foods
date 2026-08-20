@@ -10,17 +10,12 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import { useState } from "react";
-import { RefreshCw } from "lucide-react";
-import { toast } from "@/components/ui/toast";
 
 interface SortableTableProps<T> {
   data: T[];
   columns: ColumnDef<T, unknown>[];
   globalFilterPlaceholder?: string;
   showGlobalFilter?: boolean;
-  /** Optional loader (e.g. a store's loadXModule function). When provided,
-   *  a refresh icon button appears next to the search box. */
-  onRefresh?: () => Promise<void> | void;
 }
 
 export function SortableTable<T>({
@@ -28,11 +23,9 @@ export function SortableTable<T>({
   columns,
   globalFilterPlaceholder = "Search...",
   showGlobalFilter = true,
-  onRefresh,
 }: SortableTableProps<T>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState("");
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const table = useReactTable({
     data,
@@ -45,44 +38,15 @@ export function SortableTable<T>({
     getFilteredRowModel: getFilteredRowModel(),
   });
 
-  const handleRefresh = async () => {
-    if (!onRefresh || isRefreshing) return;
-    setIsRefreshing(true);
-    try {
-      await onRefresh();
-      toast.success("Table refreshed");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to refresh table");
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
   return (
     <div className="space-y-3">
-      {(showGlobalFilter || onRefresh) && (
-        <div className="flex items-center gap-2">
-          {showGlobalFilter && (
-            <input
-              value={globalFilter}
-              onChange={(e) => setGlobalFilter(e.target.value)}
-              placeholder={globalFilterPlaceholder}
-              className="w-full max-w-sm rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--text-faint)] outline-none focus:border-[var(--surface-border-strong)]"
-            />
-          )}
-          {onRefresh && (
-            <button
-              type="button"
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              title="Refresh table"
-              aria-label="Refresh table"
-              className="shrink-0 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] p-2 text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)] disabled:opacity-50 transition-colors"
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
-            </button>
-          )}
-        </div>
+      {showGlobalFilter && (
+        <input
+          value={globalFilter}
+          onChange={(e) => setGlobalFilter(e.target.value)}
+          placeholder={globalFilterPlaceholder}
+          className="w-full max-w-sm rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--text-faint)] outline-none focus:border-[var(--surface-border-strong)]"
+        />
       )}
 
       <div className="overflow-x-auto rounded-xl border border-[var(--surface-border)]">

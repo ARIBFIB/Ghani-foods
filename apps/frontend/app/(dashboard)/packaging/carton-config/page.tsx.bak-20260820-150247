@@ -163,7 +163,6 @@ function AddConfigDialog({ open, onClose }: { open: boolean; onClose: () => void
 
 export default function CartonConfigPage() {
   const configs = useStore((s) => s.cartonConfigurations);
-  const loadCartonConfigurations = useStore((s) => s.loadCartonConfigurations);
   const wrappers = useStore((s) => s.wrappers);
   const boxes = useStore((s) => s.boxes);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -223,7 +222,7 @@ export default function CartonConfigPage() {
         </div>
       )}
 
-      <SortableTable data={rows} columns={columns} globalFilterPlaceholder="Search configurations..." onRefresh={loadCartonConfigurations} />
+      <SortableTable data={rows} columns={columns} globalFilterPlaceholder="Search configurations..." />
       <AddConfigDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
     </div>
   );

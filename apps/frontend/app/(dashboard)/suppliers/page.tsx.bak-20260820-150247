@@ -100,7 +100,7 @@ export default function SuppliersPage() {
           + Add Supplier
         </button>
       </div>
-      <SortableTable data={rows} columns={columns} globalFilterPlaceholder="Search suppliers..." onRefresh={loadRawMaterialsModule} />
+      <SortableTable data={rows} columns={columns} globalFilterPlaceholder="Search suppliers..." />
       <AddSupplierDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
     </div>
   );

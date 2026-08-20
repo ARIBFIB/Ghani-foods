@@ -18,7 +18,6 @@ function StatusBadge({ status }: { status: "in_progress" | "completed" }) {
 
 export default function BatchesPage() {
   const productionBatches = useStore((s) => s.productionBatches);
-  const loadProductionBatches = useStore((s) => s.loadProductionBatches);
 
   const columns = useMemo<ColumnDef<ProductionBatch, unknown>[]>(() => [
     {
@@ -50,7 +49,7 @@ export default function BatchesPage() {
           + New Batch
         </NavLink>
       </div>
-      <SortableTable data={productionBatches} columns={columns} globalFilterPlaceholder="Search batches..." onRefresh={loadProductionBatches} />
+      <SortableTable data={productionBatches} columns={columns} globalFilterPlaceholder="Search batches..." />
     </div>
   );
 }
