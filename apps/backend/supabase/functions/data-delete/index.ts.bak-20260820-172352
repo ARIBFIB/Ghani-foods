@@ -108,12 +108,7 @@ Deno.serve(async (req) => {
     for (const table of DELETE_ORDER) {
       const count = snapshots[table]?.length ?? 0;
       // Delete-all trick: match a condition that's always true for the primary key.
-      // customer_item_prices has a COMPOSITE primary key (customer_id, item_id) -
-      // it has no "id" column, so it needs a different always-true condition.
-      const { error } =
-        table === "customer_item_prices"
-          ? await supabase.from(table).delete().not("customer_id", "is", null)
-          : await supabase.from(table).delete().not("id", "is", null);
+      const { error } = await supabase.from(table).delete().not("id", "is", null);
       if (error) throw new Error(`Delete failed for ${table}: ${error.message}`);
       deleted[table] = count;
     }
