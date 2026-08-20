@@ -24,6 +24,19 @@ function StatusBadge({ isLow }: { isLow: boolean }) {
 function AddRawMaterialMasterDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const addRawMaterial = useStore((s) => s.addRawMaterial);
   const loadRawMaterialsModule = useStore((s) => s.loadRawMaterialsModule);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await loadRawMaterialsModule();
+      toast.success("Table refreshed");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to refresh");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<RawMaterialMasterFormValues>({
     resolver: zodResolver(rawMaterialMasterSchema),
     defaultValues: { name: "", unit: "kg", lowStockThreshold: 50 },
@@ -97,20 +110,6 @@ export default function RawMaterialsPage() {
   useEffect(() => {
     loadRawMaterialsModule();
   }, [loadRawMaterialsModule]);
-
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const handleRefresh = async () => {
-    if (isRefreshing) return;
-    setIsRefreshing(true);
-    try {
-      await loadRawMaterialsModule();
-      toast.success("Table refreshed");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to refresh");
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
 
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
