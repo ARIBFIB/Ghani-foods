@@ -1,22 +1,28 @@
 <#
-  fix-monthly-expenses-sidebar.ps1
+  fix-sidebar-fixed-scroll.ps1
   ------------------------------------------------------------------
   Run this from the project ROOT:
     D:\Rozmarrah-CUST\Saim Ashraf\Nimko\Working\Code\GhaniFoods
 
   BUG:
-    Visiting /monthly-expenses correctly opens the page, but the left
-    sidebar falls back to the "Dashboard" section instead of staying
-    on "Batches" (which is where the "Costs -> Monthly Expenses" link
-    lives). This is because ROUTE_PREFIXES in sidebar-component.tsx
-    has no entry for "/monthly-expenses", so getSectionFromPathname()
-    can't match it and defaults to "dashboard".
+    On pages with tall content (Reports, Settings, etc.), the whole
+    page scrolls - including the left sidebar - because the outer
+    wrapper in the dashboard layout uses "min-h-screen", which grows
+    taller than the viewport and lets the WHOLE BODY scroll. Since
+    the sidebar itself isn't pinned to the viewport, it scrolls away
+    with the rest of the page.
 
   FIX:
-    Adds ["/monthly-expenses", "batches"] to ROUTE_PREFIXES so the
-    sidebar correctly stays on the Batches section (showing the
-    Costs -> Monthly Expenses link as active/available) whenever the
-    user is on /monthly-expenses.
+    Changes the outer wrapper in:
+      apps/frontend/app/(dashboard)/layout.tsx
+    from "flex min-h-screen ..." to "flex h-screen overflow-hidden ...".
+    This locks the whole shell to exactly the viewport height. The
+    sidebar (already h-screen) now stays fixed in place, and only
+    the <main> area (which already has overflow-y-auto) scrolls.
+
+    Because ALL dashboard pages (Reports, Settings, Batches, etc.)
+    share this one layout file, this single fix resolves the issue
+    everywhere at once - no need to touch each page individually.
 
   SAFETY:
     The file is backed up to <file>.bak-<timestamp> before editing.
@@ -31,7 +37,7 @@ $root = Get-Location
 $ts = Get-Date -Format "yyyyMMdd-HHmmss"
 
 Write-Host "==================================================" -ForegroundColor Cyan
-Write-Host "  Fix: Monthly Expenses sidebar section highlight" -ForegroundColor Cyan
+Write-Host "  Fix: Sidebar fixed, main content scrollable" -ForegroundColor Cyan
 Write-Host "==================================================" -ForegroundColor Cyan
 Write-Host "Root: $root`n"
 
@@ -61,34 +67,19 @@ function Edit-File($path, $old, $new, $label) {
     }
 }
 
-$sidebarPath = Join-Path $root "apps\frontend\components\ui\sidebar-component.tsx"
+$layoutPath = Join-Path $root "apps\frontend\app\(dashboard)\layout.tsx"
 
-Write-Host "`n[1/1] apps/frontend/components/ui/sidebar-component.tsx"
-Backup-File $sidebarPath
+Write-Host "`n[1/1] apps/frontend/app/(dashboard)/layout.tsx"
+Backup-File $layoutPath
 
-Edit-File $sidebarPath `
+Edit-File $layoutPath `
 @'
-const ROUTE_PREFIXES: Array<[string, SectionId]> = [
-  ["/suppliers", "suppliers"],
-  ["/raw-materials", "raw-materials"],
-  ["/receipts", "receipts"],
-  ["/packaging", "raw-materials"],
-  ["/packaging/carton-config", "raw-materials"],
-  ["/batches", "batches"],
-  ["/finished-cartons", "finished-cartons"],
+        <div className="flex min-h-screen bg-[var(--background)]">
 '@ `
 @'
-const ROUTE_PREFIXES: Array<[string, SectionId]> = [
-  ["/suppliers", "suppliers"],
-  ["/raw-materials", "raw-materials"],
-  ["/receipts", "receipts"],
-  ["/packaging", "raw-materials"],
-  ["/packaging/carton-config", "raw-materials"],
-  ["/batches", "batches"],
-  ["/monthly-expenses", "batches"],
-  ["/finished-cartons", "finished-cartons"],
+        <div className="flex h-screen overflow-hidden bg-[var(--background)]">
 '@ `
-"sidebar-component.tsx: map /monthly-expenses -> batches section"
+"layout.tsx: lock outer shell to viewport height so sidebar stays fixed"
 
 Write-Host "`n==================================================" -ForegroundColor Cyan
 Write-Host "  DONE" -ForegroundColor Cyan
@@ -98,10 +89,14 @@ Write-Host @"
 Next steps:
   1. cd apps\frontend
   2. npm run build   (or just refresh dev server)
-  3. Visit /monthly-expenses in the browser and confirm the sidebar
-     now stays on the "Batches" section (Costs -> Monthly Expenses)
-     instead of falling back to Dashboard.
+  3. Visit /reports, /settings, or any page with tall content and
+     confirm the left sidebar now stays fixed in place while only
+     the right-side content area scrolls.
+
+This fix applies to ALL dashboard pages at once (Reports, Settings,
+Batches, Monthly Expenses, etc.) since they all share this one
+layout.tsx file.
 
 If anything looks off, the original file is backed up right next to
-it as sidebar-component.tsx.bak-$ts
+it as layout.tsx.bak-$ts
 "@ -ForegroundColor Yellow
