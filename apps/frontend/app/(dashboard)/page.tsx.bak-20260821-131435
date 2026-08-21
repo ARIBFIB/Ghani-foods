@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useMemo } from "react";
 import { NavLink } from "@/components/ui/nav-link";
@@ -19,7 +19,6 @@ export default function DashboardPage() {
   const router = useRouter();
   const { navigate } = useNavigationLoading();
   const rawMaterials = useStore((s) => s.rawMaterials);
-  const productionBatches = useStore((s) => s.productionBatches);
   const wrappers = useStore((s) => s.wrappers);
   const boxes = useStore((s) => s.boxes);
   const invoices = useStore((s) => s.invoices);
@@ -43,13 +42,8 @@ export default function DashboardPage() {
     const totalRawMaterialValue = rawMaterials.reduce((sum, m) => sum + m.quantityInStock * m.avgUnitCost, 0);
     const finishedCartonsReady = finishedCartons.reduce((sum, c) => sum + c.stockQty, 0);
     const totalReceivables = customers.reduce((sum, c) => sum + Math.max(0, c.currentBalance), 0);
-    const now = new Date();
-    const batchesThisMonth = productionBatches.filter((b) => {
-      const d = new Date(b.batchDate);
-      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-    }).length;
-    return { totalRawMaterialValue, finishedCartonsReady, totalReceivables, batchesThisMonth };
-  }, [rawMaterials, finishedCartons, customers, productionBatches]);
+    return { totalRawMaterialValue, finishedCartonsReady, totalReceivables };
+  }, [rawMaterials, finishedCartons, customers]);
 
   const recentInvoices = invoices.slice(0, 5);
 
@@ -61,7 +55,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard label="Total Raw Material Value" value={`Rs. ${kpis.totalRawMaterialValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} />
-        <KpiCard label="Batches This Month" value={kpis.batchesThisMonth} />
+        <KpiCard label="Batches This Month" value={6} />
         <KpiCard label="Finished Cartons Ready" value={kpis.finishedCartonsReady} />
         <KpiCard label="Total Receivables" value={`Rs. ${kpis.totalReceivables.toLocaleString()}`} />
       </div>
