@@ -65,7 +65,6 @@ const ROUTE_PREFIXES: Array<[string, SectionId]> = [
   ["/packaging", "raw-materials"],
   ["/packaging/carton-config", "raw-materials"],
   ["/batches", "batches"],
-  ["/monthly-expenses", "batches"],
   ["/finished-cartons", "finished-cartons"],
   ["/customers", "customers"],
   ["/invoices", "invoices"],
