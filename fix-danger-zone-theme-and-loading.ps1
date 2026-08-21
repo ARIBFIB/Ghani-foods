@@ -1,4 +1,58 @@
-﻿"use client";
+<#
+  fix-danger-zone-theme-and-loading.ps1
+  ------------------------------------------------------------------
+  Run this from the project ROOT:
+    D:\Rozmarrah-CUST\Saim Ashraf\Nimko\Working\Code\GhaniFoods
+
+  ISSUES FIXED:
+    1. The "Danger Zone" panel on Settings -> Export & Data used
+       colors (red-900, red-950/20, text-red-300/80, etc.) that were
+       only tuned for dark theme. In LIGHT theme this produced very
+       low-contrast pale-pink-on-pale-pink text that's hard to read.
+       Fix adds proper light-mode red shades alongside dark: variants
+       so it looks correct in both themes.
+
+    2. While deleting all data, the UI only showed a plain
+       "Deleting..." label on the button - no loading animation.
+       Fix adds a full-screen overlay using the existing
+       LottieLoader component (public/loading/loading.json), matching
+       the same loader already used elsewhere in the app (e.g.
+       NavigationLoadingOverlay), while the delete request is in
+       flight.
+
+  SAFETY:
+    The file is backed up to <file>.bak-<timestamp> before being
+    fully replaced with a corrected version.
+------------------------------------------------------------------#>
+
+$ErrorActionPreference = "Stop"
+$root = Get-Location
+$ts = Get-Date -Format "yyyyMMdd-HHmmss"
+
+Write-Host "==================================================" -ForegroundColor Cyan
+Write-Host "  Fix: Danger Zone light-theme contrast + delete loader" -ForegroundColor Cyan
+Write-Host "==================================================" -ForegroundColor Cyan
+Write-Host "Root: $root`n"
+
+function Backup-File($path) {
+    if (Test-Path -LiteralPath $path) {
+        $bak = "$path.bak-$ts"
+        Copy-Item -LiteralPath $path -Destination $bak -Force
+        Write-Host "  Backed up -> $bak" -ForegroundColor DarkGray
+    }
+}
+
+$dangerZonePath = Join-Path $root "apps\frontend\components\ui\danger-zone-panel.tsx"
+
+Write-Host "`n[1/1] apps/frontend/components/ui/danger-zone-panel.tsx"
+
+if (-not (Test-Path -LiteralPath $dangerZonePath)) {
+    Write-Warning "SKIP: file not found -> $dangerZonePath"
+} else {
+    Backup-File $dangerZonePath
+
+    $newContent = @'
+"use client";
 
 import { useState } from "react";
 import { toast } from "@/components/ui/toast";
@@ -145,3 +199,28 @@ export function DangerZonePanel() {
 }
 
 export default DangerZonePanel;
+'@
+
+    Set-Content -LiteralPath $dangerZonePath -Value $newContent -NoNewline -Encoding UTF8
+    Write-Host "  OK   [danger-zone-panel.tsx: light/dark contrast fixed + Lottie loader added]" -ForegroundColor Green
+}
+
+Write-Host "`n==================================================" -ForegroundColor Cyan
+Write-Host "  DONE" -ForegroundColor Cyan
+Write-Host "==================================================" -ForegroundColor Cyan
+Write-Host @"
+
+Next steps:
+  1. cd apps\frontend
+  2. npm run build   (or just refresh dev server)
+  3. Visit /settings?tab=export in LIGHT theme and confirm the
+     "Danger Zone" panel now has clearly readable red text on a
+     light red background (not washed-out pink-on-pink).
+  4. Confirm it still looks correct in DARK theme too (unchanged).
+  5. Trigger a delete (on a test dataset!) and confirm the Lottie
+     loading animation (loading.json) now shows full-screen while
+     the backup + delete request is in progress.
+
+If anything looks off, the original file is backed up right next to
+it as danger-zone-panel.tsx.bak-$ts
+"@ -ForegroundColor Yellow
