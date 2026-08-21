@@ -1,4 +1,78 @@
-﻿"use client";
+<#
+  improve-reports-page.ps1
+  ------------------------------------------------------------------
+  Run this from the project ROOT:
+    D:\Rozmarrah-CUST\Saim Ashraf\Nimko\Working\Code\GhaniFoods
+
+  WHAT THIS FIXES / IMPROVES (Reports and Analytics page):
+
+  1. EMPTY STATE
+     Previously, when there was no data (e.g. right after "Delete All
+     Data"), Recharts rendered a broken-looking empty dashed box with
+     no message. Now each tab shows a clear "No data available for
+     this range" message instead.
+
+  2. THEME-AWARE CHARTS
+     Chart tooltips/axes/grid lines were hardcoded to dark colors
+     (#171717, #262626, #a3a3a3), so tooltips always looked dark even
+     in light theme. Now they use the app's existing CSS variables
+     (--surface, --surface-border, --foreground, --text-muted) so
+     charts match whichever theme is active.
+
+  3. SUMMARY CARDS PER TAB
+     - Inventory Movement: "Total Tracked Items" and "Items Low on
+       Stock" cards above the chart.
+     - Production Yield: "Total Output (kg)" and "Total Wastage (kg)"
+       cards above the chart.
+     - P&L: kept its existing Revenue/Cost/Profit cards.
+
+  4. SCROLLABLE CHARTS FOR LARGE DATASETS
+     If there are many raw materials/wrappers/boxes or many batches,
+     the bar chart now sits in a horizontally-scrollable container
+     with a sensible minimum width per bar, instead of squeezing all
+     labels illegibly into a fixed-width chart.
+
+  5. LOADING STATE
+     Shows a small skeleton while the store is still hydrating,
+     instead of a flash of an empty chart.
+
+  6. CONSISTENT STYLING
+     All three tabs now follow the same card/summary/chart layout
+     pattern.
+
+  SAFETY:
+    The file is backed up to <file>.bak-<timestamp> before being
+    fully replaced with the improved version.
+------------------------------------------------------------------#>
+
+$ErrorActionPreference = "Stop"
+$root = Get-Location
+$ts = Get-Date -Format "yyyyMMdd-HHmmss"
+
+Write-Host "==================================================" -ForegroundColor Cyan
+Write-Host "  Improve: Reports and Analytics page" -ForegroundColor Cyan
+Write-Host "==================================================" -ForegroundColor Cyan
+Write-Host "Root: $root`n"
+
+function Backup-File($path) {
+    if (Test-Path -LiteralPath $path) {
+        $bak = "$path.bak-$ts"
+        Copy-Item -LiteralPath $path -Destination $bak -Force
+        Write-Host "  Backed up -> $bak" -ForegroundColor DarkGray
+    }
+}
+
+$reportsPath = Join-Path $root "apps\frontend\app\(dashboard)\reports\page.tsx"
+
+Write-Host "`n[1/1] apps/frontend/app/(dashboard)/reports/page.tsx"
+
+if (-not (Test-Path -LiteralPath $reportsPath)) {
+    Write-Warning "SKIP: file not found -> $reportsPath"
+} else {
+    Backup-File $reportsPath
+
+    $newContent = @'
+"use client";
 
 import { useMemo, useState } from "react";
 import {
@@ -324,3 +398,33 @@ export default function ReportsPage() {
     </div>
   );
 }
+'@
+
+    Set-Content -LiteralPath $reportsPath -Value $newContent -NoNewline -Encoding UTF8
+    Write-Host "  OK   [reports/page.tsx: fully improved]" -ForegroundColor Green
+}
+
+Write-Host "`n==================================================" -ForegroundColor Cyan
+Write-Host "  DONE" -ForegroundColor Cyan
+Write-Host "==================================================" -ForegroundColor Cyan
+Write-Host @"
+
+Next steps:
+  1. cd apps\frontend
+  2. npm run build   (or just refresh dev server)
+  3. Visit /reports and check all three tabs:
+       - Inventory Movement -> summary cards + chart (or empty state
+         if no raw materials/wrappers/boxes exist yet)
+       - Production Yield -> summary cards + chart (or empty state
+         if no batches exist yet)
+       - P and L -> existing summary cards + line chart (or empty
+         state if no invoices in the selected date range)
+  4. Toggle light/dark theme and confirm chart tooltips/axes/grid now
+     follow the active theme instead of always looking dark.
+  5. If you have many raw materials/wrappers/boxes/batches, confirm
+     the Inventory/Yield charts scroll horizontally instead of
+     squeezing all labels together.
+
+If anything looks off, the original file is backed up right next to
+it as page.tsx.bak-$ts
+"@ -ForegroundColor Yellow
