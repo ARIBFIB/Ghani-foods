@@ -750,9 +750,23 @@ export const useStore = create<State>()((set, get) => ({
   },
 
   createInvoice: async (input) => {
+    // Send both camelCase and snake_case keys per line - the DB / RPC side
+    // uses snake_case column names everywhere else in this project, but the
+    // frontend's own domain type is camelCase. Sending both avoids a silent
+    // key-name mismatch causing "finished carton not found" even when a
+    // valid, in-stock item was selected.
+    const normalizedLines = input.lines.map((l) => ({
+      itemId: l.itemId,
+      item_id: l.itemId,
+      qty: l.qty,
+      unitPrice: l.unitPrice,
+      unit_price: l.unitPrice,
+      priceSourceNote: l.priceSourceNote,
+      price_source_note: l.priceSourceNote,
+    }));
     const { data, error } = await supabase.rpc("fn_create_invoice", {
       p_customer_id: input.customerId,
-      p_lines: input.lines,
+      p_lines: normalizedLines,
     });
     if (error || !data) throw new Error(error?.message ?? "Failed to create invoice");
     await Promise.all([get().loadCustomersModule(), get().loadFinishedCartons()]);
