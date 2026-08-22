@@ -5,9 +5,14 @@ import * as data from "./data";
 
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
-const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN;
+const DEFAULT_DEV_ORIGIN = "http://localhost:3000";
+let FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN;
 if (!FRONTEND_ORIGIN) {
-  throw new Error("FRONTEND_ORIGIN env var is required (e.g. http://localhost:3000 for local dev)");
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("FRONTEND_ORIGIN env var is required in production");
+  }
+  console.warn(`FRONTEND_ORIGIN not set, defaulting to ${DEFAULT_DEV_ORIGIN} for local dev`);
+  FRONTEND_ORIGIN = DEFAULT_DEV_ORIGIN;
 }
 
 app.use(cors({ origin: FRONTEND_ORIGIN }));

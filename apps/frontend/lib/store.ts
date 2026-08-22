@@ -9,10 +9,10 @@ const supabase = createClient();
 // Row mappers (snake_case DB rows -> camelCase domain types)
 // =============================================================================
 
-function mapSupplierRow(row: Record<string, unknown>): Supplier {
+function mapSupplierRow(row: Record<string, any>): Supplier {
   return { id: row.id, name: row.name, phone: row.phone, address: row.address ?? undefined };
 }
-function mapRawMaterialRow(row: Record<string, unknown>): RawMaterial {
+function mapRawMaterialRow(row: Record<string, any>): RawMaterial {
   return {
     id: row.id,
     name: row.name,
@@ -22,13 +22,13 @@ function mapRawMaterialRow(row: Record<string, unknown>): RawMaterial {
     lowStockThreshold: Number(row.low_stock_threshold),
   };
 }
-function mapReceiptRow(row: Record<string, unknown>): PurchaseReceipt {
+function mapReceiptRow(row: Record<string, any>): PurchaseReceipt {
   return { id: row.id, supplierId: row.supplier_id, purchaseDate: row.purchase_date };
 }
-function mapReceiptLineRow(row: Record<string, unknown>): PurchaseReceiptLine {
+function mapReceiptLineRow(row: Record<string, any>): PurchaseReceiptLine {
   return { id: row.id, receiptId: row.receipt_id, rawMaterialId: row.raw_material_id, qty: Number(row.qty), cost: Number(row.cost) };
 }
-function mapWrapperRow(row: Record<string, unknown>): Wrapper {
+function mapWrapperRow(row: Record<string, any>): Wrapper {
   return {
     id: row.id,
     name: row.name,
@@ -38,7 +38,7 @@ function mapWrapperRow(row: Record<string, unknown>): Wrapper {
     lowStockThreshold: Number(row.low_stock_threshold),
   };
 }
-function mapBoxRow(row: Record<string, unknown>): Box {
+function mapBoxRow(row: Record<string, any>): Box {
   return {
     id: row.id,
     name: row.name,
@@ -48,7 +48,7 @@ function mapBoxRow(row: Record<string, unknown>): Box {
     lowStockThreshold: Number(row.low_stock_threshold),
   };
 }
-function mapWrapperRunRow(row: Record<string, unknown>): WrapperProductionRun {
+function mapWrapperRunRow(row: Record<string, any>): WrapperProductionRun {
   return {
     id: row.id,
     wrapperId: row.wrapper_id,
@@ -57,7 +57,7 @@ function mapWrapperRunRow(row: Record<string, unknown>): WrapperProductionRun {
     date: row.run_date,
   };
 }
-function mapBoxRunRow(row: Record<string, unknown>): BoxProductionRun {
+function mapBoxRunRow(row: Record<string, any>): BoxProductionRun {
   return {
     id: row.id,
     boxId: row.box_id,
@@ -66,7 +66,7 @@ function mapBoxRunRow(row: Record<string, unknown>): BoxProductionRun {
     date: row.run_date,
   };
 }
-function mapCartonConfigRow(row: Record<string, unknown>): CartonConfiguration {
+function mapCartonConfigRow(row: Record<string, any>): CartonConfiguration {
   return {
     id: row.id,
     name: row.name,
@@ -77,7 +77,7 @@ function mapCartonConfigRow(row: Record<string, unknown>): CartonConfiguration {
     usedInPackingRun: Boolean(row.used_in_packing_run),
   };
 }
-function mapBatchRow(row: Record<string, unknown>): ProductionBatch {
+function mapBatchRow(row: Record<string, any>): ProductionBatch {
   return {
     id: row.id,
     batchDate: row.batch_date,
@@ -91,7 +91,7 @@ function mapBatchRow(row: Record<string, unknown>): ProductionBatch {
     leftoverKgConsumed: row.leftover_kg_consumed != null ? Number(row.leftover_kg_consumed) : undefined,
   };
 }
-function mapFinishedCartonRow(row: Record<string, unknown>): FinishedCarton {
+function mapFinishedCartonRow(row: Record<string, any>): FinishedCarton {
   return {
     id: row.id,
     name: row.name,
@@ -105,10 +105,10 @@ function mapFinishedCartonRow(row: Record<string, unknown>): FinishedCarton {
     stockQty: Number(row.stock_qty),
   };
 }
-function mapCustomerRow(row: Record<string, unknown>): Customer {
+function mapCustomerRow(row: Record<string, any>): Customer {
   return { id: row.id, name: row.name, phone: row.phone, currentBalance: Number(row.current_balance) };
 }
-function mapCustomerItemPriceRow(row: Record<string, unknown>): CustomerItemPrice {
+function mapCustomerItemPriceRow(row: Record<string, any>): CustomerItemPrice {
   return {
     customerId: row.customer_id,
     itemId: row.item_id,
@@ -116,7 +116,7 @@ function mapCustomerItemPriceRow(row: Record<string, unknown>): CustomerItemPric
     lastSoldDate: row.last_sold_date,
   };
 }
-function mapInvoiceRow(row: Record<string, unknown>, customerName: string, items: InvoiceLineRecord[]): Invoice {
+function mapInvoiceRow(row: Record<string, any>, customerName: string, items: InvoiceLineRecord[]): Invoice {
   return {
     id: row.invoice_number ?? row.id,
     customerId: row.customer_id,
@@ -126,7 +126,7 @@ function mapInvoiceRow(row: Record<string, unknown>, customerName: string, items
     items,
   };
 }
-function mapInvoiceItemRow(row: Record<string, unknown>): InvoiceLineRecord {
+function mapInvoiceItemRow(row: Record<string, any>): InvoiceLineRecord {
   return {
     itemId: row.finished_carton_id,
     itemName: row.item_name,
@@ -136,7 +136,7 @@ function mapInvoiceItemRow(row: Record<string, unknown>): InvoiceLineRecord {
     priceSourceNote: row.price_source_note ?? undefined,
   };
 }
-function mapLedgerRow(row: Record<string, unknown>): LedgerEntry {
+function mapLedgerRow(row: Record<string, any>): LedgerEntry {
   return {
     id: row.id,
     customerId: row.customer_id,
@@ -148,7 +148,7 @@ function mapLedgerRow(row: Record<string, unknown>): LedgerEntry {
     note: row.note ?? undefined,
   };
 }
-function mapPaymentRow(row: Record<string, unknown>, customerName: string): Payment {
+function mapPaymentRow(row: Record<string, any>, customerName: string): Payment {
   return {
     id: row.id,
     customerId: row.customer_id,
@@ -159,7 +159,7 @@ function mapPaymentRow(row: Record<string, unknown>, customerName: string): Paym
     paidAt: row.paid_at,
   };
 }
-function mapSettingsRow(row: Record<string, unknown>): AppSettings {
+function mapSettingsRow(row: Record<string, any>): AppSettings {
   return {
     businessName: row.business_name,
     address: row.address,
@@ -707,11 +707,11 @@ export const useStore = create<State>()((set, get) => ({
       itemsByInvoiceId.set(row.invoice_id, list);
     }
 
-    const invoices = (invoicesRes.data ?? []).map((row: Record<string, unknown>) =>
+    const invoices = (invoicesRes.data ?? []).map((row: Record<string, any>) =>
       mapInvoiceRow(row, customerNameById.get(row.customer_id) ?? "", itemsByInvoiceId.get(row.id) ?? [])
     );
 
-    const payments = (paymentsRes.data ?? []).map((row: Record<string, unknown>) => mapPaymentRow(row, customerNameById.get(row.customer_id) ?? ""));
+    const payments = (paymentsRes.data ?? []).map((row: Record<string, any>) => mapPaymentRow(row, customerNameById.get(row.customer_id) ?? ""));
 
     set({
       customers,

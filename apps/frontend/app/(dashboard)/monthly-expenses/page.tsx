@@ -61,7 +61,7 @@ export default function MonthlyExpensesPage() {
       .gte("month", `${m}-01`)
       .lt("month", nextMonthStr(m))
       .order("created_at", { ascending: false });
-    setRows((data ?? []).map((r: Record<string, unknown>) => ({ id: r.id, month: r.month, name: r.name, amount: Number(r.amount) })));
+    setRows((data ?? []).map((r: Record<string, unknown>) => ({ id: String(r.id), month: String(r.month), name: String(r.name), amount: Number(r.amount) })));
     setLoading(false);
   };
 
@@ -118,7 +118,7 @@ export default function MonthlyExpensesPage() {
       batchCount: result.batchCount,
       totalExpense: Number(result.totalExpense),
       allocations: (result.allocations ?? []).map((a: Record<string, unknown>) => ({
-        batchId: a.batchId,
+        batchId: String(a.batchId),
         outputYieldKg: Number(a.outputYieldKg),
         share: Number(a.share),
       })),

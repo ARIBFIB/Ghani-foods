@@ -140,17 +140,17 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
     ]);
     setExpenses(
       (expensesRes.data ?? []).map((r: Record<string, unknown>) => ({
-        id: r.id,
-        name: r.name,
+        id: String(r.id),
+        name: String(r.name),
         amount: Number(r.amount),
-        createdAt: r.created_at,
+        createdAt: String(r.created_at),
       }))
     );
     setAllocations(
       (allocationsRes.data ?? []).map((r: Record<string, unknown>) => ({
-        id: r.id,
-        month: r.month,
-        allocationMethod: r.allocation_method,
+        id: String(r.id),
+        month: String(r.month),
+        allocationMethod: String(r.allocation_method),
         totalMonthExpense: Number(r.total_month_expense),
         batchShare: Number(r.batch_share),
       }))
