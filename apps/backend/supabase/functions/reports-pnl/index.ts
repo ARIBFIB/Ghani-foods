@@ -1,4 +1,4 @@
-﻿// GET /functions/v1/reports-pnl?from=&to=
+// GET /functions/v1/reports-pnl?from=&to=
 // Real-time P&L: unit cost vs realized selling price at batch/carton level (FR-47).
 import { corsHeaders } from "../_shared/cors.ts";
 import { getClient, jsonResponse, envelopeError, envelopeSuccess } from "../_shared/client.ts";
@@ -28,12 +28,12 @@ Deno.serve(async (req: Request) => {
       .select("finished_carton_id,qty,unit_price");
     if (itemErr) return jsonResponse(envelopeError(itemErr.message, "DB_ERROR"), 500, corsHeaders);
 
-    const byBatch = (batchRows ?? []).map((b: any) => {
-      const cartonsForBatch = (cartons ?? []).filter((c: any) => c.source_batch_id === b.id);
-      const items = (invoiceItems ?? []).filter((i: any) => cartonsForBatch.some((c: any) => c.id === i.finished_carton_id));
-      const totalQty = items.reduce((s: number, i: any) => s + Number(i.qty), 0);
+    const byBatch = (batchRows ?? []).map((b: Record<string, unknown>) => {
+      const cartonsForBatch = (cartons ?? []).filter((c: Record<string, unknown>) => c.source_batch_id === b.id);
+      const items = (invoiceItems ?? []).filter((i: Record<string, unknown>) => cartonsForBatch.some((c: Record<string, unknown>) => c.id === i.finished_carton_id));
+      const totalQty = items.reduce((s: number, i: Record<string, unknown>) => s + Number(i.qty), 0);
       const avgSellPricePerKgEquivalent = totalQty > 0
-        ? items.reduce((s: number, i: any) => s + Number(i.qty) * Number(i.unit_price), 0) / totalQty
+        ? items.reduce((s: number, i: Record<string, unknown>) => s + Number(i.qty) * Number(i.unit_price), 0) / totalQty
         : 0;
       const marginPercent = b.bulk_cost_per_kg > 0
         ? Math.round(((avgSellPricePerKgEquivalent - b.bulk_cost_per_kg) / b.bulk_cost_per_kg) * 10000) / 100
@@ -46,11 +46,11 @@ Deno.serve(async (req: Request) => {
       };
     });
 
-    const byCarton = (cartons ?? []).map((c: any) => {
-      const items = (invoiceItems ?? []).filter((i: any) => i.finished_carton_id === c.id);
-      const totalQty = items.reduce((s: number, i: any) => s + Number(i.qty), 0);
+    const byCarton = (cartons ?? []).map((c: Record<string, unknown>) => {
+      const items = (invoiceItems ?? []).filter((i: Record<string, unknown>) => i.finished_carton_id === c.id);
+      const totalQty = items.reduce((s: number, i: Record<string, unknown>) => s + Number(i.qty), 0);
       const avgSellingPricePerCarton = totalQty > 0
-        ? items.reduce((s: number, i: any) => s + Number(i.qty) * Number(i.unit_price), 0) / totalQty
+        ? items.reduce((s: number, i: Record<string, unknown>) => s + Number(i.qty) * Number(i.unit_price), 0) / totalQty
         : 0;
       const marginPercent = c.cost_per_carton > 0
         ? Math.round(((avgSellingPricePerCarton - c.cost_per_carton) / c.cost_per_carton) * 10000) / 100

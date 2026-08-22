@@ -1,4 +1,4 @@
-﻿// GET /functions/v1/inventory-leftover-summary
+// GET /functions/v1/inventory-leftover-summary
 // Total unconsumed bulk product (leftover_qty_kg) across all batches, plus per-batch breakdown.
 import { corsHeaders } from "../_shared/cors.ts";
 import { getClient, jsonResponse, envelopeError, envelopeSuccess } from "../_shared/client.ts";
@@ -15,9 +15,9 @@ Deno.serve(async (req: Request) => {
 
     if (error) return jsonResponse(envelopeError(error.message, "DB_ERROR"), 500, corsHeaders);
 
-    const totalLeftoverKg = (data ?? []).reduce((s: number, b: any) => s + Number(b.leftover_qty_kg), 0);
+    const totalLeftoverKg = (data ?? []).reduce((s: number, b: Record<string, unknown>) => s + Number(b.leftover_qty_kg), 0);
     const totalLeftoverValue = (data ?? []).reduce(
-      (s: number, b: any) => s + Number(b.leftover_qty_kg) * Number(b.bulk_cost_per_kg), 0
+      (s: number, b: Record<string, unknown>) => s + Number(b.leftover_qty_kg) * Number(b.bulk_cost_per_kg), 0
     );
 
     return jsonResponse(envelopeSuccess({

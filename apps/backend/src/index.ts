@@ -5,13 +5,18 @@ import * as data from "./data";
 
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
-const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN || "http://localhost:3000";
+const FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN;
+if (!FRONTEND_ORIGIN) {
+  throw new Error("FRONTEND_ORIGIN env var is required (e.g. http://localhost:3000 for local dev)");
+}
 
 app.use(cors({ origin: FRONTEND_ORIGIN }));
 app.use(express.json());
 
 app.use((req, _res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  }
   next();
 });
 
@@ -111,5 +116,5 @@ app.patch("/api/settings", (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`GhaniFoods backend running at http://localhost:${PORT}`);
+  console.log(`GhaniFoods backend running on port ${PORT} (origin: ${FRONTEND_ORIGIN})`);
 });

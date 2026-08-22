@@ -1,4 +1,4 @@
-﻿// GET /functions/v1/reports-inventory?period=&from=&to=
+// GET /functions/v1/reports-inventory?period=&from=&to=
 import { corsHeaders } from "../_shared/cors.ts";
 import { getClient, jsonResponse, envelopeError, envelopeSuccess } from "../_shared/client.ts";
 
@@ -39,13 +39,13 @@ Deno.serve(async (req: Request) => {
       .select("box_id, quantity_produced, run_date");
     if (brErr) return jsonResponse(envelopeError(brErr.message, "DB_ERROR"), 500, corsHeaders);
 
-    const rawMaterialMovement = (rawMaterials ?? []).map((m: any) => {
+    const rawMaterialMovement = (rawMaterials ?? []).map((m: Record<string, unknown>) => {
       const purchasedQty = (receiptLines ?? [])
-        .filter((l: any) => l.raw_material_id === m.id)
-        .reduce((s: number, l: any) => s + Number(l.qty), 0);
+        .filter((l: Record<string, unknown>) => l.raw_material_id === m.id)
+        .reduce((s: number, l: Record<string, unknown>) => s + Number(l.qty), 0);
       const consumedQty = (consumptions ?? [])
-        .filter((c: any) => c.raw_material_id === m.id)
-        .reduce((s: number, c: any) => s + Number(c.qty), 0);
+        .filter((c: Record<string, unknown>) => c.raw_material_id === m.id)
+        .reduce((s: number, c: Record<string, unknown>) => s + Number(c.qty), 0);
       return {
         rawMaterialId: m.id,
         name: m.name,

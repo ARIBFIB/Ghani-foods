@@ -1,4 +1,4 @@
-﻿// GET /functions/v1/reports-production?from=&to=
+// GET /functions/v1/reports-production?from=&to=
 import { corsHeaders } from "../_shared/cors.ts";
 import { getClient, jsonResponse, envelopeError, envelopeSuccess } from "../_shared/client.ts";
 
@@ -21,7 +21,7 @@ Deno.serve(async (req: Request) => {
     const { data, error } = await query;
     if (error) return jsonResponse(envelopeError(error.message, "DB_ERROR"), 500, corsHeaders);
 
-    const result = (data ?? []).map((b: any) => ({
+    const result = (data ?? []).map((b: Record<string, unknown>) => ({
       batchId: b.id,
       batchDate: b.batch_date,
       outputYieldKg: Number(b.output_yield_kg),

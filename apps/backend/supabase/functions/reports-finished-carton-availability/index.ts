@@ -1,4 +1,4 @@
-﻿// GET /functions/v1/reports-finished-carton-availability
+// GET /functions/v1/reports-finished-carton-availability
 import { corsHeaders } from "../_shared/cors.ts";
 import { getClient, jsonResponse, envelopeError, envelopeSuccess } from "../_shared/client.ts";
 
@@ -14,7 +14,7 @@ Deno.serve(async (req: Request) => {
 
     if (error) return jsonResponse(envelopeError(error.message, "DB_ERROR"), 500, corsHeaders);
 
-    const result = (data ?? []).map((c: any) => ({
+    const result = (data ?? []).map((c: Record<string, unknown>) => ({
       id: c.id,
       name: c.name,
       stockQty: c.stock_qty,

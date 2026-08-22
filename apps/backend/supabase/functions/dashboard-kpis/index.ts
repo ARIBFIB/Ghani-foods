@@ -1,4 +1,4 @@
-﻿// GET /functions/v1/dashboard-kpis
+// GET /functions/v1/dashboard-kpis
 // Aggregates KPIs + low-stock alerts (FR-8) per backend spec section 2_dashboard.
 import { corsHeaders } from "../_shared/cors.ts";
 import { getClient, jsonResponse, envelopeError, envelopeSuccess } from "../_shared/client.ts";
@@ -23,31 +23,31 @@ Deno.serve(async (req: Request) => {
     }
 
     const totalRawMaterialValue = (rawMaterials.data ?? []).reduce(
-      (sum: number, m: any) => sum + Number(m.quantity_in_stock) * Number(m.avg_unit_cost), 0
+      (sum: number, m: Record<string, unknown>) => sum + Number(m.quantity_in_stock) * Number(m.avg_unit_cost), 0
     );
 
     const now = new Date();
-    const batchesThisMonth = (batches.data ?? []).filter((b: any) => {
+    const batchesThisMonth = (batches.data ?? []).filter((b: Record<string, unknown>) => {
       const d = new Date(b.batch_date);
       return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
     }).length;
 
-    const finishedCartonsReady = (finishedCartons.data ?? []).reduce((s: number, c: any) => s + Number(c.stock_qty), 0);
+    const finishedCartonsReady = (finishedCartons.data ?? []).reduce((s: number, c: Record<string, unknown>) => s + Number(c.stock_qty), 0);
 
     const totalReceivables = (customers.data ?? [])
-      .filter((c: any) => Number(c.current_balance) > 0)
-      .reduce((s: number, c: any) => s + Number(c.current_balance), 0);
+      .filter((c: Record<string, unknown>) => Number(c.current_balance) > 0)
+      .reduce((s: number, c: Record<string, unknown>) => s + Number(c.current_balance), 0);
 
     const lowStockAlerts = [
       ...(rawMaterials.data ?? [])
-        .filter((m: any) => Number(m.quantity_in_stock) < Number(m.low_stock_threshold))
-        .map((m: any) => ({ type: "rawMaterial", id: m.id, name: m.name, quantityInStock: Number(m.quantity_in_stock), threshold: Number(m.low_stock_threshold) })),
+        .filter((m: Record<string, unknown>) => Number(m.quantity_in_stock) < Number(m.low_stock_threshold))
+        .map((m: Record<string, unknown>) => ({ type: "rawMaterial", id: m.id, name: m.name, quantityInStock: Number(m.quantity_in_stock), threshold: Number(m.low_stock_threshold) })),
       ...(wrappers.data ?? [])
-        .filter((w: any) => Number(w.stock_qty) < Number(w.low_stock_threshold))
-        .map((w: any) => ({ type: "wrapper", id: w.id, name: w.name, quantityInStock: Number(w.stock_qty), threshold: Number(w.low_stock_threshold) })),
+        .filter((w: Record<string, unknown>) => Number(w.stock_qty) < Number(w.low_stock_threshold))
+        .map((w: Record<string, unknown>) => ({ type: "wrapper", id: w.id, name: w.name, quantityInStock: Number(w.stock_qty), threshold: Number(w.low_stock_threshold) })),
       ...(boxes.data ?? [])
-        .filter((b: any) => Number(b.stock_qty) < Number(b.low_stock_threshold))
-        .map((b: any) => ({ type: "box", id: b.id, name: b.name, quantityInStock: Number(b.stock_qty), threshold: Number(b.low_stock_threshold) })),
+        .filter((b: Record<string, unknown>) => Number(b.stock_qty) < Number(b.low_stock_threshold))
+        .map((b: Record<string, unknown>) => ({ type: "box", id: b.id, name: b.name, quantityInStock: Number(b.stock_qty), threshold: Number(b.low_stock_threshold) })),
     ];
 
     return jsonResponse(envelopeSuccess({

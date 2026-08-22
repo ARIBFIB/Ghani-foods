@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { use, useEffect, useState } from "react";
 import { NavLink } from "@/components/ui/nav-link";
@@ -139,7 +139,7 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
         .order("month", { ascending: false }),
     ]);
     setExpenses(
-      (expensesRes.data ?? []).map((r: any) => ({
+      (expensesRes.data ?? []).map((r: Record<string, unknown>) => ({
         id: r.id,
         name: r.name,
         amount: Number(r.amount),
@@ -147,7 +147,7 @@ export default function BatchDetailPage({ params }: { params: Promise<{ id: stri
       }))
     );
     setAllocations(
-      (allocationsRes.data ?? []).map((r: any) => ({
+      (allocationsRes.data ?? []).map((r: Record<string, unknown>) => ({
         id: r.id,
         month: r.month,
         allocationMethod: r.allocation_method,
