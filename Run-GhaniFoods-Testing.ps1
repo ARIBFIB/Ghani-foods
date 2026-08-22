@@ -15,6 +15,11 @@
                                    nikalta hai (empty body, TODO, no
                                    return, empty catch, console.log left
                                    in code, etc.)
+      - RPC Functional Smoke Test -> asal Supabase RPC functions ko real
+                                     sample data ke saath call karta hai
+                                     (opt-in, -RunRpcSmokeTest se), taake
+                                     "reachable hai" aur "sahi kaam karta
+                                     hai" dono test ho.
 
     Output "Testing Report" folder me 3 files banta hai:
       - TestingReport_<timestamp>.txt
@@ -24,13 +29,18 @@
 
   Run karne ka tareeqa (root se):
     PS D:\Rozmarrah-CUST\Saim Ashraf\Nimko\Working\Code\GhaniFoods> .\Run-GhaniFoods-Testing.ps1
+    PS D:\...\GhaniFoods> .\Run-GhaniFoods-Testing.ps1 -RunRpcSmokeTest   # also runs real RPC calls (see WARNING below)
 ========================================================================
 #>
 
 [CmdletBinding()]
 param(
     [switch]$SkipInstall,     # npm install skip karne ke liye (agar node_modules already hai)
-    [switch]$SkipBuild        # build/typecheck skip karne ke liye (sirf static scan chahiye to)
+    [switch]$SkipBuild,       # build/typecheck skip karne ke liye (sirf static scan chahiye to)
+    [switch]$RunRpcSmokeTest  # DESTRUCTIVE: real Supabase RPCs ko real sample data se call karta hai
+                              # (e.g. fn_create_invoice) - ye REAL invoice banata hai aur REAL stock
+                              # deduct karta hai. Sirf staging/test project par, ya jaan-boojh kar
+                              # production par ek test customer/item ke saath chalayein. Default OFF.
 )
 
 $ErrorActionPreference = "Continue"
@@ -42,6 +52,14 @@ Write-Host " GhaniFoods - FULL SYSTEM TESTING" -ForegroundColor Cyan
 Write-Host " Root: $Root" -ForegroundColor Cyan
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host ""
+
+if ($RunRpcSmokeTest) {
+    Write-Host " WARNING: -RunRpcSmokeTest is ON. This will call REAL Supabase RPC" -ForegroundColor Red
+    Write-Host " functions (e.g. fn_create_invoice) with REAL sample data pulled from" -ForegroundColor Red
+    Write-Host " your DB. This WILL create a real invoice row and deduct real stock." -ForegroundColor Red
+    Write-Host " Press Ctrl+C now to abort, or wait 5 seconds to continue..." -ForegroundColor Red
+    Start-Sleep -Seconds 5
+}
 
 # ------------------------------------------------------------------
 # Setup: Report folder + timestamp
@@ -589,6 +607,7 @@ $BackendApiResults   = New-Object System.Collections.Generic.List[Object]
 $SupabaseFnResults   = New-Object System.Collections.Generic.List[Object]
 $DbTestResults       = New-Object System.Collections.Generic.List[Object]
 $FrontendPageResults = New-Object System.Collections.Generic.List[Object]
+$RpcSmokeResults     = New-Object System.Collections.Generic.List[Object]
 
 # ============================================================
 # PHASE 8: BACKEND LOCAL API LIVE TEST (apps/backend Express mock server)
@@ -648,6 +667,8 @@ catch {
 # ============================================================
 Write-Host ""
 Write-Host "===== PHASE 9: SUPABASE EDGE FUNCTIONS LIVE TEST =====" -ForegroundColor Cyan
+$SupaUrl = $null
+$SupaAnon = $null
 try {
     $SupaUrl = Get-DotEnvValue -Dir $FrontendDir -Key "NEXT_PUBLIC_SUPABASE_URL"
     if (-not $SupaUrl) { $SupaUrl = Get-DotEnvValue -Dir $BackendDir -Key "SUPABASE_URL" }
@@ -686,6 +707,7 @@ catch {
 # ============================================================
 Write-Host ""
 Write-Host "===== PHASE 10: DATABASE CONNECTIVITY TEST =====" -ForegroundColor Cyan
+$SqlTablesFound = @()
 try {
     if (-not $SupaUrl -or -not $SupaAnon) {
         Write-Host "  Supabase URL/key nahi mile - DB test skip." -ForegroundColor DarkYellow
@@ -709,6 +731,7 @@ try {
             }
             $sqlTables = $sqlTables | Sort-Object -Unique
         }
+        $SqlTablesFound = $sqlTables
         Write-Host "  Tables found in migrations: $($sqlTables.Count) - checking each is queryable..." -ForegroundColor Gray
         foreach ($tbl in $sqlTables) {
             $tUrl = "$SupaUrl/rest/v1/$tbl`?select=*&limit=1"
@@ -781,6 +804,102 @@ catch {
     $FrontendPageResults.Add([PSCustomObject]@{ Page="(error)"; Status="SKIPPED - $($_.Exception.Message)"; StatusCode=$null })
 }
 
+# ============================================================
+# PHASE 12: RPC FUNCTIONAL SMOKE TEST (real payload, opt-in)
+#
+# Unlike Phase 9 (which only checks a function is deployed/reachable
+# via OPTIONS/GET), this phase actually INVOKES key business RPCs with
+# a real, valid payload built from real rows already in your DB - the
+# same way the frontend does it. This is what catches bugs like
+# "finished carton not found" (a camelCase/snake_case key mismatch
+# between the frontend payload and the SQL function) that a plain
+# reachability check cannot see.
+#
+# OFF by default because it can mutate real data (e.g. fn_create_invoice
+# creates a real invoice row and deducts real stock). Run with
+# -RunRpcSmokeTest to enable. Each RPC tested here is documented with
+# what real-world side effect it has.
+# ============================================================
+Write-Host ""
+Write-Host "===== PHASE 12: RPC FUNCTIONAL SMOKE TEST (real payload) =====" -ForegroundColor Cyan
+
+if (-not $RunRpcSmokeTest) {
+    Write-Host "  Skipped (default off - pass -RunRpcSmokeTest to enable)." -ForegroundColor DarkYellow
+    $RpcSmokeResults.Add([PSCustomObject]@{ Rpc="(all)"; Status="SKIPPED - not requested (-RunRpcSmokeTest)"; StatusCode=$null; DurationMs=0; SideEffect="" })
+}
+elseif (-not $SupaUrl -or -not $SupaAnon) {
+    Write-Host "  Supabase URL/key nahi mile - RPC smoke test skip." -ForegroundColor DarkYellow
+    $RpcSmokeResults.Add([PSCustomObject]@{ Rpc="(all)"; Status="SKIPPED - .env / Supabase URL-key nahi mila"; StatusCode=$null; DurationMs=0; SideEffect="" })
+}
+else {
+    function Invoke-SupabaseRpc {
+        param([string]$FnName, [hashtable]$Payload)
+        $url = "$SupaUrl/rest/v1/rpc/$FnName"
+        $headers = @{ apikey = $SupaAnon; Authorization = "Bearer $SupaAnon"; "Content-Type" = "application/json" }
+        $bodyJson = $Payload | ConvertTo-Json -Depth 8
+        return Test-HttpEndpoint -Url $url -Method "POST" -Headers $headers -Body $bodyJson -TimeoutSec 15
+    }
+
+    function Get-OneRow {
+        param([string]$Table, [string]$Filter = "")
+        $url = "$SupaUrl/rest/v1/$Table`?select=*&limit=1$Filter"
+        try {
+            $resp = Invoke-RestMethod -Uri $url -Method Get -Headers @{ apikey = $SupaAnon; Authorization = "Bearer $SupaAnon" } -TimeoutSec 10 -ErrorAction Stop
+            if ($resp -and $resp.Count -gt 0) { return $resp[0] }
+        } catch {}
+        return $null
+    }
+
+    # --- fn_create_invoice: needs a real customer + a real finished_carton with stock ---
+    Write-Host "  -> Testing fn_create_invoice (creates a REAL invoice, deducts REAL stock)..." -ForegroundColor Yellow
+    $testCustomer = Get-OneRow -Table "customers"
+    $testCarton   = Get-OneRow -Table "finished_cartons" -Filter "&stock_qty=gt.0&order=stock_qty.desc"
+
+    if (-not $testCustomer -or -not $testCarton) {
+        Write-Host "     SKIPPED - no customer or no in-stock finished_carton found to test with." -ForegroundColor DarkYellow
+        $RpcSmokeResults.Add([PSCustomObject]@{ Rpc="fn_create_invoice"; Status="SKIPPED - no test data available (need >=1 customer and >=1 finished_carton with stock_qty > 0)"; StatusCode=$null; DurationMs=0; SideEffect="none (skipped)" })
+    }
+    else {
+        $unitPrice = if ($testCarton.cost_per_carton) { [double]$testCarton.cost_per_carton } else { 1 }
+        $payload = @{
+            p_customer_id = $testCustomer.id
+            p_lines = @(
+                @{
+                    itemId = $testCarton.id
+                    item_id = $testCarton.id
+                    qty = 1
+                    unitPrice = $unitPrice
+                    unit_price = $unitPrice
+                    priceSourceNote = "RPC smoke test (Run-GhaniFoods-Testing.ps1)"
+                    price_source_note = "RPC smoke test (Run-GhaniFoods-Testing.ps1)"
+                }
+            )
+        }
+        $r = Invoke-SupabaseRpc -FnName "fn_create_invoice" -Payload $payload
+        $verdict = if ($r.Status -eq "REACHABLE" -and $r.StatusCode -lt 300) { "WORKING (real invoice created - verify/delete it manually if this was not intended)" }
+                   else { "FAILED (HTTP $($r.StatusCode))" }
+        Write-Host "     $verdict" -ForegroundColor $(if ($verdict -like "WORKING*") { "Green" } else { "Red" })
+        $RpcSmokeResults.Add([PSCustomObject]@{
+            Rpc = "fn_create_invoice"
+            Status = $verdict
+            StatusCode = $r.StatusCode
+            DurationMs = $r.DurationMs
+            SideEffect = "Creates 1 real invoice for customer '$($testCustomer.id)', deducts 1 unit of stock from finished_carton '$($testCarton.id)' if successful."
+        })
+    }
+
+    # --- fn_price_lookup: read-only, safe to always run when RunRpcSmokeTest is on ---
+    if ($testCustomer -and $testCarton) {
+        Write-Host "  -> Testing fn_price_lookup (read-only)..." -ForegroundColor Yellow
+        $r2 = Invoke-SupabaseRpc -FnName "fn_price_lookup" -Payload @{ p_customer_id = $testCustomer.id; p_item_id = $testCarton.id }
+        $verdict2 = if ($r2.Status -eq "REACHABLE" -and $r2.StatusCode -lt 300) { "WORKING" } else { "FAILED (HTTP $($r2.StatusCode))" }
+        Write-Host "     $verdict2" -ForegroundColor $(if ($verdict2 -eq "WORKING") { "Green" } else { "Red" })
+        $RpcSmokeResults.Add([PSCustomObject]@{ Rpc="fn_price_lookup"; Status=$verdict2; StatusCode=$r2.StatusCode; DurationMs=$r2.DurationMs; SideEffect="none (read-only)" })
+    }
+
+    Write-Host "  RPC smoke test done. Working: $(($RpcSmokeResults | Where-Object Status -like 'WORKING*').Count) / $($RpcSmokeResults.Count)" -ForegroundColor Gray
+}
+
 $SW.Stop()
 
 
@@ -797,8 +916,9 @@ $BrokenFns    = ($FunctionStats | Where-Object Status -eq "BROKEN").Count
 $OkFns        = ($FunctionStats | Where-Object Status -eq "OK").Count
 
 $BackendApiFailCount = ($BackendApiResults | Where-Object { $_.Status -match 'NOT WORKING|SERVER ERROR|DID NOT START' }).Count
+$RpcSmokeFailCount   = ($RpcSmokeResults | Where-Object { $_.Status -like 'FAILED*' }).Count
 
-$OverallStatus = if ($TotalFail -gt 0 -or $BrokenFns -gt 0 -or $HighSeverity -gt 0 -or $BackendApiFailCount -gt 0) { "NEEDS ATTENTION" }
+$OverallStatus = if ($TotalFail -gt 0 -or $BrokenFns -gt 0 -or $HighSeverity -gt 0 -or $BackendApiFailCount -gt 0 -or $RpcSmokeFailCount -gt 0) { "NEEDS ATTENTION" }
                  elseif ($MedSeverity -gt 0 -or $SuspectFns -gt 0) { "PASS WITH WARNINGS" }
                  else { "PASS" }
 
@@ -826,6 +946,10 @@ $JsonObject = [ordered]@{
         backendApiTotal   = $BackendApiResults.Count
         frontendPagesOk   = ($FrontendPageResults | Where-Object Status -eq 'LOADS OK').Count
         frontendPagesTotal = $FrontendPageResults.Count
+        rpcSmokeTestRun    = [bool]$RunRpcSmokeTest
+        rpcSmokeWorking    = ($RpcSmokeResults | Where-Object Status -like 'WORKING*').Count
+        rpcSmokeFailed     = $RpcSmokeFailCount
+        rpcSmokeTotal      = $RpcSmokeResults.Count
     }
     alphaTesting   = $Findings
     functionAudit  = $FunctionStats
@@ -842,6 +966,7 @@ $JsonObject = [ordered]@{
     supabaseFunctionsLiveTest = $SupabaseFnResults
     databaseTest          = $DbTestResults
     frontendPagesLiveTest = $FrontendPageResults
+    rpcFunctionalSmokeTest = $RpcSmokeResults
 }
 $JsonObject | ConvertTo-Json -Depth 8 | Out-File -FilePath $JsonPath -Encoding utf8
 
@@ -864,6 +989,7 @@ $Txt.Add("Functions scanned      : $($FunctionStats.Count)  (OK=$OkFns, Suspect=
 $Txt.Add("Build steps            : Pass=$TotalPass, Fail=$TotalFail")
 $Txt.Add("Backend API (live)     : $(($BackendApiResults | Where-Object Status -eq 'WORKING').Count) / $($BackendApiResults.Count) working")
 $Txt.Add("Frontend pages (live)  : $(($FrontendPageResults | Where-Object Status -eq 'LOADS OK').Count) / $($FrontendPageResults.Count) loading OK")
+$Txt.Add("RPC smoke test (real)  : $(if ($RunRpcSmokeTest) { "$(($RpcSmokeResults | Where-Object Status -like 'WORKING*').Count) / $($RpcSmokeResults.Count) working" } else { "NOT RUN (pass -RunRpcSmokeTest to enable)" })")
 $Txt.Add("")
 
 $Txt.Add("============================================================")
@@ -1010,6 +1136,23 @@ foreach ($p in $FrontendPageResults) {
 $Txt.Add("")
 
 $Txt.Add("============================================================")
+$Txt.Add("PHASE 12: RPC FUNCTIONAL SMOKE TEST (real payload, opt-in)")
+$Txt.Add("============================================================")
+if (-not $RunRpcSmokeTest) {
+    $Txt.Add("  NOT RUN - pass -RunRpcSmokeTest to enable. This phase calls real RPCs")
+    $Txt.Add("  (e.g. fn_create_invoice) with real sample data, the same shape the")
+    $Txt.Add("  frontend sends, to catch functional bugs a reachability check misses.")
+    $Txt.Add("  WARNING: it can create real rows / mutate real data - see per-RPC")
+    $Txt.Add("  SideEffect notes in the JSON report before enabling on production data.")
+} else {
+    foreach ($rp in $RpcSmokeResults) {
+        $Txt.Add("  [$($rp.Status)] $($rp.Rpc)  -> HTTP $($rp.StatusCode)  ($($rp.DurationMs) ms)")
+        if ($rp.SideEffect) { $Txt.Add("      Side effect: $($rp.SideEffect)") }
+    }
+}
+$Txt.Add("")
+
+$Txt.Add("============================================================")
 $Txt.Add("END OF REPORT")
 $Txt.Add("============================================================")
 
@@ -1043,6 +1186,7 @@ $Html = New-Object System.Text.StringBuilder
 [void]$Html.Append("<tr><td>Build steps (Pass/Fail)</td><td>$TotalPass / $TotalFail</td></tr>")
 [void]$Html.Append("<tr><td>Backend API (live-tested)</td><td>$(($BackendApiResults | Where-Object Status -eq 'WORKING').Count) / $($BackendApiResults.Count) working</td></tr>")
 [void]$Html.Append("<tr><td>Frontend pages (live-tested)</td><td>$(($FrontendPageResults | Where-Object Status -eq 'LOADS OK').Count) / $($FrontendPageResults.Count) loading OK</td></tr>")
+[void]$Html.Append("<tr><td>RPC smoke test (real payload)</td><td>$(if ($RunRpcSmokeTest) { "$(($RpcSmokeResults | Where-Object Status -like 'WORKING*').Count) / $($RpcSmokeResults.Count) working" } else { "NOT RUN (-RunRpcSmokeTest)" })</td></tr>")
 [void]$Html.Append("</table>")
 
 [void]$Html.Append("<h2>Phase 1: Alpha Testing - Static Findings</h2><table>")
@@ -1143,6 +1287,19 @@ foreach ($p in $FrontendPageResults) {
     [void]$Html.Append("<tr><td>$(Esc $p.Page)</td><td>$($p.StatusCode)</td><td><span class='badge' style='background:$c'>$(Esc $p.Status)</span></td><td>$($p.DurationMs)</td></tr>")
 }
 [void]$Html.Append("</table>")
+
+[void]$Html.Append("<h2>Phase 12: RPC Functional Smoke Test (real payload, opt-in)</h2>")
+if (-not $RunRpcSmokeTest) {
+    [void]$Html.Append("<p style='color:#6b7280'>NOT RUN - pass -RunRpcSmokeTest to enable. This phase invokes real RPCs (e.g. fn_create_invoice) with a real payload built from real DB rows, catching functional/key-mismatch bugs that a plain reachability check (Phase 9) cannot see. It can mutate real data - see per-RPC side effects before enabling on production.</p>")
+}
+else {
+    [void]$Html.Append("<table><tr><th>RPC</th><th>HTTP Status</th><th>Result</th><th>ms</th><th>Side effect</th></tr>")
+    foreach ($rp in $RpcSmokeResults) {
+        $c = if ($rp.Status -like 'WORKING*') { "#16a34a" } elseif ($rp.Status -like 'SKIPPED*') { "#6b7280" } else { "#dc2626" }
+        [void]$Html.Append("<tr><td>$(Esc $rp.Rpc)</td><td>$($rp.StatusCode)</td><td><span class='badge' style='background:$c'>$(Esc $rp.Status)</span></td><td>$($rp.DurationMs)</td><td>$(Esc $rp.SideEffect)</td></tr>")
+    }
+    [void]$Html.Append("</table>")
+}
 
 [void]$Html.Append("<script src='https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js'></script>")
 [void]$Html.Append("<script>try{mermaid.initialize({startOnLoad:true,securityLevel:'loose'});}catch(e){}</script>")

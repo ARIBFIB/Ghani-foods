@@ -1,7 +1,7 @@
 ﻿{
     "project":  "GhaniFoods",
-    "generatedAt":  "2026-08-23 01:31:52",
-    "durationSec":  101,
+    "generatedAt":  "2026-08-23 02:13:03",
+    "durationSec":  137,
     "overallStatus":  "PASS WITH WARNINGS",
     "summary":  {
                     "filesScanned":  105,
@@ -18,7 +18,11 @@
                     "backendApiWorking":  28,
                     "backendApiTotal":  28,
                     "frontendPagesOk":  22,
-                    "frontendPagesTotal":  22
+                    "frontendPagesTotal":  22,
+                    "rpcSmokeTestRun":  false,
+                    "rpcSmokeWorking":  0,
+                    "rpcSmokeFailed":  0,
+                    "rpcSmokeTotal":  1
                 },
     "alphaTesting":  [
                          {
@@ -1695,22 +1699,22 @@
                             "Phase":  "Beta",
                             "Step":  "Backend: npm install",
                             "Status":  "PASS",
-                            "DurationMs":  4957,
-                            "Output":  "up to date, audited 627 packages in 4s\r\n\r\n166 packages are looking for funding\r\n  run `npm fund` for details\r\n\r\nfound 0 vulnerabilities"
+                            "DurationMs":  6028,
+                            "Output":  "up to date, audited 627 packages in 5s\r\n\r\n166 packages are looking for funding\r\n  run `npm fund` for details\r\n\r\nfound 0 vulnerabilities"
                         },
                         {
                             "Phase":  "Beta",
                             "Step":  "Backend: TypeScript build (tsc)",
                             "Status":  "PASS",
-                            "DurationMs":  4965,
+                            "DurationMs":  5549,
                             "Output":  "\u003e ghanifoods-backend@0.1.0 build\r\n\u003e tsc -p tsconfig.json"
                         },
                         {
                             "Phase":  "Beta",
                             "Step":  "Frontend: Next.js build",
                             "Status":  "PASS",
-                            "DurationMs":  66814,
-                            "Output":  "\u003e ghanifoods-frontend@0.1.0 build\r\n\u003e next build --turbopack\r\n\r\n   Γû▓ Next.js 15.5.23 (Turbopack)\r\n   - Environments: .env.local\r\n\r\n   Creating an optimized production build ...\r\nnode.exe :  ΓÜá Slow filesystem \r\ndetected. The benchmark took 220ms. \r\nIf D:\\Rozmarrah-CUST\\Saim Ashraf\\Nim\r\nko\\Working\\Code\\GhaniFoods\\apps\\fron\r\ntend\\.next is a network drive, \r\nconsider moving it to a local \r\nfolder. If you have an antivirus \r\nenabled, consider excluding your \r\nproject directory.\r\nAt line:1 char:1\r\n+ \u0026 \"C:\\Program \r\nFiles\\nodejs/node.exe\" \"C:\\Program \r\nFiles\\nodejs/node_mo ...\r\n+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : NotSp \r\n   ecified: ( ΓÜá Slow files...jec  \r\n  t directory.:String) [], Remote   \r\n Exception\r\n    + FullyQualifiedErrorId : Nativ \r\n   eCommandError\r\n \r\n Γ£ô Finished writing to disk in 1654ms\r\n Γ£ô Compiled successfully in 33.1s\r\n   Linting and checking validity of types ...\r\n   Collecting page data ...\r\n   Generating static pages (0/20) ...\r\n   Generating static pages (5/20) \r\n   Generating static pages (10/20) \r\n   Generating static pages (15/20) \r\n Γ£ô Generating static pages (20/20)\r\n   Finalizing page optimization ...\r\n   Collecting build traces ...\r\n\r\nRoute (app)                         Size  First Load JS\r\nΓöî Γùï /                            1.61 kB         255 kB\r\nΓö£ Γùï /_not-found                      0 B         123 kB\r\nΓö£ Γùï /batches                     2.57 kB         270 kB\r\nΓö£ ╞Æ /batches/[id]                4.95 kB         285 kB\r\nΓö£ Γùï /batches/new                 5.48 kB         286 kB\r\nΓö£ Γùï /customers                   3.97 kB         298 kB\r\nΓö£ ╞Æ /customers/[id]              4.02 kB         284 kB\r\nΓö£ Γùï /finished-cartons            5.21 kB         277 kB\r\nΓö£ Γùï /invoices                    2.52 kB         270 kB\r\nΓö£ ╞Æ /invoices/[id]               4.18 kB         284 kB\r\nΓö£ Γùï /invoices/new                5.06 kB         285 kB\r\nΓö£ Γùï /login                       9.11 kB         245 kB\r\nΓö£ Γùï /monthly-expenses            4.65 kB         285 kB\r\nΓö£ Γùï /packaging                   5.33 kB         300 kB\r\nΓö£ Γùï /packaging/carton-config     5.12 kB         318 kB\r\nΓö£ Γùï /payments                    4.45 kB         299 kB\r\nΓö£ Γùï /raw-materials               6.98 kB         306 kB\r\nΓö£ ╞Æ /raw-materials/[id]          5.08 kB         258 kB\r\nΓö£ Γùï /receipts                    6.36 kB         259 kB\r\nΓö£ Γùï /reports                      113 kB         367 kB\r\nΓö£ Γùï /settings                    5.12 kB         285 kB\r\nΓö£ Γùï /suppliers                   3.95 kB         298 kB\r\nΓöö ╞Æ /suppliers/[id]              5.22 kB         258 kB\r\n+ First Load JS shared by all     132 kB\r\n  Γö£ chunks/3b38c45f0e3f98d0.js   55.4 kB\r\n  Γö£ chunks/469bd91adfc0831d.js   13.4 kB\r\n  Γö£ chunks/6c140621b8ab24f0.js   17.2 kB\r\n  Γöö other shared chunks (total)  46.2 kB\r\n\r\n\r\n╞Æ Middleware                     95.6 kB\r\n\r\nΓùï  (Static)   prerendered as static content\r\n╞Æ  (Dynamic)  server-rendered on demand"
+                            "DurationMs":  100276,
+                            "Output":  "\u003e ghanifoods-frontend@0.1.0 build\r\n\u003e next build --turbopack\r\n\r\n   Γû▓ Next.js 15.5.23 (Turbopack)\r\n   - Environments: .env.local\r\n\r\n   Creating an optimized production build ...\r\nnode.exe :  ΓÜá Slow filesystem \r\ndetected. The benchmark took 243ms. \r\nIf D:\\Rozmarrah-CUST\\Saim Ashraf\\Nim\r\nko\\Working\\Code\\GhaniFoods\\apps\\fron\r\ntend\\.next is a network drive, \r\nconsider moving it to a local \r\nfolder. If you have an antivirus \r\nenabled, consider excluding your \r\nproject directory.\r\nAt line:1 char:1\r\n+ \u0026 \"C:\\Program \r\nFiles\\nodejs/node.exe\" \"C:\\Program \r\nFiles\\nodejs/node_mo ...\r\n+ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    + CategoryInfo          : NotSp \r\n   ecified: ( ΓÜá Slow files...jec  \r\n  t directory.:String) [], Remote   \r\n Exception\r\n    + FullyQualifiedErrorId : Nativ \r\n   eCommandError\r\n \r\n Γ£ô Finished writing to disk in 2.7s\r\n Γ£ô Compiled successfully in 41s\r\n   Linting and checking validity of types ...\r\n   Collecting page data ...\r\n   Generating static pages (0/20) ...\r\n   Generating static pages (5/20) \r\n   Generating static pages (10/20) \r\n   Generating static pages (15/20) \r\n Γ£ô Generating static pages (20/20)\r\n   Finalizing page optimization ...\r\n   Collecting build traces ...\r\n\r\nRoute (app)                         Size  First Load JS\r\nΓöî Γùï /                            1.61 kB         255 kB\r\nΓö£ Γùï /_not-found                      0 B         123 kB\r\nΓö£ Γùï /batches                     2.57 kB         270 kB\r\nΓö£ ╞Æ /batches/[id]                4.95 kB         285 kB\r\nΓö£ Γùï /batches/new                 5.48 kB         286 kB\r\nΓö£ Γùï /customers                   3.97 kB         298 kB\r\nΓö£ ╞Æ /customers/[id]              4.02 kB         284 kB\r\nΓö£ Γùï /finished-cartons            5.21 kB         277 kB\r\nΓö£ Γùï /invoices                    2.52 kB         270 kB\r\nΓö£ ╞Æ /invoices/[id]               4.18 kB         284 kB\r\nΓö£ Γùï /invoices/new                5.06 kB         285 kB\r\nΓö£ Γùï /login                       9.11 kB         245 kB\r\nΓö£ Γùï /monthly-expenses            4.65 kB         285 kB\r\nΓö£ Γùï /packaging                   5.33 kB         300 kB\r\nΓö£ Γùï /packaging/carton-config     5.12 kB         318 kB\r\nΓö£ Γùï /payments                    4.45 kB         299 kB\r\nΓö£ Γùï /raw-materials               6.98 kB         306 kB\r\nΓö£ ╞Æ /raw-materials/[id]          5.08 kB         258 kB\r\nΓö£ Γùï /receipts                    6.36 kB         260 kB\r\nΓö£ Γùï /reports                      113 kB         367 kB\r\nΓö£ Γùï /settings                    5.12 kB         285 kB\r\nΓö£ Γùï /suppliers                   3.95 kB         298 kB\r\nΓöö ╞Æ /suppliers/[id]              5.22 kB         258 kB\r\n+ First Load JS shared by all     132 kB\r\n  Γö£ chunks/3b38c45f0e3f98d0.js   55.4 kB\r\n  Γö£ chunks/469bd91adfc0831d.js   13.4 kB\r\n  Γö£ chunks/6c140621b8ab24f0.js   17.2 kB\r\n  Γöö other shared chunks (total)  46.2 kB\r\n\r\n\r\n╞Æ Middleware                     95.6 kB\r\n\r\nΓùï  (Static)   prerendered as static content\r\n╞Æ  (Dynamic)  server-rendered on demand"
                         },
                         {
                             "Phase":  "Beta",
@@ -2018,196 +2022,196 @@
                                    "Method":  "GET",
                                    "StatusCode":  200,
                                    "Status":  "WORKING",
-                                   "DurationMs":  16
+                                   "DurationMs":  50
                                },
                                {
                                    "Route":  "/api/kpis",
                                    "Method":  "GET",
                                    "StatusCode":  200,
                                    "Status":  "WORKING",
-                                   "DurationMs":  17
+                                   "DurationMs":  46
                                },
                                {
                                    "Route":  "/api/raw-materials",
                                    "Method":  "GET",
                                    "StatusCode":  200,
                                    "Status":  "WORKING",
-                                   "DurationMs":  11
+                                   "DurationMs":  46
                                },
                                {
                                    "Route":  "/api/raw-materials",
                                    "Method":  "POST",
                                    "StatusCode":  201,
                                    "Status":  "WORKING",
-                                   "DurationMs":  103
+                                   "DurationMs":  188
                                },
                                {
                                    "Route":  "/api/raw-materials/test-id",
                                    "Method":  "GET",
                                    "StatusCode":  404,
                                    "Status":  "WORKING",
-                                   "DurationMs":  30
+                                   "DurationMs":  55
                                },
                                {
                                    "Route":  "/api/raw-materials/test-id/receipts",
                                    "Method":  "POST",
                                    "StatusCode":  201,
                                    "Status":  "WORKING",
-                                   "DurationMs":  11
+                                   "DurationMs":  48
                                },
                                {
                                    "Route":  "/api/packaging-materials",
                                    "Method":  "GET",
                                    "StatusCode":  200,
                                    "Status":  "WORKING",
-                                   "DurationMs":  22
+                                   "DurationMs":  51
                                },
                                {
                                    "Route":  "/api/packaging-materials/test-id/restock",
                                    "Method":  "POST",
                                    "StatusCode":  201,
                                    "Status":  "WORKING",
-                                   "DurationMs":  10
+                                   "DurationMs":  42
                                },
                                {
                                    "Route":  "/api/batches",
                                    "Method":  "GET",
                                    "StatusCode":  200,
                                    "Status":  "WORKING",
-                                   "DurationMs":  10
+                                   "DurationMs":  50
                                },
                                {
                                    "Route":  "/api/batches/test-id",
                                    "Method":  "GET",
                                    "StatusCode":  404,
                                    "Status":  "WORKING",
-                                   "DurationMs":  5
+                                   "DurationMs":  27
                                },
                                {
                                    "Route":  "/api/batches",
                                    "Method":  "POST",
                                    "StatusCode":  201,
                                    "Status":  "WORKING",
-                                   "DurationMs":  10
+                                   "DurationMs":  50
                                },
                                {
                                    "Route":  "/api/batches/test-id/overhead",
                                    "Method":  "POST",
                                    "StatusCode":  200,
                                    "Status":  "WORKING",
-                                   "DurationMs":  19
+                                   "DurationMs":  26
                                },
                                {
                                    "Route":  "/api/finished-cartons",
                                    "Method":  "GET",
                                    "StatusCode":  200,
                                    "Status":  "WORKING",
-                                   "DurationMs":  9
+                                   "DurationMs":  24
                                },
                                {
                                    "Route":  "/api/finished-cartons/packing-run",
                                    "Method":  "POST",
                                    "StatusCode":  201,
                                    "Status":  "WORKING",
-                                   "DurationMs":  12
+                                   "DurationMs":  25
                                },
                                {
                                    "Route":  "/api/customers",
                                    "Method":  "GET",
                                    "StatusCode":  200,
                                    "Status":  "WORKING",
-                                   "DurationMs":  12
+                                   "DurationMs":  22
                                },
                                {
                                    "Route":  "/api/customers",
                                    "Method":  "POST",
                                    "StatusCode":  201,
                                    "Status":  "WORKING",
-                                   "DurationMs":  9
+                                   "DurationMs":  25
                                },
                                {
                                    "Route":  "/api/customers/test-id",
                                    "Method":  "GET",
                                    "StatusCode":  404,
                                    "Status":  "WORKING",
-                                   "DurationMs":  5
+                                   "DurationMs":  4
                                },
                                {
                                    "Route":  "/api/customers/test-id/item-prices",
                                    "Method":  "GET",
                                    "StatusCode":  200,
                                    "Status":  "WORKING",
-                                   "DurationMs":  10
+                                   "DurationMs":  29
                                },
                                {
                                    "Route":  "/api/invoices",
                                    "Method":  "GET",
                                    "StatusCode":  200,
                                    "Status":  "WORKING",
-                                   "DurationMs":  9
+                                   "DurationMs":  24
                                },
                                {
                                    "Route":  "/api/invoices/test-id",
                                    "Method":  "GET",
                                    "StatusCode":  404,
                                    "Status":  "WORKING",
-                                   "DurationMs":  2
+                                   "DurationMs":  6
                                },
                                {
                                    "Route":  "/api/invoices",
                                    "Method":  "POST",
                                    "StatusCode":  201,
                                    "Status":  "WORKING",
-                                   "DurationMs":  8
+                                   "DurationMs":  25
                                },
                                {
                                    "Route":  "/api/invoices/test-id/pdf",
                                    "Method":  "GET",
                                    "StatusCode":  200,
                                    "Status":  "WORKING",
-                                   "DurationMs":  21
+                                   "DurationMs":  26
                                },
                                {
                                    "Route":  "/api/payments",
                                    "Method":  "GET",
                                    "StatusCode":  200,
                                    "Status":  "WORKING",
-                                   "DurationMs":  9
+                                   "DurationMs":  28
                                },
                                {
                                    "Route":  "/api/payments",
                                    "Method":  "POST",
                                    "StatusCode":  201,
                                    "Status":  "WORKING",
-                                   "DurationMs":  12
+                                   "DurationMs":  25
                                },
                                {
                                    "Route":  "/api/reports/inventory",
                                    "Method":  "GET",
                                    "StatusCode":  200,
                                    "Status":  "WORKING",
-                                   "DurationMs":  11
+                                   "DurationMs":  26
                                },
                                {
                                    "Route":  "/api/reports/pnl",
                                    "Method":  "GET",
                                    "StatusCode":  200,
                                    "Status":  "WORKING",
-                                   "DurationMs":  10
+                                   "DurationMs":  24
                                },
                                {
                                    "Route":  "/api/settings",
                                    "Method":  "GET",
                                    "StatusCode":  200,
                                    "Status":  "WORKING",
-                                   "DurationMs":  12
+                                   "DurationMs":  23
                                },
                                {
                                    "Route":  "/api/settings",
                                    "Method":  "PATCH",
                                    "StatusCode":  200,
                                    "Status":  "WORKING",
-                                   "DurationMs":  10
+                                   "DurationMs":  26
                                }
                            ],
     "supabaseFunctionsLiveTest":  [
@@ -2215,103 +2219,103 @@
                                           "Function":  "batch-expenses",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  538
+                                          "DurationMs":  537
                                       },
                                       {
                                           "Function":  "batches",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  242
+                                          "DurationMs":  182
                                       },
                                       {
                                           "Function":  "boxes-create",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  181
+                                          "DurationMs":  172
                                       },
                                       {
                                           "Function":  "boxes-production",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  174
+                                          "DurationMs":  173
                                       },
                                       {
                                           "Function":  "boxes-production-runs",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  192
+                                          "DurationMs":  178
                                       },
                                       {
                                           "Function":  "carton-configurations-create",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  195
+                                          "DurationMs":  203
                                       },
                                       {
                                           "Function":  "carton-configurations-update",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  175
+                                          "DurationMs":  180
                                       },
                                       {
                                           "Function":  "customers-create",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  179
+                                          "DurationMs":  174
                                       },
                                       {
                                           "Function":  "customers-invoices",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  178
+                                          "DurationMs":  175
                                       },
                                       {
                                           "Function":  "customers-item-prices",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  163
+                                          "DurationMs":  169
                                       },
                                       {
                                           "Function":  "customers-ledger",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  201
+                                          "DurationMs":  185
                                       },
                                       {
                                           "Function":  "dashboard-kpis",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  204
+                                          "DurationMs":  167
                                       },
                                       {
                                           "Function":  "data-delete",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  562
+                                          "DurationMs":  635
                                       },
                                       {
                                           "Function":  "data-export",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  835
+                                          "DurationMs":  795
                                       },
                                       {
                                           "Function":  "inventory-leftover-summary",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  167
+                                          "DurationMs":  170
                                       },
                                       {
                                           "Function":  "invoices",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  176
+                                          "DurationMs":  178
                                       },
                                       {
                                           "Function":  "invoices-back-context",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  168
+                                          "DurationMs":  182
                                       },
                                       {
                                           "Function":  "invoices-pdf",
@@ -2323,133 +2327,133 @@
                                           "Function":  "invoices-price-lookup",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  172
+                                          "DurationMs":  184
                                       },
                                       {
                                           "Function":  "monthly-expenses",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  177
+                                          "DurationMs":  181
                                       },
                                       {
                                           "Function":  "monthly-overhead-allocate",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  164
+                                          "DurationMs":  161
                                       },
                                       {
                                           "Function":  "packing-runs",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  182
+                                          "DurationMs":  188
                                       },
                                       {
                                           "Function":  "packing-runs-preview",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  174
+                                          "DurationMs":  175
                                       },
                                       {
                                           "Function":  "payments",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  199
+                                          "DurationMs":  185
                                       },
                                       {
                                           "Function":  "production-batches-leftover-sources",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  168
+                                          "DurationMs":  184
                                       },
                                       {
                                           "Function":  "purchase-receipts",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  279
+                                          "DurationMs":  169
                                       },
                                       {
                                           "Function":  "raw-materials-create",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  193
+                                          "DurationMs":  177
                                       },
                                       {
                                           "Function":  "raw-materials-history",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  198
+                                          "DurationMs":  181
                                       },
                                       {
                                           "Function":  "receipts-delete",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  1312
+                                          "DurationMs":  189
                                       },
                                       {
                                           "Function":  "receipts-detail",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  172
+                                          "DurationMs":  177
                                       },
                                       {
                                           "Function":  "receipts-list",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  187
+                                          "DurationMs":  174
                                       },
                                       {
                                           "Function":  "receipts-update",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  1160
+                                          "DurationMs":  174
                                       },
                                       {
                                           "Function":  "reports-finished-carton-availability",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  161
+                                          "DurationMs":  168
                                       },
                                       {
                                           "Function":  "reports-inventory",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  168
+                                          "DurationMs":  172
                                       },
                                       {
                                           "Function":  "reports-pnl",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  213
+                                          "DurationMs":  168
                                       },
                                       {
                                           "Function":  "reports-production",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  190
+                                          "DurationMs":  175
                                       },
                                       {
                                           "Function":  "suppliers-history",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  178
+                                          "DurationMs":  171
                                       },
                                       {
                                           "Function":  "wrappers-create",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  187
+                                          "DurationMs":  171
                                       },
                                       {
                                           "Function":  "wrappers-production",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  169
+                                          "DurationMs":  171
                                       },
                                       {
                                           "Function":  "wrappers-production-runs",
                                           "Status":  "DEPLOYED / REACHABLE",
                                           "StatusCode":  200,
-                                          "DurationMs":  193
+                                          "DurationMs":  170
                                       }
                                   ],
     "databaseTest":  [
@@ -2574,133 +2578,142 @@
                                       "Page":  "/",
                                       "Status":  "LOADS OK",
                                       "StatusCode":  200,
-                                      "DurationMs":  33
+                                      "DurationMs":  71
                                   },
                                   {
                                       "Page":  "/batches",
                                       "Status":  "LOADS OK",
                                       "StatusCode":  200,
-                                      "DurationMs":  32
+                                      "DurationMs":  55
                                   },
                                   {
                                       "Page":  "/batches/new",
                                       "Status":  "LOADS OK",
                                       "StatusCode":  200,
-                                      "DurationMs":  26
+                                      "DurationMs":  59
                                   },
                                   {
                                       "Page":  "/batches/test-id",
                                       "Status":  "LOADS OK",
                                       "StatusCode":  200,
-                                      "DurationMs":  27
+                                      "DurationMs":  56
                                   },
                                   {
                                       "Page":  "/customers",
                                       "Status":  "LOADS OK",
                                       "StatusCode":  200,
-                                      "DurationMs":  27
+                                      "DurationMs":  56
                                   },
                                   {
                                       "Page":  "/customers/test-id",
                                       "Status":  "LOADS OK",
                                       "StatusCode":  200,
-                                      "DurationMs":  28
+                                      "DurationMs":  55
                                   },
                                   {
                                       "Page":  "/finished-cartons",
                                       "Status":  "LOADS OK",
                                       "StatusCode":  200,
-                                      "DurationMs":  27
+                                      "DurationMs":  54
                                   },
                                   {
                                       "Page":  "/invoices",
                                       "Status":  "LOADS OK",
                                       "StatusCode":  200,
-                                      "DurationMs":  27
+                                      "DurationMs":  53
                                   },
                                   {
                                       "Page":  "/invoices/new",
                                       "Status":  "LOADS OK",
                                       "StatusCode":  200,
-                                      "DurationMs":  26
+                                      "DurationMs":  52
                                   },
                                   {
                                       "Page":  "/invoices/test-id",
                                       "Status":  "LOADS OK",
                                       "StatusCode":  200,
-                                      "DurationMs":  27
+                                      "DurationMs":  52
                                   },
                                   {
                                       "Page":  "/login",
                                       "Status":  "LOADS OK",
                                       "StatusCode":  200,
-                                      "DurationMs":  24
+                                      "DurationMs":  46
                                   },
                                   {
                                       "Page":  "/monthly-expenses",
                                       "Status":  "LOADS OK",
                                       "StatusCode":  200,
-                                      "DurationMs":  28
+                                      "DurationMs":  53
                                   },
                                   {
                                       "Page":  "/packaging",
                                       "Status":  "LOADS OK",
                                       "StatusCode":  200,
-                                      "DurationMs":  25
+                                      "DurationMs":  55
                                   },
                                   {
                                       "Page":  "/packaging/carton-config",
                                       "Status":  "LOADS OK",
                                       "StatusCode":  200,
-                                      "DurationMs":  26
+                                      "DurationMs":  51
                                   },
                                   {
                                       "Page":  "/payments",
                                       "Status":  "LOADS OK",
                                       "StatusCode":  200,
-                                      "DurationMs":  27
+                                      "DurationMs":  53
                                   },
                                   {
                                       "Page":  "/raw-materials",
                                       "Status":  "LOADS OK",
                                       "StatusCode":  200,
-                                      "DurationMs":  25
+                                      "DurationMs":  51
                                   },
                                   {
                                       "Page":  "/raw-materials/test-id",
                                       "Status":  "LOADS OK",
                                       "StatusCode":  200,
-                                      "DurationMs":  28
+                                      "DurationMs":  59
                                   },
                                   {
                                       "Page":  "/receipts",
                                       "Status":  "LOADS OK",
                                       "StatusCode":  200,
-                                      "DurationMs":  25
+                                      "DurationMs":  55
                                   },
                                   {
                                       "Page":  "/reports",
                                       "Status":  "LOADS OK",
                                       "StatusCode":  200,
-                                      "DurationMs":  25
+                                      "DurationMs":  51
                                   },
                                   {
                                       "Page":  "/settings",
                                       "Status":  "LOADS OK",
                                       "StatusCode":  200,
-                                      "DurationMs":  28
+                                      "DurationMs":  63
                                   },
                                   {
                                       "Page":  "/suppliers",
                                       "Status":  "LOADS OK",
                                       "StatusCode":  200,
-                                      "DurationMs":  25
+                                      "DurationMs":  61
                                   },
                                   {
                                       "Page":  "/suppliers/test-id",
                                       "Status":  "LOADS OK",
                                       "StatusCode":  200,
-                                      "DurationMs":  28
+                                      "DurationMs":  52
                                   }
-                              ]
+                              ],
+    "rpcFunctionalSmokeTest":  [
+                                   {
+                                       "Rpc":  "(all)",
+                                       "Status":  "SKIPPED - not requested (-RunRpcSmokeTest)",
+                                       "StatusCode":  null,
+                                       "DurationMs":  0,
+                                       "SideEffect":  ""
+                                   }
+                               ]
 }

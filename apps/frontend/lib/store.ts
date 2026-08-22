@@ -750,19 +750,15 @@ export const useStore = create<State>()((set, get) => ({
   },
 
   createInvoice: async (input) => {
-    // Send both camelCase and snake_case keys per line - the DB / RPC side
-    // uses snake_case column names everywhere else in this project, but the
-    // frontend's own domain type is camelCase. Sending both avoids a silent
-    // key-name mismatch causing "finished carton not found" even when a
-    // valid, in-stock item was selected.
+    // fn_create_invoice (apps/backend/supabase/migrations/0002_functions.sql)
+    // reads each line as v_line->>'finishedCartonId', v_line->>'qty',
+    // v_line->>'unitPrice'. It does NOT read itemId / item_id / unit_price /
+    // priceSourceNote - sending those instead of finishedCartonId is exactly
+    // why every invoice failed with "finished carton not found".
     const normalizedLines = input.lines.map((l) => ({
-      itemId: l.itemId,
-      item_id: l.itemId,
+      finishedCartonId: l.itemId,
       qty: l.qty,
       unitPrice: l.unitPrice,
-      unit_price: l.unitPrice,
-      priceSourceNote: l.priceSourceNote,
-      price_source_note: l.priceSourceNote,
     }));
     const { data, error } = await supabase.rpc("fn_create_invoice", {
       p_customer_id: input.customerId,
@@ -770,7 +766,7 @@ export const useStore = create<State>()((set, get) => ({
     });
     if (error || !data) throw new Error(error?.message ?? "Failed to create invoice");
     await Promise.all([get().loadCustomersModule(), get().loadFinishedCartons()]);
-    return (data as any).invoiceNumber ?? (data as any).invoiceId;
+    return (data as any).invoiceNumber ?? (data as any).id;
   },
 
   // ---------------------------------------------------------------------
