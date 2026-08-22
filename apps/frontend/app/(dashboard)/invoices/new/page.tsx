@@ -61,21 +61,13 @@ function NewInvoiceForm() {
     formState: { errors, isSubmitting },
   } = useForm<InvoiceHeaderFormValues>({
     resolver: zodResolver(invoiceHeaderSchema),
-    defaultValues: { customerId: preselectedCustomerId || customers[0]?.id || "", margin: defaultMargin ?? 20 },
+    defaultValues: { customerId: preselectedCustomerId || "", margin: defaultMargin ?? 20 },
   });
   const customerId = watch("customerId");
   const margin = watch("margin");
 
   const [lines, setLines] = useState<InvoiceLine[]>(() => {
-    const firstItemId = finishedCartons[0]?.id ?? "";
-    const { unitPrice, priceSourceNote } = buildPriceAndNote(
-      firstItemId,
-      preselectedCustomerId || customers[0]?.id || "",
-      defaultMargin ?? 20,
-      finishedCartons,
-      lastSoldPriceInfo,
-    );
-    return [{ id: crypto.randomUUID(), itemId: firstItemId, qty: "1", unitPrice, priceSourceNote, touched: false }];
+    return [{ id: crypto.randomUUID(), itemId: "", qty: "", unitPrice: "", priceSourceNote: "", touched: false }];
   });
   const [lineError, setLineError] = useState("");
 
@@ -99,9 +91,7 @@ function NewInvoiceForm() {
   }, [customerId, margin, lineItemIdsKey]);
 
   const addLine = () => {
-    const firstItemId = finishedCartons[0]?.id ?? "";
-    const { unitPrice, priceSourceNote } = buildPriceAndNote(firstItemId, customerId, Number(margin) || 0, finishedCartons, lastSoldPriceInfo);
-    setLines((prev) => [...prev, { id: crypto.randomUUID(), itemId: firstItemId, qty: "1", unitPrice, priceSourceNote, touched: false }]);
+    setLines((prev) => [...prev, { id: crypto.randomUUID(), itemId: "", qty: "", unitPrice: "", priceSourceNote: "", touched: false }]);
   };
   const removeLine = (id: string) => setLines((prev) => (prev.length > 1 ? prev.filter((l) => l.id !== id) : prev));
   const updateLine = (id: string, patch: Partial<InvoiceLine>) =>
@@ -156,6 +146,7 @@ function NewInvoiceForm() {
           <label className="text-sm text-[var(--text-muted)]">Customer</label>
           <select {...register("customerId")}
             className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]">
+            <option value="">Select a customer</option>
             {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
           {errors.customerId && <p className="text-xs text-red-400 mt-1">{errors.customerId.message}</p>}
@@ -194,7 +185,8 @@ function NewInvoiceForm() {
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <select value={line.itemId} onChange={(e) => handleItemChange(line.id, e.target.value)}
                     className="flex-1 rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]">
-                    {finishedCartons.map((c) => <option key={c.id} value={c.id}>{c.name} \u2014 {c.stockQty} in stock</option>)}
+                    <option value="">Select item</option>
+                    {finishedCartons.map((c) => <option key={c.id} value={c.id}>{c.name} {"\u2014"} {c.stockQty} in stock</option>)}
                   </select>
                   <input value={line.qty} onChange={(e) => updateLine(line.id, { qty: e.target.value })} type="number" placeholder="Qty"
                     className="w-full sm:w-20 rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
