@@ -1,7 +1,7 @@
 ============================================================
  GHANIFOODS - FULL SYSTEM TESTING REPORT
- Generated : 2026-08-23 00:32:09
- Duration  : 131s
+ Generated : 2026-08-23 01:01:48
+ Duration  : 107s
  Overall   : PASS WITH WARNINGS
 ============================================================
 
@@ -10,20 +10,20 @@ SUMMARY
 Files scanned          : 105
 Total static findings  : 4  (High=0, Medium=2, Low=2)
 Functions scanned      : 234  (OK=230, Suspect=4, Broken=0)
-Build steps            : Pass=2, Fail=
-Backend API (live)     : 0 / 1 working
-Frontend pages (live)  : 0 / 1 loading OK
+Build steps            : Pass=3, Fail=0
+Backend API (live)     : 28 / 28 working
+Frontend pages (live)  : 22 / 22 loading OK
 
 ============================================================
 PHASE 1: ALPHA TESTING - STATIC CODE FINDINGS
 ============================================================
 
 FILE: apps\backend\src\index.ts
-  [Line 10] [MEDIUM] Hardcoded localhost URL
-    -> throw new Error("FRONTEND_ORIGIN env var is required (e.g. http://localhost:3000 for local dev)");
-  [Line 18] [LOW] console.log left in code
+  [Line 8] [MEDIUM] Hardcoded localhost URL
+    -> const DEFAULT_DEV_ORIGIN = "http://localhost:3000";
+  [Line 23] [LOW] console.log left in code
     -> console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
-  [Line 119] [LOW] console.log left in code
+  [Line 124] [LOW] console.log left in code
     -> console.log(`GhaniFoods backend running on port ${PORT} (origin: ${FRONTEND_ORIGIN})`);
 
 FILE: apps\frontend\components\ui\auth-page.tsx
@@ -44,52 +44,11 @@ Total functions scanned: 234 (OK=230, Suspect=4, Broken=0)
 PHASE 2: BETA TESTING - BUILD / TYPECHECK RESULTS
 ============================================================
 
-[PASS] Backend: npm install  (4899 ms)
+[PASS] Backend: npm install  (4104 ms)
 
-[PASS] Backend: TypeScript build (tsc)  (2090 ms)
+[PASS] Backend: TypeScript build (tsc)  (2642 ms)
 
-[FAIL] Frontend: Next.js build  (54408 ms)
-  Output (last 40 lines):
-    ])[33m;[39m
-     [90m 141 |[39m     setExpenses(
-    [31m[1m>[22m[39m[90m 142 
-    |[39m       
-    (expensesRes[33m.[39mdata 
-    [33m?[39m[33m?[39m 
-    [])[33m.[39mmap((r[33m:[39m [33
-    mRecord[39m[33m<[39m[33mstring[
-    39m[33m,[39m unknown[33m>[39m) 
-    [33m=>[39m ({
-     [90m     |[39m       
-    [31m[1m^[22m[39m
-     [90m 143 |[39m         
-    id[33m:[39m 
-    r[33m.[39mid[33m,[39m
-     [90m 144 |[39m         
-    name[33m:[39m 
-    r[33m.[39mname[33m,[39m
-     [90m 145 |[39m         
-    amount[33m:[39m [33mNumber[39m(r
-    [33m.[39mamount)[33m,[39m[0m
-    Next.js build worker exited with 
-    code: 1 and signal: null
-    npm error Lifecycle script `build` 
-    failed with error:
-    npm error code 1
-    npm error path 
-    D:\Rozmarrah-CUST\Saim Ashraf\Nimko\
-    Working\Code\GhaniFoods\apps\fronten
-    d
-    npm error workspace 
-    ghanifoods-frontend@0.1.0
-    npm error location 
-    D:\Rozmarrah-CUST\Saim Ashraf\Nimko\
-    Working\Code\GhaniFoods\apps\fronten
-    d
-    npm error command failed
-    npm error command 
-    C:\WINDOWS\system32\cmd.exe /d /s 
-    /c next build --turbopack
+[PASS] Frontend: Next.js build  (75318 ms)
 
 [INFO] Supabase Edge Functions inventory  (0 ms)
 
@@ -662,53 +621,80 @@ flowchart TD
 ============================================================
 PHASE 8: BACKEND API LIVE TEST (apps/backend Express server)
 ============================================================
-  [SERVER DID NOT START] - (server startup)  -> HTTP   (0 ms)
+  [WORKING] GET /api/health  -> HTTP 200  (137 ms)
+  [WORKING] GET /api/kpis  -> HTTP 200  (46 ms)
+  [WORKING] GET /api/raw-materials  -> HTTP 200  (51 ms)
+  [WORKING] POST /api/raw-materials  -> HTTP 201  (264 ms)
+  [WORKING] GET /api/raw-materials/test-id  -> HTTP 404  (56 ms)
+  [WORKING] POST /api/raw-materials/test-id/receipts  -> HTTP 201  (44 ms)
+  [WORKING] GET /api/packaging-materials  -> HTTP 200  (40 ms)
+  [WORKING] POST /api/packaging-materials/test-id/restock  -> HTTP 201  (51 ms)
+  [WORKING] GET /api/batches  -> HTTP 200  (38 ms)
+  [WORKING] GET /api/batches/test-id  -> HTTP 404  (35 ms)
+  [WORKING] POST /api/batches  -> HTTP 201  (34 ms)
+  [WORKING] POST /api/batches/test-id/overhead  -> HTTP 200  (30 ms)
+  [WORKING] GET /api/finished-cartons  -> HTTP 200  (17 ms)
+  [WORKING] POST /api/finished-cartons/packing-run  -> HTTP 201  (16 ms)
+  [WORKING] GET /api/customers  -> HTTP 200  (19 ms)
+  [WORKING] POST /api/customers  -> HTTP 201  (25 ms)
+  [WORKING] GET /api/customers/test-id  -> HTTP 404  (3 ms)
+  [WORKING] GET /api/customers/test-id/item-prices  -> HTTP 200  (20 ms)
+  [WORKING] GET /api/invoices  -> HTTP 200  (16 ms)
+  [WORKING] GET /api/invoices/test-id  -> HTTP 404  (11 ms)
+  [WORKING] POST /api/invoices  -> HTTP 201  (24 ms)
+  [WORKING] GET /api/invoices/test-id/pdf  -> HTTP 200  (24 ms)
+  [WORKING] GET /api/payments  -> HTTP 200  (18 ms)
+  [WORKING] POST /api/payments  -> HTTP 201  (27 ms)
+  [WORKING] GET /api/reports/inventory  -> HTTP 200  (19 ms)
+  [WORKING] GET /api/reports/pnl  -> HTTP 200  (18 ms)
+  [WORKING] GET /api/settings  -> HTTP 200  (16 ms)
+  [WORKING] PATCH /api/settings  -> HTTP 200  (18 ms)
 
-Summary: 0 / 1 routes WORKING
+Summary: 28 / 28 routes WORKING
 
 ============================================================
 PHASE 9: SUPABASE EDGE FUNCTIONS LIVE TEST
 ============================================================
-  [DEPLOYED / REACHABLE] batch-expenses  -> HTTP 200  (609 ms)
-  [DEPLOYED / REACHABLE] batches  -> HTTP 200  (200 ms)
-  [DEPLOYED / REACHABLE] boxes-create  -> HTTP 200  (218 ms)
-  [DEPLOYED / REACHABLE] boxes-production  -> HTTP 200  (226 ms)
-  [DEPLOYED / REACHABLE] boxes-production-runs  -> HTTP 200  (163 ms)
-  [DEPLOYED / REACHABLE] carton-configurations-create  -> HTTP 200  (176 ms)
-  [DEPLOYED / REACHABLE] carton-configurations-update  -> HTTP 200  (166 ms)
-  [DEPLOYED / REACHABLE] customers-create  -> HTTP 200  (175 ms)
-  [DEPLOYED / REACHABLE] customers-invoices  -> HTTP 200  (191 ms)
-  [DEPLOYED / REACHABLE] customers-item-prices  -> HTTP 200  (163 ms)
-  [DEPLOYED / REACHABLE] customers-ledger  -> HTTP 200  (176 ms)
-  [DEPLOYED / REACHABLE] dashboard-kpis  -> HTTP 200  (200 ms)
-  [DEPLOYED / REACHABLE] data-delete  -> HTTP 200  (533 ms)
-  [DEPLOYED / REACHABLE] data-export  -> HTTP 200  (808 ms)
-  [DEPLOYED / REACHABLE] inventory-leftover-summary  -> HTTP 200  (182 ms)
-  [DEPLOYED / REACHABLE] invoices  -> HTTP 200  (204 ms)
-  [DEPLOYED / REACHABLE] invoices-back-context  -> HTTP 200  (202 ms)
-  [DEPLOYED / REACHABLE] invoices-pdf  -> HTTP 200  (218 ms)
-  [DEPLOYED / REACHABLE] invoices-price-lookup  -> HTTP 200  (196 ms)
-  [DEPLOYED / REACHABLE] monthly-expenses  -> HTTP 200  (167 ms)
-  [DEPLOYED / REACHABLE] monthly-overhead-allocate  -> HTTP 200  (186 ms)
-  [DEPLOYED / REACHABLE] packing-runs  -> HTTP 200  (216 ms)
-  [DEPLOYED / REACHABLE] packing-runs-preview  -> HTTP 200  (248 ms)
-  [DEPLOYED / REACHABLE] payments  -> HTTP 200  (226 ms)
-  [DEPLOYED / REACHABLE] production-batches-leftover-sources  -> HTTP 200  (182 ms)
-  [DEPLOYED / REACHABLE] purchase-receipts  -> HTTP 200  (234 ms)
-  [DEPLOYED / REACHABLE] raw-materials-create  -> HTTP 200  (198 ms)
-  [DEPLOYED / REACHABLE] raw-materials-history  -> HTTP 200  (188 ms)
-  [NOT DEPLOYED (404)] receipts-delete  -> HTTP 404  (111 ms)
-  [DEPLOYED / REACHABLE] receipts-detail  -> HTTP 200  (198 ms)
-  [DEPLOYED / REACHABLE] receipts-list  -> HTTP 200  (203 ms)
-  [NOT DEPLOYED (404)] receipts-update  -> HTTP 404  (105 ms)
-  [DEPLOYED / REACHABLE] reports-finished-carton-availability  -> HTTP 200  (175 ms)
-  [DEPLOYED / REACHABLE] reports-inventory  -> HTTP 200  (186 ms)
-  [DEPLOYED / REACHABLE] reports-pnl  -> HTTP 200  (178 ms)
-  [DEPLOYED / REACHABLE] reports-production  -> HTTP 200  (201 ms)
-  [DEPLOYED / REACHABLE] suppliers-history  -> HTTP 200  (186 ms)
-  [DEPLOYED / REACHABLE] wrappers-create  -> HTTP 200  (186 ms)
-  [DEPLOYED / REACHABLE] wrappers-production  -> HTTP 200  (192 ms)
-  [DEPLOYED / REACHABLE] wrappers-production-runs  -> HTTP 200  (194 ms)
+  [DEPLOYED / REACHABLE] batch-expenses  -> HTTP 200  (680 ms)
+  [DEPLOYED / REACHABLE] batches  -> HTTP 200  (186 ms)
+  [DEPLOYED / REACHABLE] boxes-create  -> HTTP 200  (191 ms)
+  [DEPLOYED / REACHABLE] boxes-production  -> HTTP 200  (193 ms)
+  [DEPLOYED / REACHABLE] boxes-production-runs  -> HTTP 200  (198 ms)
+  [DEPLOYED / REACHABLE] carton-configurations-create  -> HTTP 200  (194 ms)
+  [DEPLOYED / REACHABLE] carton-configurations-update  -> HTTP 200  (183 ms)
+  [DEPLOYED / REACHABLE] customers-create  -> HTTP 200  (166 ms)
+  [DEPLOYED / REACHABLE] customers-invoices  -> HTTP 200  (224 ms)
+  [DEPLOYED / REACHABLE] customers-item-prices  -> HTTP 200  (222 ms)
+  [DEPLOYED / REACHABLE] customers-ledger  -> HTTP 200  (172 ms)
+  [DEPLOYED / REACHABLE] dashboard-kpis  -> HTTP 200  (170 ms)
+  [DEPLOYED / REACHABLE] data-delete  -> HTTP 200  (851 ms)
+  [DEPLOYED / REACHABLE] data-export  -> HTTP 200  (825 ms)
+  [DEPLOYED / REACHABLE] inventory-leftover-summary  -> HTTP 200  (207 ms)
+  [DEPLOYED / REACHABLE] invoices  -> HTTP 200  (197 ms)
+  [DEPLOYED / REACHABLE] invoices-back-context  -> HTTP 200  (194 ms)
+  [DEPLOYED / REACHABLE] invoices-pdf  -> HTTP 200  (221 ms)
+  [DEPLOYED / REACHABLE] invoices-price-lookup  -> HTTP 200  (186 ms)
+  [DEPLOYED / REACHABLE] monthly-expenses  -> HTTP 200  (182 ms)
+  [DEPLOYED / REACHABLE] monthly-overhead-allocate  -> HTTP 200  (168 ms)
+  [DEPLOYED / REACHABLE] packing-runs  -> HTTP 200  (182 ms)
+  [DEPLOYED / REACHABLE] packing-runs-preview  -> HTTP 200  (177 ms)
+  [DEPLOYED / REACHABLE] payments  -> HTTP 200  (190 ms)
+  [DEPLOYED / REACHABLE] production-batches-leftover-sources  -> HTTP 200  (210 ms)
+  [DEPLOYED / REACHABLE] purchase-receipts  -> HTTP 200  (183 ms)
+  [DEPLOYED / REACHABLE] raw-materials-create  -> HTTP 200  (190 ms)
+  [DEPLOYED / REACHABLE] raw-materials-history  -> HTTP 200  (199 ms)
+  [NOT DEPLOYED (404)] receipts-delete  -> HTTP 404  (108 ms)
+  [DEPLOYED / REACHABLE] receipts-detail  -> HTTP 200  (187 ms)
+  [DEPLOYED / REACHABLE] receipts-list  -> HTTP 200  (185 ms)
+  [NOT DEPLOYED (404)] receipts-update  -> HTTP 404  (93 ms)
+  [DEPLOYED / REACHABLE] reports-finished-carton-availability  -> HTTP 200  (192 ms)
+  [DEPLOYED / REACHABLE] reports-inventory  -> HTTP 200  (201 ms)
+  [DEPLOYED / REACHABLE] reports-pnl  -> HTTP 200  (227 ms)
+  [DEPLOYED / REACHABLE] reports-production  -> HTTP 200  (184 ms)
+  [DEPLOYED / REACHABLE] suppliers-history  -> HTTP 200  (185 ms)
+  [DEPLOYED / REACHABLE] wrappers-create  -> HTTP 200  (194 ms)
+  [DEPLOYED / REACHABLE] wrappers-production  -> HTTP 200  (191 ms)
+  [DEPLOYED / REACHABLE] wrappers-production-runs  -> HTTP 200  (178 ms)
 
 ============================================================
 PHASE 10: DATABASE CONNECTIVITY TEST
@@ -740,7 +726,28 @@ PHASE 10: DATABASE CONNECTIVITY TEST
 ============================================================
 PHASE 11: FRONTEND PAGES LIVE TEST (next start)
 ============================================================
-  [SERVER DID NOT START] (server startup)  -> HTTP 
+  [LOADS OK] /  -> HTTP 200
+  [LOADS OK] /batches  -> HTTP 200
+  [LOADS OK] /batches/new  -> HTTP 200
+  [LOADS OK] /batches/test-id  -> HTTP 200
+  [LOADS OK] /customers  -> HTTP 200
+  [LOADS OK] /customers/test-id  -> HTTP 200
+  [LOADS OK] /finished-cartons  -> HTTP 200
+  [LOADS OK] /invoices  -> HTTP 200
+  [LOADS OK] /invoices/new  -> HTTP 200
+  [LOADS OK] /invoices/test-id  -> HTTP 200
+  [LOADS OK] /login  -> HTTP 200
+  [LOADS OK] /monthly-expenses  -> HTTP 200
+  [LOADS OK] /packaging  -> HTTP 200
+  [LOADS OK] /packaging/carton-config  -> HTTP 200
+  [LOADS OK] /payments  -> HTTP 200
+  [LOADS OK] /raw-materials  -> HTTP 200
+  [LOADS OK] /raw-materials/test-id  -> HTTP 200
+  [LOADS OK] /receipts  -> HTTP 200
+  [LOADS OK] /reports  -> HTTP 200
+  [LOADS OK] /settings  -> HTTP 200
+  [LOADS OK] /suppliers  -> HTTP 200
+  [LOADS OK] /suppliers/test-id  -> HTTP 200
 
 ============================================================
 END OF REPORT
