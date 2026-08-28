@@ -103,10 +103,40 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
   const { id } = use(params);
   const invoice = useStore((s) => s.invoices.find((i) => i.id === id));
   const settings = useStore((s) => s.settings);
+  const hydrated = useStore((s) => s.hydrated);
+  const loadCustomersModule = useStore((s) => s.loadCustomersModule);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
 
+  // Fix (client feedback: "sirf first time dekh pate hain"): this page
+  // used to depend entirely on the dashboard layout's one-time StoreHydrator
+  // load. If this page is opened directly - refresh, bookmark, reopened
+  // tab, or coming back after the browser was closed - before that load
+  // finishes, `invoice` is briefly (or permanently, if that fetch never
+  // re-runs) undefined, and the old code showed a dead-end "Invoice not
+  // found" with no way to recover. This page now triggers its own refresh
+  // on mount and distinguishes "still loading" from "genuinely not found".
+  const [refreshing, setRefreshing] = useState(true);
+  useEffect(() => {
+    let cancelled = false;
+    loadCustomersModule().finally(() => {
+      if (!cancelled) setRefreshing(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
   if (!invoice) {
+    if (!hydrated || refreshing) {
+      return (
+        <div className="space-y-4">
+          <NavLink href="/invoices" className="text-sm text-[var(--text-muted)] hover:underline">&larr; Back to Invoices</NavLink>
+          <p className="text-[var(--text-muted)]">Loading invoice...</p>
+        </div>
+      );
+    }
     return (
       <div className="space-y-4">
         <NavLink href="/invoices" className="text-sm text-[var(--text-muted)] hover:underline">&larr; Back to Invoices</NavLink>
@@ -251,9 +281,6 @@ export default function InvoiceDetailPage({ params }: { params: Promise<{ id: st
                   <tr key={idx}>
                     <td className="px-4 py-2 text-[var(--text-secondary)]">
                       {line.itemName}
-                      {line.priceSourceNote && (
-                        <div className="mt-0.5 text-xs text-[var(--text-faint)]">{line.priceSourceNote}</div>
-                      )}
                     </td>
                     <td className="px-4 py-2 text-[var(--text-secondary)]">{line.qty}</td>
                     <td className="px-4 py-2 text-[var(--text-secondary)]">Rs. {line.unitPrice.toLocaleString()}</td>
