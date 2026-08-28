@@ -8,7 +8,6 @@ import { type ColumnDef } from "@tanstack/react-table";
 import { useStore, type Payment } from "@/lib/store";
 import { paymentSchema, type PaymentFormValues } from "@/lib/schemas";
 import { SortableTable } from "@/components/ui/sortable-table";
-import { ContraTransferDialog } from "@/components/ui/contra-transfer-dialog";
 
 function RecordPaymentDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const customers = useStore((s) => s.customers);
@@ -150,7 +149,6 @@ export default function PaymentsPage() {
   const items = useStore((s) => s.payments);
   const loadCustomersModule = useStore((s) => s.loadCustomersModule);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [contraDialogOpen, setContraDialogOpen] = useState(false);
 
   const columns = useMemo<ColumnDef<Payment, unknown>[]>(() => [
     { accessorKey: "paidAt", header: "Date" },
@@ -181,18 +179,12 @@ export default function PaymentsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-[var(--foreground)]">Payments</h1>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setContraDialogOpen(true)} className="rounded-lg border border-neutral-400 dark:border-neutral-600 px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)]">
-            Contra Transfer
-          </button>
-          <button onClick={() => setDialogOpen(true)} className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
-            + Record Payment
-          </button>
-        </div>
+        <button onClick={() => setDialogOpen(true)} className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
+          + Record Payment
+        </button>
       </div>
       <SortableTable data={items} columns={columns} globalFilterPlaceholder="Search payments..." onRefresh={loadCustomersModule} />
       <RecordPaymentDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
-      <ContraTransferDialog open={contraDialogOpen} onClose={() => setContraDialogOpen(false)} />
     </div>
   );
 }

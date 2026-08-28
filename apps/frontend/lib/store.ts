@@ -974,8 +974,8 @@ export const useStore = create<State>()((set, get) => ({
   createContraTransfer: async (input) => {
     const { error } = await supabase.functions.invoke("contra-vouchers", {
       body: {
-        fromAccount: input.fromAccount,
-        toAccount: input.toAccount,
+        fromMethod: input.fromAccount.toLowerCase(),
+        toMethod: input.toAccount.toLowerCase(),
         amount: input.amount,
         note: input.note ?? null,
       },
