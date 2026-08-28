@@ -21,15 +21,16 @@ function RecordPaymentDialog({ open, onClose }: { open: boolean; onClose: () => 
     formState: { errors, isSubmitting },
   } = useForm<PaymentFormValues>({
     resolver: zodResolver(paymentSchema),
-    defaultValues: { customerId: customers[0]?.id ?? "", amount: 0, direction: "received", note: "" },
+    defaultValues: { customerId: customers[0]?.id ?? "", amount: 0, direction: "received", method: "cash", note: "" },
   });
   const direction = watch("direction");
+  const method = watch("method");
 
   if (!open) return null;
 
   const onSubmit = async (values: PaymentFormValues) => {
     try {
-      await recordLedgerEntry(values.customerId, values.amount, values.direction, values.note ?? "");
+      await recordLedgerEntry(values.customerId, values.amount, values.direction, values.method, values.note ?? "");
       toast.success(
         values.direction === "received"
           ? `Payment of Rs. ${values.amount.toLocaleString()} received`
@@ -97,6 +98,35 @@ function RecordPaymentDialog({ open, onClose }: { open: boolean; onClose: () => 
             </div>
             <input type="hidden" {...register("direction")} />
             {errors.direction && <p className="text-xs text-red-400 mt-1">{errors.direction.message}</p>}
+          </div>
+          <div>
+            <label className="text-sm text-[var(--text-muted)]">Received In / Paid From</label>
+            <div className="mt-1 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setValue("method", "cash", { shouldValidate: true })}
+                className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
+                  method === "cash"
+                    ? "border-[var(--surface-border-strong)] bg-[var(--surface-hover)] text-[var(--foreground)]"
+                    : "border-[var(--surface-border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
+                }`}
+              >
+                Cash
+              </button>
+              <button
+                type="button"
+                onClick={() => setValue("method", "bank", { shouldValidate: true })}
+                className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
+                  method === "bank"
+                    ? "border-[var(--surface-border-strong)] bg-[var(--surface-hover)] text-[var(--foreground)]"
+                    : "border-[var(--surface-border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
+                }`}
+              >
+                Bank
+              </button>
+            </div>
+            <input type="hidden" {...register("method")} />
+            {errors.method && <p className="text-xs text-red-400 mt-1">{errors.method.message}</p>}
           </div>
           <div>
             <label className="text-sm text-[var(--text-muted)]">Note</label>

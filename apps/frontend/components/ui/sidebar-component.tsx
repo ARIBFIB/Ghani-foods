@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { usePathname } from "next/navigation";
@@ -193,6 +193,7 @@ function getSidebarContent(activeSection: SectionId): SidebarContent {
       title: "Receipts",
       sections: [
         { title: "Purchase Receipts", items: [{ icon: <FolderOpen size={16} className="text-[var(--foreground)]" />, label: "All Receipts", href: "/receipts" }] },
+        { title: "Purchase Orders", items: [{ icon: <DocumentAdd size={16} className="text-[var(--foreground)]" />, label: "All Purchase Orders", href: "/purchase-orders" }] },
       ],
     },
     suppliers: {

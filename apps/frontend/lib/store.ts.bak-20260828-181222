@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { create } from "zustand";
 import { createClient } from "@/lib/supabase/client";
@@ -10,13 +10,7 @@ const supabase = createClient();
 // =============================================================================
 
 function mapSupplierRow(row: Record<string, any>): Supplier {
-  return {
-    id: row.id,
-    name: row.name,
-    phone: row.phone,
-    address: row.address ?? undefined,
-    currentBalance: Number(row.current_balance ?? 0),
-  };
+  return { id: row.id, name: row.name, phone: row.phone, address: row.address ?? undefined };
 }
 function mapRawMaterialRow(row: Record<string, any>): RawMaterial {
   return {
@@ -29,7 +23,7 @@ function mapRawMaterialRow(row: Record<string, any>): RawMaterial {
   };
 }
 function mapReceiptRow(row: Record<string, any>): PurchaseReceipt {
-  return { id: row.id, supplierId: row.supplier_id, purchaseDate: row.purchase_date, poId: row.po_id ?? undefined };
+  return { id: row.id, supplierId: row.supplier_id, purchaseDate: row.purchase_date };
 }
 function mapReceiptLineRow(row: Record<string, any>): PurchaseReceiptLine {
   return { id: row.id, receiptId: row.receipt_id, rawMaterialId: row.raw_material_id, qty: Number(row.qty), cost: Number(row.cost) };
@@ -185,18 +179,6 @@ function mapPaymentRow(row: Record<string, any>, customerName: string): Payment 
     paidAt: row.paid_at,
   };
 }
-function mapSupplierLedgerRow(row: Record<string, any>): SupplierLedgerEntry {
-  return {
-    id: row.id,
-    supplierId: row.supplier_id,
-    type: row.type,
-    direction: row.direction,
-    amount: Number(row.amount),
-    runningBalance: Number(row.running_balance),
-    date: row.entry_date,
-    note: row.note ?? undefined,
-  };
-}
 function mapSettingsRow(row: Record<string, any>): AppSettings {
   return {
     businessName: row.business_name,
@@ -212,7 +194,7 @@ function mapSettingsRow(row: Record<string, any>): AppSettings {
 // Types (BRS v1.2 / Frontend Spec v2.2 domain model)
 // =============================================================================
 
-export type Supplier = { id: string; name: string; phone: string; address?: string; currentBalance: number };
+export type Supplier = { id: string; name: string; phone: string; address?: string };
 
 export type RawMaterial = {
   id: string;
@@ -223,7 +205,7 @@ export type RawMaterial = {
   lowStockThreshold: number;
 };
 
-export type PurchaseReceipt = { id: string; supplierId: string; purchaseDate: string; poId?: string };
+export type PurchaseReceipt = { id: string; supplierId: string; purchaseDate: string };
 
 export type PurchaseReceiptLine = { id: string; receiptId: string; rawMaterialId: string; qty: number; cost: number };
 
@@ -331,26 +313,13 @@ export type Invoice = {
 // customer / credit-note adjustment. Both currently reduce the outstanding
 // running balance server-side (fn_record_payment). Confirm sign convention
 // with client before go-live.
-export type LedgerEntryType = "invoice" | "payment" | "adjustment" | "credit_note" | "debit_note";
+export type LedgerEntryType = "invoice" | "payment" | "adjustment";
 export type LedgerDirection = "received" | "given";
 
 export type LedgerEntry = {
   id: string;
   customerId: string;
   type: LedgerEntryType;
-  direction: LedgerDirection | null;
-  amount: number;
-  runningBalance: number;
-  date: string;
-  note?: string;
-};
-
-export type SupplierLedgerEntryType = "purchase" | "payment" | "debit_note" | "adjustment";
-
-export type SupplierLedgerEntry = {
-  id: string;
-  supplierId: string;
-  type: SupplierLedgerEntryType;
   direction: LedgerDirection | null;
   amount: number;
   runningBalance: number;
@@ -429,7 +398,6 @@ type State = {
   invoices: Invoice[];
   ledgerEntries: LedgerEntry[];
   payments: Payment[];
-  supplierLedgerEntries: SupplierLedgerEntry[];
   treasuryAccounts: { id: string; name: 'Bank' | 'Cash'; balance: number }[];
   settings: AppSettings;
   hydrated: boolean;
@@ -442,7 +410,6 @@ type State = {
   addSupplier: (item: { name: string; phone: string; address?: string }) => Promise<string>;
   addRawMaterial: (item: { name: string; unit: string; lowStockThreshold: number }) => Promise<string>;
   createPurchaseReceipt: (input: {
-    poId: string;
     supplierId: string;
     purchaseDate: string;
     items: { rawMaterialId: string; qty: number; cost: number }[];
@@ -509,27 +476,6 @@ type State = {
     lines: { itemId: string; qty: number; unitPrice: number; priceSourceNote?: string }[];
   }) => Promise<string>;
 
-  // Step 1 additions: Supplier payments, Credit/Debit Notes, Contra Transfer
-  recordSupplierPayment: (supplierId: string, amount: number, method: 'bank' | 'cash', note: string) => Promise<void>;
-  createCreditNote: (input: {
-    customerId: string;
-    invoiceId?: string;
-    lines: { itemId: string; qty: number; unitPrice: number }[];
-    note?: string;
-  }) => Promise<string>;
-  createDebitNote: (input: {
-    supplierId: string;
-    receiptId?: string;
-    lines: { rawMaterialId: string; qty: number; cost: number }[];
-    note?: string;
-  }) => Promise<string>;
-  createContraTransfer: (input: {
-    fromAccount: 'Bank' | 'Cash';
-    toAccount: 'Bank' | 'Cash';
-    amount: number;
-    note?: string;
-  }) => Promise<void>;
-
   // Settings
   loadSettings: () => Promise<void>;
   updateSettings: (patch: Partial<AppSettings>) => Promise<void>;
@@ -554,7 +500,6 @@ export const useStore = create<State>()((set, get) => ({
   invoices: [],
   ledgerEntries: [],
   payments: [],
-  supplierLedgerEntries: [],
   settings: emptySettings,
   treasuryAccounts: [],
   hydrated: false,
@@ -590,19 +535,17 @@ export const useStore = create<State>()((set, get) => ({
   // ---------------------------------------------------------------------
 
   loadRawMaterialsModule: async () => {
-    const [suppliersRes, rawMaterialsRes, receiptsRes, receiptLinesRes, supplierLedgerRes] = await Promise.all([
+    const [suppliersRes, rawMaterialsRes, receiptsRes, receiptLinesRes] = await Promise.all([
       supabase.from("suppliers").select("*").order("created_at", { ascending: false }),
       supabase.from("raw_materials").select("*").order("name"),
       supabase.from("purchase_receipts").select("*").order("purchase_date", { ascending: false }),
       supabase.from("purchase_receipt_lines").select("*"),
-      supabase.from("supplier_ledger_entries").select("*").order("entry_date", { ascending: false }),
     ]);
     set({
       suppliers: (suppliersRes.data ?? []).map(mapSupplierRow),
       rawMaterials: (rawMaterialsRes.data ?? []).map(mapRawMaterialRow),
       receipts: (receiptsRes.data ?? []).map(mapReceiptRow),
       receiptLines: (receiptLinesRes.data ?? []).map(mapReceiptLineRow),
-      supplierLedgerEntries: (supplierLedgerRes.data ?? []).map(mapSupplierLedgerRow),
     });
   },
 
@@ -630,17 +573,16 @@ export const useStore = create<State>()((set, get) => ({
     return material.id;
   },
 
-  // Step A backend change: receipts are now only created against a valid PO
-  // via fn_create_purchase_receipt_from_po. poId is mandatory.
+  // FR-5/FR-6/FR-7: server-side RPC (fn_create_purchase_receipt) recalculates
+  // each affected raw material's weighted-average cost atomically.
   createPurchaseReceipt: async (input) => {
-    const { data, error } = await supabase.rpc("fn_create_purchase_receipt_from_po", {
-      p_po_id: input.poId,
+    const { data, error } = await supabase.rpc("fn_create_purchase_receipt", {
       p_supplier_id: input.supplierId,
       p_purchase_date: input.purchaseDate,
       p_items: input.items.map((i) => ({ rawMaterialId: i.rawMaterialId, qty: i.qty, cost: i.cost })),
     });
     if (error || !data) throw new Error(error?.message ?? "Failed to save purchase receipt");
-    await Promise.all([get().loadRawMaterialsModule(), get().loadPurchaseOrders()]);
+    await get().loadRawMaterialsModule();
     return (data as any).receiptId as string;
   },
 
@@ -663,6 +605,19 @@ export const useStore = create<State>()((set, get) => ({
 
   // ---------------------------------------------------------------------
   // Purchase Orders (Phase 2 / Batch B2a)
+  loadPurchaseOrders: () => Promise<void>;
+  createPurchaseOrder: (input: {
+    supplierId: string;
+    poDate: string;
+    notes?: string;
+    items: { rawMaterialId: string; qty: number; expectedUnitCost: number }[];
+  }) => Promise<string>;
+
+  // Wrapper / Box - Define + Produce (FR-11 - FR-15)
+  // ---------------------------------------------------------------------
+
+  // ---------------------------------------------------------------------
+  // Purchase Orders (Phase 2 / Batch B2a)
   // ---------------------------------------------------------------------
 
   loadPurchaseOrders: async () => {
@@ -677,8 +632,9 @@ export const useStore = create<State>()((set, get) => ({
   },
 
   // "Without purchase order nothing should get added": fn_create_purchase_order
-  // is the only way a PO (and its lines) gets created. fn_create_purchase_receipt_from_po
-  // is now the only way a receipt can be recorded against one of these.
+  // is the only way a PO (and its lines) gets created. Batch B2b will make
+  // fn_create_purchase_receipt_from_po the only way a receipt can be recorded
+  // against one of these.
   createPurchaseOrder: async (input) => {
     const { data, error } = await supabase.rpc("fn_create_purchase_order", {
       p_supplier_id: input.supplierId,
@@ -924,60 +880,6 @@ export const useStore = create<State>()((set, get) => ({
     if (error || !data) throw new Error(error?.message ?? "Failed to create invoice");
     await Promise.all([get().loadCustomersModule(), get().loadFinishedCartons()]);
     return (data as any).invoiceNumber ?? (data as any).id;
-  },
-
-  // ---------------------------------------------------------------------
-  // Step 1 additions: Supplier Payments, Credit/Debit Notes, Contra Transfer
-  // Calls the 4 new edge functions/RPCs created in Step A.
-  // ---------------------------------------------------------------------
-
-  recordSupplierPayment: async (supplierId, amount, method, note) => {
-    const { error } = await supabase.functions.invoke("supplier-payments", {
-      body: { supplierId, amount, method, note: note || null },
-    });
-    if (error) throw new Error(error.message ?? "Failed to record supplier payment");
-    await Promise.all([get().loadRawMaterialsModule(), get().loadTreasuryAccounts()]);
-  },
-
-  createCreditNote: async (input) => {
-    const { data, error } = await supabase.functions.invoke("credit-notes", {
-      body: {
-        customerId: input.customerId,
-        invoiceId: input.invoiceId ?? null,
-        lines: input.lines.map((l) => ({ itemId: l.itemId, qty: l.qty, unitPrice: l.unitPrice })),
-        note: input.note ?? null,
-      },
-    });
-    if (error || !data?.data) throw new Error(error?.message ?? "Failed to create credit note");
-    await Promise.all([get().loadCustomersModule(), get().loadFinishedCartons()]);
-    return (data.data as any).id as string;
-  },
-
-  createDebitNote: async (input) => {
-    const { data, error } = await supabase.functions.invoke("debit-notes", {
-      body: {
-        supplierId: input.supplierId,
-        receiptId: input.receiptId ?? null,
-        lines: input.lines.map((l) => ({ rawMaterialId: l.rawMaterialId, qty: l.qty, cost: l.cost })),
-        note: input.note ?? null,
-      },
-    });
-    if (error || !data?.data) throw new Error(error?.message ?? "Failed to create debit note");
-    await get().loadRawMaterialsModule();
-    return (data.data as any).id as string;
-  },
-
-  createContraTransfer: async (input) => {
-    const { error } = await supabase.functions.invoke("contra-vouchers", {
-      body: {
-        fromAccount: input.fromAccount,
-        toAccount: input.toAccount,
-        amount: input.amount,
-        note: input.note ?? null,
-      },
-    });
-    if (error) throw new Error(error.message ?? "Failed to create contra transfer");
-    await get().loadTreasuryAccounts();
   },
 
   // ---------------------------------------------------------------------

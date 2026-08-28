@@ -1,7 +1,7 @@
-﻿// Record a customer payment/adjustment (FR-42/43) - direction AND method
-// are both mandatory. method must be "bank" or "cash" and determines
-// which treasury account (Bank or Cash) is moved by fn_record_payment.
-// POST /functions/v1/payments
+﻿// Record a supplier payment (paying down what we owe a supplier).
+// Reduces supplier.current_balance and moves money OUT of the chosen
+// treasury account (Bank or Cash). Wraps fn_record_supplier_payment.
+// POST /functions/v1/supplier-payments
 import { corsHeaders } from "../_shared/cors.ts";
 import { getClient, statusForPgError, jsonResponse, envelopeError, envelopeSuccess } from "../_shared/client.ts";
 
@@ -12,19 +12,21 @@ Deno.serve(async (req: Request) => {
     const body = await req.json();
     const supabase = getClient(req);
 
+    if (!body.supplierId) {
+      return jsonResponse(envelopeError("supplierId is required", "BAD_REQUEST"), 400, corsHeaders);
+    }
     if (!body.method || (body.method !== "bank" && body.method !== "cash")) {
       return jsonResponse(envelopeError("method is required and must be 'bank' or 'cash'", "BAD_REQUEST"), 400, corsHeaders);
     }
 
     const rpcParams = {
-      p_customer_id: body.customerId,
+      p_supplier_id: body.supplierId,
       p_amount: body.amount,
-      p_direction: body.direction,
       p_method: body.method,
       p_note: body.note ?? null,
     };
 
-    const { data, error } = await supabase.rpc("fn_record_payment", rpcParams);
+    const { data, error } = await supabase.rpc("fn_record_supplier_payment", rpcParams);
 
     if (error) {
       const status = statusForPgError(error.message);

@@ -1,3 +1,44 @@
+<#
+Step D2 - Purchase Receipt Dialog -> PO-driven
+Rewrites apps\frontend\components\ui\purchase-receipt-dialog.tsx so a
+receipt can only be created against a selected, still-open Purchase Order
+(matches store.ts's createPurchaseReceipt({ poId, supplierId, purchaseDate,
+items }) and the purchaseOrders / purchaseOrderLines state shape).
+
+Flow:
+  1. User picks a PO (filtered to status draft/sent/partially_received,
+     optionally pre-filtered by lockSupplierId).
+  2. Dialog shows that PO's lines with remaining-to-receive qty
+     (qtyOrdered - qtyReceived) and the expected unit cost as a default.
+  3. User edits qty received / actual cost per line, sets purchase date,
+     and submits -> store.createPurchaseReceipt({ poId, supplierId,
+     purchaseDate, items }).
+
+The old "Existing Material / + New Material" free-entry mode is removed:
+migration 0009 requires every receipt to trace back to a PO line, so
+inventing a brand-new raw material mid-receipt is no longer a supported
+path here (that still happens via Purchase Order creation + raw-materials
+page, not this dialog).
+
+Run from repo root:
+  .\step-d2-purchase-receipt-dialog.ps1
+#>
+
+$ErrorActionPreference = "Stop"
+
+$target = "apps\frontend\components\ui\purchase-receipt-dialog.tsx"
+
+if (-not (Test-Path $target)) {
+    Write-Host "ERROR: $target not found. Run this script from the GhaniFoods repo root." -ForegroundColor Red
+    exit 1
+}
+
+$timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+$backup = "$target.bak-$timestamp"
+Copy-Item $target $backup
+Write-Host "Backed up existing file -> $backup"
+
+$content = @'
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
@@ -270,3 +311,29 @@ export function PurchaseReceiptDialog({
 }
 
 export default PurchaseReceiptDialog;
+'@
+
+Set-Content -Path $target -Value $content -NoNewline
+Write-Host "Wrote: $target"
+
+Write-Host ""
+Write-Host "====================================================================" -ForegroundColor Cyan
+Write-Host "STEP D2 COMPLETE (purchase-receipt-dialog.tsx)" -ForegroundColor Cyan
+Write-Host "====================================================================" -ForegroundColor Cyan
+Write-Host "Changed:"
+Write-Host "  - Dialog now requires selecting an open Purchase Order first"
+Write-Host "  - Line items auto-load from that PO (remaining qty + expected cost)"
+Write-Host "  - Removed 'Existing Material / + New Material' free-entry mode"
+Write-Host "    (no longer valid - every receipt must trace back to a PO line)"
+Write-Host "  - Removed inline '+ Add Supplier' (supplier now comes from the PO)"
+Write-Host "  - Calls store.createPurchaseReceipt({ poId, supplierId, purchaseDate, items })"
+Write-Host ""
+Write-Host "CHECK: any page that renders <PurchaseReceiptDialog lockRawMaterialId=... />" -ForegroundColor Yellow
+Write-Host "(e.g. raw-materials/[id], raw-materials list row action) will now get a" -ForegroundColor Yellow
+Write-Host "TS error since lockRawMaterialId was removed - that prop no longer makes" -ForegroundColor Yellow
+Write-Host "sense when items come from a PO. Search usages:" -ForegroundColor Yellow
+Write-Host "  git grep -n lockRawMaterialId" -ForegroundColor Yellow
+Write-Host ""
+Write-Host "NEXT (Step D3): build the Supplier Payment dialog (calls" -ForegroundColor Green
+Write-Host "store.recordSupplierPayment) and wire it into the Suppliers detail page." -ForegroundColor Green
+Write-Host "Say 'next' to generate that .ps1." -ForegroundColor Green

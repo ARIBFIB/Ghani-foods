@@ -1,4 +1,4 @@
-﻿import { z } from "zod";
+import { z } from "zod";
 
 // ---------------------------------------------------------------------------
 // Suppliers & Raw Material master
@@ -159,6 +159,9 @@ export const paymentSchema = z.object({
   amount: z.coerce.number().positive("Amount must be greater than 0"),
   direction: z.enum(["received", "given"], {
     required_error: "Select a direction",
+  }),
+  method: z.enum(["bank", "cash"], {
+    required_error: "Select Bank or Cash",
   }),
   note: z.string().trim().optional(),
 });

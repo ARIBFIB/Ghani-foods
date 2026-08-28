@@ -1,4 +1,45 @@
-﻿"use client";
+<#
+step-b-c-store-update.ps1
+
+Run from project root (GhaniFoods\):
+    PS D:\...\GhaniFoods> .\step-b-c-store-update.ps1
+
+What this does:
+  1. Backs up apps\frontend\lib\store.ts -> store.ts.bak-<timestamp>
+  2. Fixes the bug: stray/duplicate type-signature lines that were pasted
+     inside the object literal (right after updateReceipt) are removed.
+  3. Adds currentBalance to Supplier type + mapSupplierRow.
+  4. Adds SupplierLedgerEntry type + supplierLedgerEntries state, loaded
+     alongside suppliers in loadRawMaterialsModule.
+  5. createPurchaseReceipt now requires poId and calls
+     fn_create_purchase_receipt_from_po (matches Step A backend change).
+  6. Adds new actions: recordSupplierPayment, createCreditNote,
+     createDebitNote, createContraTransfer (call the 4 new edge
+     functions/RPCs created in Step A: supplier-payments, credit-notes,
+     debit-notes, contra-vouchers).
+
+NOTE: RPC/edge function param names below follow the same pattern as the
+existing fn_record_payment call (p_..._id, p_amount, p_method, p_note).
+If your actual Step A function signatures differ, tell me and I will
+regenerate this script to match exactly.
+#>
+
+$ErrorActionPreference = "Stop"
+
+$targetFile = "apps\frontend\lib\store.ts"
+
+if (-not (Test-Path $targetFile)) {
+    Write-Host "ERROR: $targetFile not found. Run this script from the GhaniFoods project root." -ForegroundColor Red
+    exit 1
+}
+
+$timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+$backupPath = "$targetFile.bak-$timestamp"
+Copy-Item $targetFile $backupPath
+Write-Host "Backed up existing file -> $backupPath"
+
+$newContent = @'
+"use client";
 
 import { create } from "zustand";
 import { createClient } from "@/lib/supabase/client";
@@ -1003,3 +1044,25 @@ export const useStore = create<State>()((set, get) => ({
     set({ settings: mapSettingsRow(data) });
   },
 }));
+'@
+
+Set-Content -Path $targetFile -Value $newContent -Encoding UTF8
+Write-Host "Wrote: $targetFile"
+Write-Host "===================================================================="
+Write-Host "STEP B + C COMPLETE"
+Write-Host "===================================================================="
+Write-Host "Fixed:"
+Write-Host "  - Removed stray/duplicate type-signature lines that were breaking compile"
+Write-Host "  - createPurchaseReceipt now requires poId, calls fn_create_purchase_receipt_from_po"
+Write-Host "Added:"
+Write-Host "  - Supplier.currentBalance, SupplierLedgerEntry type + state"
+Write-Host "  - recordSupplierPayment, createCreditNote, createDebitNote, createContraTransfer"
+Write-Host ""
+Write-Host "IMPORTANT: This assumes DB table 'supplier_ledger_entries' exists (from"
+Write-Host "migration 0009) and that Step A edge functions accept the body shapes used"
+Write-Host "above (supplierId/amount/method/note, customerId/invoiceId/lines/note, etc)."
+Write-Host "If your Step A edge function bodies use different field names, tell me the"
+Write-Host "exact index.ts content and I will regenerate this script to match exactly."
+Write-Host ""
+Write-Host "NEXT: Update purchase-receipt-dialog.tsx to pass poId (Step D), then build"
+Write-Host "the Supplier Payment / Credit Note / Debit Note / Contra Transfer dialogs."

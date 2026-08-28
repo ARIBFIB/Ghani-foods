@@ -1,3 +1,32 @@
+<#
+Step D1 - Frontend API layer update
+Updates apps\frontend\lib\api.ts so it matches the Step A edge functions
+(payments, purchase-receipts, supplier-payments, credit-notes, debit-notes,
+contra-vouchers). These are called via supabase.functions.invoke(...) since
+they are HTTP edge functions expecting a JSON body ({ supplierId, method,
+amount, note, ... }) - NOT direct Postgres RPC calls (p_... params).
+
+Run from repo root:
+  .\step-d1-api-update.ps1
+
+A timestamped backup of the existing file is created first.
+#>
+
+$ErrorActionPreference = "Stop"
+
+$target = "apps\frontend\lib\api.ts"
+
+if (-not (Test-Path $target)) {
+    Write-Host "ERROR: $target not found. Run this script from the GhaniFoods repo root." -ForegroundColor Red
+    exit 1
+}
+
+$timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+$backup = "$target.bak-$timestamp"
+Copy-Item $target $backup
+Write-Host "Backed up existing file -> $backup"
+
+$content = @'
 import { createClient } from "@/lib/supabase/client";
 
 const supabase = createClient();
@@ -127,3 +156,33 @@ export const createContraTransfer = (
 // ---------- auth ----------
 export const signOut = () => supabase.auth.signOut();
 export const getCurrentUser = () => supabase.auth.getUser();
+'@
+
+Set-Content -Path $target -Value $content -NoNewline
+Write-Host "Wrote: $target"
+
+Write-Host ""
+Write-Host "====================================================================" -ForegroundColor Cyan
+Write-Host "STEP D1 COMPLETE (lib/api.ts)" -ForegroundColor Cyan
+Write-Host "====================================================================" -ForegroundColor Cyan
+Write-Host "Changed:"
+Write-Host "  - createPurchaseReceipt(poId, purchaseDate, items) - now via purchase-receipts edge function"
+Write-Host "  - recordPayment(...) - method (bank/cash) now required, calls payments edge function"
+Write-Host "Added:"
+Write-Host "  - getPurchaseOrders(), getSupplierLedger(supplierId)"
+Write-Host "  - recordSupplierPayment(supplierId, amount, method, note?)"
+Write-Host "  - createCreditNote(invoiceId, lines, note?)"
+Write-Host "  - createDebitNote(supplierId, lines, note?)"
+Write-Host "  - createContraTransfer(fromMethod, toMethod, amount, note?)"
+Write-Host ""
+Write-Host "NOTE: apps\frontend\lib\store.ts was already updated in Step B/C to call" -ForegroundColor Yellow
+Write-Host "the edge functions directly via supabase.functions.invoke - it does NOT" -ForegroundColor Yellow
+Write-Host "currently import from lib/api.ts for these actions. This api.ts update" -ForegroundColor Yellow
+Write-Host "keeps api.ts consistent/usable on its own, but store.ts is what your" -ForegroundColor Yellow
+Write-Host "components actually call today." -ForegroundColor Yellow
+Write-Host ""
+Write-Host "NEXT (Step D2): update purchase-receipt-dialog.tsx to select a Purchase" -ForegroundColor Green
+Write-Host "Order (poId) instead of manually entering supplier+items, since the" -ForegroundColor Green
+Write-Host "backend now rejects receipts without a valid open PO. Say 'next' and" -ForegroundColor Green
+Write-Host "I will generate that .ps1 once I confirm the store.ts shape of" -ForegroundColor Green
+Write-Host "purchaseOrders / createPurchaseReceipt in your current store.ts." -ForegroundColor Green

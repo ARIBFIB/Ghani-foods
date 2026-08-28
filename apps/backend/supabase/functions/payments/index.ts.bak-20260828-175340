@@ -1,6 +1,4 @@
-﻿// Record a customer payment/adjustment (FR-42/43) - direction AND method
-// are both mandatory. method must be "bank" or "cash" and determines
-// which treasury account (Bank or Cash) is moved by fn_record_payment.
+﻿// Record a payment/adjustment (FR-42/43) - direction is mandatory
 // POST /functions/v1/payments
 import { corsHeaders } from "../_shared/cors.ts";
 import { getClient, statusForPgError, jsonResponse, envelopeError, envelopeSuccess } from "../_shared/client.ts";
@@ -12,16 +10,11 @@ Deno.serve(async (req: Request) => {
     const body = await req.json();
     const supabase = getClient(req);
 
-    if (!body.method || (body.method !== "bank" && body.method !== "cash")) {
-      return jsonResponse(envelopeError("method is required and must be 'bank' or 'cash'", "BAD_REQUEST"), 400, corsHeaders);
-    }
-
     const rpcParams = {
-      p_customer_id: body.customerId,
-      p_amount: body.amount,
-      p_direction: body.direction,
-      p_method: body.method,
-      p_note: body.note ?? null,
+    p_customer_id: body.customerId,
+    p_amount: body.amount,
+    p_direction: body.direction,
+    p_note: body.note ?? null,
     };
 
     const { data, error } = await supabase.rpc("fn_record_payment", rpcParams);

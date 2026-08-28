@@ -1,11 +1,10 @@
-"use client";
+﻿"use client";
 
 import { Fragment, use, useEffect, useMemo, useState } from "react";
 import { NavLink } from "@/components/ui/nav-link";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useStore } from "@/lib/store";
 import { PurchaseReceiptDialog } from "@/components/ui/purchase-receipt-dialog";
-import { SupplierPaymentDialog } from "@/components/ui/supplier-payment-dialog";
 
 export default function SupplierDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -13,11 +12,9 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
   const allReceipts = useStore((s) => s.receipts);
   const receiptLines = useStore((s) => s.receiptLines);
   const rawMaterials = useStore((s) => s.rawMaterials);
-  const allSupplierLedgerEntries = useStore((s) => s.supplierLedgerEntries);
   const loadRawMaterialsModule = useStore((s) => s.loadRawMaterialsModule);
   const [expandedReceiptId, setExpandedReceiptId] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
 
   useEffect(() => {
     loadRawMaterialsModule();
@@ -39,14 +36,6 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
   const totalLifetimeValue = useMemo(
     () => receiptSummaries.reduce((sum, r) => sum + r.totalValue, 0),
     [receiptSummaries]
-  );
-
-  const ledgerEntries = useMemo(
-    () =>
-      allSupplierLedgerEntries
-        .filter((e) => e.supplierId === id)
-        .sort((a, b) => b.date.localeCompare(a.date)),
-    [allSupplierLedgerEntries, id]
   );
 
   if (!supplier) {
@@ -79,23 +68,14 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
             <div className="text-[var(--text-muted)] text-xs">Total Lifetime Value</div>
             <div className="text-lg font-semibold text-[var(--foreground)] mt-1">Rs. {totalLifetimeValue.toLocaleString()}</div>
           </div>
-          <div>
-            <div className="text-[var(--text-muted)] text-xs">Outstanding Balance</div>
-            <div className="text-lg font-semibold text-[var(--foreground)] mt-1">Rs. {supplier.currentBalance.toLocaleString()}</div>
-          </div>
         </div>
       </div>
 
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-[var(--foreground)]">Purchase History</h2>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setPaymentDialogOpen(true)} className="rounded-lg border border-[var(--surface-border)] px-4 py-2 text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] transition-colors">
-            Record Payment
-          </button>
-          <button onClick={() => setDialogOpen(true)} className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
-            + Record Purchase
-          </button>
-        </div>
+        <button onClick={() => setDialogOpen(true)} className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity">
+          + Record Purchase
+        </button>
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-[var(--surface-border)]">
@@ -171,46 +151,7 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
         </table>
       </div>
 
-      <h2 className="text-lg font-semibold text-[var(--foreground)]">Account Ledger</h2>
-
-      <div className="overflow-x-auto rounded-xl border border-[var(--surface-border)]">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-[var(--surface-border)] bg-[var(--surface)] text-left text-[var(--text-muted)]">
-              <th className="px-4 py-3 font-medium">Date</th>
-              <th className="px-4 py-3 font-medium">Type</th>
-              <th className="px-4 py-3 font-medium">Direction</th>
-              <th className="px-4 py-3 font-medium">Amount</th>
-              <th className="px-4 py-3 font-medium">Running Balance</th>
-              <th className="px-4 py-3 font-medium">Note</th>
-            </tr>
-          </thead>
-          <tbody>
-            {ledgerEntries.map((entry) => (
-              <tr key={entry.id} className="border-b border-[var(--surface-border)] last:border-0 hover:bg-[var(--surface)]/60">
-                <td className="px-4 py-3 text-[var(--text-secondary)]">{entry.date}</td>
-                <td className="px-4 py-3 text-[var(--text-secondary)] capitalize">{entry.type.replace("_", " ")}</td>
-                <td className="px-4 py-3 text-[var(--text-secondary)] capitalize">{entry.direction ?? "-"}</td>
-                <td className="px-4 py-3 text-[var(--text-secondary)]">Rs. {entry.amount.toLocaleString()}</td>
-                <td className="px-4 py-3 text-[var(--text-secondary)]">Rs. {entry.runningBalance.toLocaleString()}</td>
-                <td className="px-4 py-3 text-[var(--text-muted)]">{entry.note ?? "-"}</td>
-              </tr>
-            ))}
-            {ledgerEntries.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-[var(--text-faint)]">No ledger entries yet for this supplier.</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
       <PurchaseReceiptDialog open={dialogOpen} onClose={() => setDialogOpen(false)} lockSupplierId={supplier.id} />
-      <SupplierPaymentDialog
-        open={paymentDialogOpen}
-        onClose={() => setPaymentDialogOpen(false)}
-        supplierId={supplier.id}
-        supplierName={supplier.name}
-        currentBalance={supplier.currentBalance}
-      />
     </div>
   );
 }

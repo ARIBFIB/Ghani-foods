@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { use, useEffect, useMemo, useState } from "react";
 import { NavLink } from "@/components/ui/nav-link";
@@ -133,7 +133,7 @@ export default function RawMaterialDetailPage({ params }: { params: Promise<{ id
         </table>
       </div>
 
-      <PurchaseReceiptDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
+      <PurchaseReceiptDialog open={dialogOpen} onClose={() => setDialogOpen(false)} lockRawMaterialId={material.id} />
     </div>
   );
 }

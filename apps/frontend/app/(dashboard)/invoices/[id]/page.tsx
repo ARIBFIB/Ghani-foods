@@ -11,28 +11,27 @@ import { z } from "zod";
 
 const paymentAmountSchema = z.object({
   amount: z.coerce.number().positive("Amount must be greater than 0"),
+  method: z.enum(["bank", "cash"], { required_error: "Select Bank or Cash" }),
 });
 type PaymentAmountValues = z.infer<typeof paymentAmountSchema>;
 
 function RecordPaymentDialog({ open, onClose, customerId, customerName }: { open: boolean; onClose: () => void; customerId: string; customerName: string }) {
-  // NOTE: this dialog still only records a "received" payment with no
-  // direction selector. The full +/- direction UI (BRS v1.2 item 6 /
-  // Spec v2.2 5.12) is Step 7 scope. This wiring is switched from the
-  // removed s.recordPayment() to the real s.recordLedgerEntry() so the
-  // page compiles against the current store in the meantime.
   const recordLedgerEntry = useStore((s) => s.recordLedgerEntry);
   const {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
-  } = useForm<PaymentAmountValues>({ resolver: zodResolver(paymentAmountSchema) });
+  } = useForm<PaymentAmountValues>({ resolver: zodResolver(paymentAmountSchema), defaultValues: { method: "cash" } });
+  const method = watch("method");
 
   if (!open) return null;
 
   const onSubmit = async (values: PaymentAmountValues) => {
     try {
-      await recordLedgerEntry(customerId, values.amount, "received", "Payment against invoice");
+      await recordLedgerEntry(customerId, values.amount, "received", values.method, "Payment against invoice");
       toast.success(`Payment of Rs. ${values.amount.toLocaleString()} recorded for ${customerName}`);
       reset();
       onClose();
@@ -50,6 +49,35 @@ function RecordPaymentDialog({ open, onClose, customerId, customerName }: { open
           <input {...register("amount")} type="number" step="any"
             className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
           {errors.amount && <p className="text-xs text-red-400 mt-1">{errors.amount.message}</p>}
+        </div>
+        <div>
+          <label className="text-sm text-[var(--text-muted)]">Received In</label>
+          <div className="mt-1 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setValue("method", "cash", { shouldValidate: true })}
+              className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
+                method === "cash"
+                  ? "border-[var(--surface-border-strong)] bg-[var(--surface-hover)] text-[var(--foreground)]"
+                  : "border-[var(--surface-border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
+              }`}
+            >
+              Cash
+            </button>
+            <button
+              type="button"
+              onClick={() => setValue("method", "bank", { shouldValidate: true })}
+              className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
+                method === "bank"
+                  ? "border-[var(--surface-border-strong)] bg-[var(--surface-hover)] text-[var(--foreground)]"
+                  : "border-[var(--surface-border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
+              }`}
+            >
+              Bank
+            </button>
+          </div>
+          <input type="hidden" {...register("method")} />
+          {errors.method && <p className="text-xs text-red-400 mt-1">{errors.method.message}</p>}
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" onClick={() => { reset(); onClose(); }} className="rounded-lg px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]">Cancel</button>
