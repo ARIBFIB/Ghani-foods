@@ -15,9 +15,6 @@ const paymentAmountSchema = z.object({
   direction: z.enum(["received", "given"], {
     required_error: "Select a direction",
   }),
-  method: z.enum(["cash", "bank"], {
-    required_error: "Select a method",
-  }),
   note: z.string().trim().optional(),
 });
 type PaymentAmountValues = z.infer<typeof paymentAmountSchema>;
@@ -33,26 +30,21 @@ function RecordPaymentDialog({ open, onClose, customerId }: { open: boolean; onC
     formState: { errors, isSubmitting },
   } = useForm<PaymentAmountValues>({
     resolver: zodResolver(paymentAmountSchema),
-    defaultValues: { amount: 0, direction: "received", method: "cash", note: "" },
+    defaultValues: { amount: 0, direction: "received", note: "" },
   });
   const direction = watch("direction");
-  const method = watch("method");
 
   if (!open) return null;
 
   const onSubmit = async (values: PaymentAmountValues) => {
-    try {
-      await recordLedgerEntry(customerId, values.amount, values.direction, values.method, values.note ?? "");
-      toast.success(
-        values.direction === "received"
-          ? `Payment of Rs. ${values.amount.toLocaleString()} received`
-          : `Rs. ${values.amount.toLocaleString()} recorded as given / credit adjustment`
-      );
-      reset();
-      onClose();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to record payment");
-    }
+    recordLedgerEntry(customerId, values.amount, values.direction, values.note ?? "");
+    toast.success(
+      values.direction === "received"
+        ? `Payment of Rs. ${values.amount.toLocaleString()} received`
+        : `Rs. ${values.amount.toLocaleString()} recorded as given / credit adjustment`
+    );
+    reset();
+    onClose();
   };
 
   return (
@@ -97,40 +89,11 @@ function RecordPaymentDialog({ open, onClose, customerId }: { open: boolean; onC
                     : "border-[var(--surface-border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
                 }`}
               >
-                Ã¢Ë†â€™ Given / credit adjustment
+                âˆ’ Given / credit adjustment
               </button>
             </div>
             <input type="hidden" {...register("direction")} />
             {errors.direction && <p className="text-xs text-red-400 mt-1">{errors.direction.message}</p>}
-          </div>
-          <div>
-            <label className="text-sm text-[var(--text-muted)]">Received In / Paid From</label>
-            <div className="mt-1 grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setValue("method", "cash", { shouldValidate: true })}
-                className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
-                  method === "cash"
-                    ? "border-[var(--surface-border-strong)] bg-[var(--surface-hover)] text-[var(--foreground)]"
-                    : "border-[var(--surface-border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
-                }`}
-              >
-                Cash
-              </button>
-              <button
-                type="button"
-                onClick={() => setValue("method", "bank", { shouldValidate: true })}
-                className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
-                  method === "bank"
-                    ? "border-[var(--surface-border-strong)] bg-[var(--surface-hover)] text-[var(--foreground)]"
-                    : "border-[var(--surface-border)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]"
-                }`}
-              >
-                Bank
-              </button>
-            </div>
-            <input type="hidden" {...register("method")} />
-            {errors.method && <p className="text-xs text-red-400 mt-1">{errors.method.message}</p>}
           </div>
           <div>
             <label className="text-sm text-[var(--text-muted)]">Note</label>
@@ -151,11 +114,11 @@ function RecordPaymentDialog({ open, onClose, customerId }: { open: boolean; onC
 }
 
 function DirectionBadge({ direction }: { direction: LedgerDirection | null }) {
-  if (!direction) return <span className="text-[var(--text-faint)]">â€”</span>;
+  if (!direction) return <span className="text-[var(--text-faint)]">—</span>;
   return direction === "received" ? (
     <span className="rounded-full bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-400">+ Received</span>
   ) : (
-    <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-400">Ã¢Ë†â€™ Given</span>
+    <span className="rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-medium text-red-400">âˆ’ Given</span>
   );
 }
 
@@ -242,7 +205,7 @@ export default function CustomerDetailPage({ params }: { params: Promise<{ id: s
                   <td className="px-4 py-3"><DirectionBadge direction={l.direction} /></td>
                   <td className="px-4 py-3 text-[var(--text-secondary)]">{l.note}</td>
                   <td className={`px-4 py-3 ${isDebit ? "text-red-400" : "text-green-400"}`}>
-                    {isDebit ? "+" : "Ã¢Ë†â€™"} Rs. {l.amount.toLocaleString()}
+                    {isDebit ? "+" : "âˆ’"} Rs. {l.amount.toLocaleString()}
                   </td>
                   <td className="px-4 py-3 text-[var(--text-secondary)]">Rs. {l.runningBalance.toLocaleString()}</td>
                 </tr>
