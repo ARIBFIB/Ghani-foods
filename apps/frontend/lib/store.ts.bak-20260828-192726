@@ -1,6 +1,3 @@
-===================================================================
-FILE: apps\frontend\lib\store.ts
-===================================================================
 "use client";
 
 import { create } from "zustand";
@@ -148,6 +145,7 @@ function mapCustomerItemPriceRow(row: Record<string, any>): CustomerItemPrice {
 function mapInvoiceRow(row: Record<string, any>, customerName: string, items: InvoiceLineRecord[]): Invoice {
   return {
     id: row.invoice_number ?? row.id,
+    dbId: row.id,
     customerId: row.customer_id,
     customerName,
     invoiceDate: row.invoice_date,
@@ -157,6 +155,7 @@ function mapInvoiceRow(row: Record<string, any>, customerName: string, items: In
 }
 function mapInvoiceItemRow(row: Record<string, any>): InvoiceLineRecord {
   return {
+    id: row.id,
     itemId: row.finished_carton_id,
     itemName: row.item_name,
     qty: Number(row.qty),
@@ -312,6 +311,7 @@ export type Customer = { id: string; name: string; phone: string; currentBalance
 export type CustomerItemPrice = { customerId: string; itemId: string; lastSoldPrice: number; lastSoldDate: string };
 
 export type InvoiceLineRecord = {
+  id: string;
   itemId: string;
   itemName: string;
   qty: number;
@@ -322,6 +322,7 @@ export type InvoiceLineRecord = {
 
 export type Invoice = {
   id: string;
+  dbId: string;
   customerId: string;
   customerName: string;
   invoiceDate: string;
@@ -517,7 +518,7 @@ type State = {
   createCreditNote: (input: {
     customerId: string;
     invoiceId?: string;
-    lines: { itemId: string; qty: number; unitPrice: number }[];
+    lines: { invoiceItemId: string; qty: number; unitPrice: number }[];
     note?: string;
   }) => Promise<string>;
   createDebitNote: (input: {
@@ -947,7 +948,7 @@ export const useStore = create<State>()((set, get) => ({
       body: {
         customerId: input.customerId,
         invoiceId: input.invoiceId ?? null,
-        lines: input.lines.map((l) => ({ itemId: l.itemId, qty: l.qty, unitPrice: l.unitPrice })),
+        lines: input.lines.map((l) => ({ invoiceItemId: l.invoiceItemId, qty: l.qty, unitPrice: l.unitPrice })),
         note: input.note ?? null,
       },
     });
