@@ -25,7 +25,7 @@ export const getSupplierLedger = (supplierId: string) =>
 // params server-side. functions.invoke() posts JSON and parses the response
 // envelope { data } / { error } that every edge function in this repo returns.
 async function callFunction<T = unknown>(name: string, body: unknown): Promise<T> {
-  const { data, error } = await supabase.functions.invoke(name, { body: body as any });
+  const { data, error } = await supabase.functions.invoke(name, { body });
   if (error) {
     // Prefer a server-provided message if the function returned one in its
     // error envelope; functions.invoke() surfaces transport-level errors here.
