@@ -100,7 +100,7 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
           </div>
           <div>
             <div className="text-[var(--text-muted)] text-xs">Outstanding Balance</div>
-            <div className="text-lg font-semibold text-[var(--foreground)] mt-1">Rs. {supplier.currentBalance.toLocaleString()}</div>
+            <div className={`text-lg font-semibold mt-1 ${supplier.currentBalance > 0 ? "text-red-400" : "text-green-400"}`}>Rs. {Math.abs(supplier.currentBalance).toLocaleString()}</div>
           </div>
         </div>
       </div>
