@@ -42,7 +42,8 @@
 param(
     [string]$ProjectRoot = (Get-Location).Path,
     [Parameter(Mandatory = $true)]
-    [string]$DbPassword
+    [string]$DbPassword,
+    [string]$ConnectionString = $null
 )
 
 $ErrorActionPreference = "Stop"
@@ -162,7 +163,37 @@ else {
     exit 1
 }
 
-$connStr = "postgresql://postgres:$DbPassword@db.$projectRef.supabase.co:5432/postgres"
+if ($ConnectionString) {
+    $connStr = $ConnectionString
+    Write-Ok "Using the connection string you provided directly."
+}
+else {
+    $connStr = "postgresql://postgres:$DbPassword@db.$projectRef.supabase.co:5432/postgres"
+
+    # Preflight: the direct db.<ref>.supabase.co host is IPv6-only on many
+    # Supabase projects now, which fails DNS resolution (ENOTFOUND) on a
+    # lot of regular networks/ISPs. Check DNS BEFORE running the real
+    # queries, so a connectivity problem never gets misreported as
+    # "function/view not found".
+    $dnsOk = $false
+    try {
+        [void][System.Net.Dns]::GetHostEntry("db.$projectRef.supabase.co")
+        $dnsOk = $true
+    }
+    catch {
+        $dnsOk = $false
+    }
+
+    if (-not $dnsOk) {
+        Write-Fail "Cannot resolve db.$projectRef.supabase.co (DNS lookup failed). This is a CONNECTIVITY problem, not proof anything is missing in the DB - do not treat any 'not found' result below as real until this is fixed."
+        Write-Warn2 "This project's direct DB host is very likely IPv6-only now (a known Supabase change), which many networks can't reach."
+        Write-Warn2 "Fix: open Supabase Dashboard -> Project Settings -> Database -> 'Connection string' -> select 'Session pooler' (or 'Transaction pooler'), copy that full connection string, then re-run this script as:"
+        Write-Host ""
+        Write-Host "    .\Finish-SupplierLedgerVerification.ps1 -DbPassword `"...`" -ConnectionString `"paste-the-pooler-connection-string-here`"" -ForegroundColor White
+        Write-Host ""
+        exit 1
+    }
+}
 
 # One-time setup for the Node.js fallback: install the 'pg' package into a
 # scratch folder (not the project) so this never touches the app's own
@@ -273,17 +304,24 @@ function Invoke-PgQuery($sql, $label) {
 $fnResult   = Invoke-PgQuery "select proname from pg_proc where proname = 'fn_supplier_balance';" "Checking fn_supplier_balance exists..."
 $viewResult = Invoke-PgQuery "select viewname from pg_views where viewname = 'v_supplier_ledger_orphans';" "Checking v_supplier_ledger_orphans exists..."
 
-$fnExists   = $fnResult -match 'fn_supplier_balance'
-$viewExists = $viewResult -match 'v_supplier_ledger_orphans'
+$fnHadError   = $fnResult -match 'QUERY_ERROR'
+$viewHadError = $viewResult -match 'QUERY_ERROR'
+$fnExists   = (-not $fnHadError) -and ($fnResult -match 'fn_supplier_balance')
+$viewExists = (-not $viewHadError) -and ($viewResult -match 'v_supplier_ledger_orphans')
 
-if ($fnExists) { Write-Ok "fn_supplier_balance confirmed to exist in the live DB." }
+if ($fnHadError) { Write-Fail "Could not check fn_supplier_balance - query errored (see output above), NOT confirmed missing." }
+elseif ($fnExists) { Write-Ok "fn_supplier_balance confirmed to exist in the live DB." }
 else { Write-Fail "fn_supplier_balance was NOT found in the live DB." }
 
-if ($viewExists) { Write-Ok "v_supplier_ledger_orphans confirmed to exist in the live DB." }
+if ($viewHadError) { Write-Fail "Could not check v_supplier_ledger_orphans - query errored (see output above), NOT confirmed missing." }
+elseif ($viewExists) { Write-Ok "v_supplier_ledger_orphans confirmed to exist in the live DB." }
 else { Write-Fail "v_supplier_ledger_orphans was NOT found in the live DB." }
 
 if ($viewExists) {
     Invoke-PgQuery "select * from v_supplier_ledger_orphans;" "Fetching orphan ledger entries (this is your Rs. 150,000 audit data)..." | Out-Null
+}
+elseif ($viewHadError) {
+    Write-Warn2 "Skipping orphan-entry query - connection/query error above needs to be fixed first, this is not a real 'view missing' situation."
 }
 else {
     Write-Warn2 "Skipping orphan-entry query since the view doesn't exist - the earlier migration verification needs to be revisited first."
@@ -296,6 +334,9 @@ Write-Step "Summary"
 if ($fnExists -and $viewExists) {
     Write-Ok "Both fn_supplier_balance and v_supplier_ledger_orphans are confirmed live. Review the orphan rows printed above to decide delete vs backfill."
 }
+elseif ($fnHadError -or $viewHadError) {
+    Write-Fail "Could not reach the database to verify - this is a CONNECTIVITY problem, not confirmation that anything is missing. Fix the connection (see warning above about the pooler connection string) and re-run before concluding anything."
+}
 else {
-    Write-Fail "One or both DB objects are missing - do NOT mark Issue 10 as done yet. Re-check the migration push."
+    Write-Fail "One or both DB objects are genuinely missing (connection worked, they just weren't found) - do NOT mark Issue 10 as done yet. Re-check the migration push."
 }

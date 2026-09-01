@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { NavLink } from "@/components/ui/nav-link";
@@ -90,18 +90,6 @@ export default function SuppliersPage() {
     { accessorKey: "phone", header: "Phone" },
     { accessorKey: "totalPurchases", header: "Total Purchases" },
     { accessorKey: "lastPurchaseDate", header: "Last Purchase Date" },
-    {
-      accessorKey: "currentBalance",
-      header: "Amount Payable",
-      cell: ({ row }) => {
-        const bal = row.original.currentBalance;
-        return (
-          <span className={bal > 0 ? "text-red-400" : "text-green-400"}>
-            Rs. {Math.abs(bal).toLocaleString()}
-          </span>
-        );
-      },
-    },
   ], []);
 
   return (
