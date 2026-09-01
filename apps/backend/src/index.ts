@@ -1,10 +1,13 @@
-// src/index.ts
+﻿// src/index.ts
 import express from "express";
 import cors from "cors";
 import * as data from "./data";
 
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
+// LOCAL-DEV-ONLY fallback. See apps/backend/.env.example - set FRONTEND_ORIGIN
+// in a real .env file for your environment. Production REQUIRES FRONTEND_ORIGIN
+// to be set (throws below if missing), so this value is never used live.
 const DEFAULT_DEV_ORIGIN = "http://localhost:3000";
 let FRONTEND_ORIGIN = process.env.FRONTEND_ORIGIN;
 if (!FRONTEND_ORIGIN) {
@@ -121,5 +124,7 @@ app.patch("/api/settings", (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`GhaniFoods backend running on port ${PORT} (origin: ${FRONTEND_ORIGIN})`);
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`GhaniFoods backend running on port ${PORT} (origin: ${FRONTEND_ORIGIN})`);
+  }
 });

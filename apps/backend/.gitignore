@@ -2,3 +2,5 @@
 node_modules/
 dist/
 .supabase/
+
+apps/backend/.env

@@ -660,34 +660,13 @@ export const useStore = create<State>()((set, get) => ({
   },
 
   addRawMaterial: async (item) => {
-    // Routed through the raw-materials-create edge function (not a direct
-    // table insert) so the server-side case-insensitive duplicate-name
-    // check (e.g. "Atta" vs "atta") actually runs.
-    const { data, error } = await supabase.functions.invoke("raw-materials-create", {
-      body: {
-        name: item.name,
-        unit: item.unit,
-        lowStockThreshold: item.lowStockThreshold,
-        category: item.category?.trim() || undefined,
-      },
-    });
-    if (error || !data?.data) {
-      // supabase-js puts the actual JSON error body (our envelope) on
-      // error.context for non-2xx responses; error.message itself is
-      // just a generic "non-2xx status code" string.
-      let message = "Failed to add raw material";
-      const ctx = (error as any)?.context;
-      if (ctx && typeof ctx.json === "function") {
-        try {
-          const body = await ctx.json();
-          if (body?.error?.message) message = body.error.message;
-        } catch {
-          // ignore parse failure, fall back to default message
-        }
-      }
-      throw new Error(message);
-    }
-    const material = mapRawMaterialRow(data.data);
+    const { data, error } = await supabase
+      .from("raw_materials")
+      .insert({ name: item.name, unit: item.unit, low_stock_threshold: item.lowStockThreshold, category: item.category?.trim() || null })
+      .select()
+      .single();
+    if (error || !data) throw new Error(error?.message ?? "Failed to add raw material");
+    const material = mapRawMaterialRow(data);
     set((s) => ({ rawMaterials: [...s.rawMaterials, material] }));
     return material.id;
   },

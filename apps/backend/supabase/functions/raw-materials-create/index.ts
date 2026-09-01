@@ -36,6 +36,7 @@ Deno.serve(async (req: Request) => {
         quantity_in_stock: body.quantityInStock ?? 0,
         avg_unit_cost: body.avgUnitCost ?? 0,
         low_stock_threshold: body.lowStockThreshold ?? 0,
+        category: body.category ?? null,
       })
       .select()
       .single();
