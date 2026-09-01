@@ -12,10 +12,25 @@ Deno.serve(async (req: Request) => {
       return jsonResponse(envelopeError("name, rawMaterialId and gramsPerUnit are required", "BAD_REQUEST"), 400, corsHeaders);
     }
 
+    const trimmedName = String(body.name).trim();
+
+    const { data: existing } = await supabase
+      .from("boxes")
+      .select("id, name")
+      .ilike("name", trimmedName)
+      .maybeSingle();
+    if (existing) {
+      return jsonResponse(
+        envelopeError(`Is naam ka item pehle se maujood hai: ${existing.name}`, "CONFLICT"),
+        409,
+        corsHeaders
+      );
+    }
+
     const { data, error } = await supabase
       .from("boxes")
       .insert({
-        name: body.name,
+        name: trimmedName,
         raw_material_id: body.rawMaterialId,
         grams_per_unit: body.gramsPerUnit,
         stock_qty: body.stockQty ?? 0,

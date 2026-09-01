@@ -32,6 +32,8 @@ Deno.serve(async (req: Request) => {
     if (body.boxId !== undefined) updatePayload.box_id = body.boxId;
     if (body.packetsPerBox !== undefined) updatePayload.packets_per_box = body.packetsPerBox;
     if (body.boxesPerCarton !== undefined) updatePayload.boxes_per_carton = body.boxesPerCarton;
+    if (body.cartonMaterialId !== undefined) updatePayload.carton_material_id = body.cartonMaterialId;
+    if (body.cartonQtyPerCarton !== undefined) updatePayload.carton_qty_per_carton = body.cartonQtyPerCarton;
 
     const { data, error } = await supabase
       .from("carton_configurations")

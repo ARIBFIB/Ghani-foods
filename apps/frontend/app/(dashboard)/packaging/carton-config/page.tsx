@@ -1,14 +1,15 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "@/components/ui/toast";
 import { type ColumnDef } from "@tanstack/react-table";
-import { useStore, type CartonConfiguration } from "@/lib/store";
+import { useStore, type CartonConfiguration, computePackagingUnitCost, packagingQtyLabel, packagingUnitAbbrev } from "@/lib/store";
 import { cartonConfigSchema, type CartonConfigFormValues } from "@/lib/schemas";
 import { SortableTable } from "@/components/ui/sortable-table";
 import { InfoTip } from "@/components/ui/info-tip";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 
 function StatusBadge({ used }: { used: boolean }) {
   return (
@@ -27,18 +28,16 @@ function AddConfigDialog({ open, onClose }: { open: boolean; onClose: () => void
   const addCartonConfiguration = useStore((s) => s.addCartonConfiguration);
 
   // Packaging cost build-up (BRS v1.2 sec 1.1; Frontend spec v2.2 sec 5.13
-  // "Carton Configuration cost preview"). Grams-per-unit is always in
-  // grams; the underlying Raw Material's avgUnitCost is per its stock
-  // `unit`. Assume that unit is "kg" unless it is literally "g".
-  const costPerGram = (rawMaterialId: string) => {
-    const rm = rawMaterials.find((r) => r.id === rawMaterialId);
-    if (!rm) return 0;
-    return rm.unit === "g" ? rm.avgUnitCost : rm.avgUnitCost / 1000;
-  };
+  // "Carton Configuration cost preview"). ISSUE 8 FIX: this used to assume
+  // every raw material was tracked in kg/g and hardcoded a /1000
+  // conversion for anything that was not literally "g" - silently wrong
+  // for piece/dozen/litre/etc. Now reuses the shared, unit-aware
+  // computePackagingUnitCost() from the store, which multiplies directly
+  // in the raw material's own unit with no assumed conversion.
 
   const { register, handleSubmit, control, watch, reset, formState: { errors, isSubmitting } } = useForm<CartonConfigFormValues>({
     resolver: zodResolver(cartonConfigSchema),
-    defaultValues: { name: "", wrapperId: wrappers[0]?.id ?? "", packetsPerBox: 12, boxId: boxes[0]?.id ?? "", boxesPerCarton: 4 },
+    defaultValues: { name: "", wrapperId: wrappers[0]?.id ?? "", packetsPerBox: 12, boxId: boxes[0]?.id ?? "", boxesPerCarton: 4, cartonMaterialId: rawMaterials[0]?.id ?? "", cartonQtyPerCarton: 1 },
   });
 
   const name = watch("name");
@@ -46,6 +45,10 @@ function AddConfigDialog({ open, onClose }: { open: boolean; onClose: () => void
   const boxId = watch("boxId");
   const packetsPerBox = watch("packetsPerBox");
   const boxesPerCarton = watch("boxesPerCarton");
+  // ISSUE 9: the physical carton itself is a consumable raw material too,
+  // and needs to be selected + deducted just like Wrapper/Box already are.
+  const cartonMaterialId = watch("cartonMaterialId");
+  const cartonQtyPerCarton = watch("cartonQtyPerCarton");
 
   if (!open) return null;
 
@@ -53,11 +56,13 @@ function AddConfigDialog({ open, onClose }: { open: boolean; onClose: () => void
 
   const selectedWrapper = wrappers.find((w) => w.id === wrapperId);
   const selectedBox = boxes.find((b) => b.id === boxId);
-  const costPerWrapper = selectedWrapper ? selectedWrapper.gramsPerUnit * costPerGram(selectedWrapper.rawMaterialId) : 0;
-  const costPerBox = selectedBox ? selectedBox.gramsPerUnit * costPerGram(selectedBox.rawMaterialId) : 0;
+  const selectedCartonMaterial = rawMaterials.find((r) => r.id === cartonMaterialId);
+  const costPerWrapper = selectedWrapper ? computePackagingUnitCost(selectedWrapper.gramsPerUnit, rawMaterials.find((r) => r.id === selectedWrapper.rawMaterialId)) : 0;
+  const costPerBox = selectedBox ? computePackagingUnitCost(selectedBox.gramsPerUnit, rawMaterials.find((r) => r.id === selectedBox.rawMaterialId)) : 0;
+  const costPerCartonMaterial = selectedCartonMaterial ? computePackagingUnitCost(Number(cartonQtyPerCarton) || 0, selectedCartonMaterial) : 0;
   const costPerPacket = costPerWrapper;
   const costPerBoxAssembled = costPerBox + (Number(packetsPerBox) || 0) * costPerWrapper;
-  const costPerCarton = (Number(boxesPerCarton) || 0) * costPerBoxAssembled;
+  const costPerCarton = (Number(boxesPerCarton) || 0) * costPerBoxAssembled + costPerCartonMaterial;
 
   const onSubmit = async (values: CartonConfigFormValues) => {
     try {
@@ -88,11 +93,14 @@ function AddConfigDialog({ open, onClose }: { open: boolean; onClose: () => void
               control={control}
               name="wrapperId"
               render={({ field }) => (
-                <select {...field}
-                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]">
-                  <option value="">Select wrapper...</option>
-                  {wrappers.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
-                </select>
+                <SearchableSelect
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={wrappers.map((w) => ({ value: w.id, label: w.name }))}
+                  placeholder="Select wrapper..."
+                  searchPlaceholder="Search wrappers..."
+                  className="mt-1"
+                />
               )}
             />
             {errors.wrapperId && <p className="text-xs text-red-400 mt-1">{errors.wrapperId.message}</p>}
@@ -111,11 +119,14 @@ function AddConfigDialog({ open, onClose }: { open: boolean; onClose: () => void
               control={control}
               name="boxId"
               render={({ field }) => (
-                <select {...field}
-                  className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]">
-                  <option value="">Select box...</option>
-                  {boxes.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-                </select>
+                <SearchableSelect
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={boxes.map((b) => ({ value: b.id, label: b.name }))}
+                  placeholder="Select box..."
+                  searchPlaceholder="Search boxes..."
+                  className="mt-1"
+                />
               )}
             />
             {errors.boxId && <p className="text-xs text-red-400 mt-1">{errors.boxId.message}</p>}
@@ -126,6 +137,36 @@ function AddConfigDialog({ open, onClose }: { open: boolean; onClose: () => void
             <input {...register("boxesPerCarton")} type="number"
               className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
             {errors.boxesPerCarton && <p className="text-xs text-red-400 mt-1">{errors.boxesPerCarton.message}</p>}
+          </div>
+
+          <div>
+            <label className="text-sm text-[var(--text-muted)]">Carton Material</label>
+            <Controller
+              control={control}
+              name="cartonMaterialId"
+              render={({ field }) => (
+                <SearchableSelect
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={rawMaterials.map((m) => ({ value: m.id, label: `${m.name}${m.category ? ` - ${m.category}` : ""} (${m.unit})` }))}
+                  placeholder="Select the physical carton..."
+                  searchPlaceholder="Search raw materials..."
+                  className="mt-1"
+                />
+              )}
+            />
+            <p className="mt-1 text-[11px] text-[var(--text-muted)]">The physical carton this configuration is packed into - consumed from stock, same as Wrapper/Box, every time this configuration is produced.</p>
+            {errors.cartonMaterialId && <p className="text-xs text-red-400 mt-1">{errors.cartonMaterialId.message}</p>}
+          </div>
+
+          <div>
+            <label className="text-sm text-[var(--text-muted)] inline-flex items-center">
+              {packagingQtyLabel(selectedCartonMaterial?.unit)}
+              <InfoTip text={`How many ${(selectedCartonMaterial?.unit || "units").toLowerCase()} of the carton material are consumed per carton produced`} />
+            </label>
+            <input {...register("cartonQtyPerCarton")} type="number" step="any"
+              className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
+            {errors.cartonQtyPerCarton && <p className="text-xs text-red-400 mt-1">{errors.cartonQtyPerCarton.message}</p>}
           </div>
 
           {wrapperId && boxId && totalPacketsPerCarton > 0 && (
@@ -139,12 +180,13 @@ function AddConfigDialog({ open, onClose }: { open: boolean; onClose: () => void
             <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--background)] p-3 text-xs text-[var(--text-muted)] space-y-1.5">
               <div className="flex items-center text-[var(--foreground)] font-medium">
                 Cost Build-Up
-                <InfoTip text="Derived from each Wrapper/Box's grams-per-unit x its raw material's current weighted-average cost. Wrapper cost = per packet. Box cost + (Packets/Box x Wrapper cost) = per box. That x Boxes/Carton = per carton. Excludes bulk product cost, which varies per batch." />
+                <InfoTip text="Derived from each Wrapper/Box/Carton Material's quantity-per-unit x its raw material's current weighted-average cost. Wrapper cost = per packet. Box cost + (Packets/Box x Wrapper cost) = per box. (Boxes/Carton x Box cost) + Carton Material cost = per carton. Excludes bulk product cost, which varies per batch." />
               </div>
               <div className="grid grid-cols-2 gap-x-3 gap-y-1">
                 <span>Cost / Wrapper (Packet)</span><span className="text-right text-[var(--foreground)]">Rs. {costPerPacket.toFixed(2)}</span>
                 <span>Cost / Box</span><span className="text-right text-[var(--foreground)]">Rs. {costPerBox.toFixed(2)}</span>
                 <span>Cost / Box (assembled)</span><span className="text-right text-[var(--foreground)]">Rs. {costPerBoxAssembled.toFixed(2)}</span>
+                <span>Cost / Carton Material</span><span className="text-right text-[var(--foreground)]">Rs. {costPerCartonMaterial.toFixed(2)}</span>
                 <span className="font-medium">Cost / Carton</span><span className="text-right text-[var(--foreground)] font-medium">Rs. {costPerCarton.toFixed(2)}</span>
               </div>
             </div>
@@ -164,24 +206,42 @@ function AddConfigDialog({ open, onClose }: { open: boolean; onClose: () => void
 export default function CartonConfigPage() {
   const configs = useStore((s) => s.cartonConfigurations);
   const loadCartonConfigurations = useStore((s) => s.loadCartonConfigurations);
+  const deleteCartonConfiguration = useStore((s) => s.deleteCartonConfiguration);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const handleDelete = async (id: string, name: string, usedInPackingRun: boolean) => {
+    if (usedInPackingRun) return;
+    if (!window.confirm(`Delete carton configuration "${name}"? This cannot be undone.`)) return;
+    setDeletingId(id);
+    try {
+      await deleteCartonConfiguration(id);
+      toast.success("Carton configuration deleted");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete carton configuration");
+    } finally {
+      setDeletingId(null);
+    }
+  };
   const wrappers = useStore((s) => s.wrappers);
   const boxes = useStore((s) => s.boxes);
+  const rawMaterials = useStore((s) => s.rawMaterials);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  type Row = CartonConfiguration & { wrapperName: string; boxName: string; packetsPerCarton: number };
+  type Row = CartonConfiguration & { wrapperName: string; boxName: string; cartonMaterialName: string; packetsPerCarton: number };
 
   const rows = useMemo<Row[]>(() => {
     return configs.map((c) => {
       const wrapper = wrappers.find((w) => w.id === c.wrapperId);
       const box = boxes.find((b) => b.id === c.boxId);
+      const cartonMaterial = rawMaterials.find((r) => r.id === c.cartonMaterialId);
       return {
         ...c,
         wrapperName: wrapper?.name ?? "Unknown Wrapper",
         boxName: box?.name ?? "Unknown Box",
+        cartonMaterialName: cartonMaterial ? `${cartonMaterial.name} (${c.cartonQtyPerCarton} ${packagingUnitAbbrev(cartonMaterial.unit)})` : "Not set",
         packetsPerCarton: c.packetsPerBox * c.boxesPerCarton,
       };
     });
-  }, [configs, wrappers, boxes]);
+  }, [configs, wrappers, boxes, rawMaterials]);
 
   const columns = useMemo<ColumnDef<Row, unknown>[]>(() => [
     { accessorKey: "name", header: "Name", cell: ({ getValue }) => <span className="text-[var(--foreground)] font-medium">{getValue() as string}</span> },
@@ -189,14 +249,29 @@ export default function CartonConfigPage() {
     { accessorKey: "packetsPerBox", header: "Packets / Box" },
     { accessorKey: "boxName", header: "Box" },
     { accessorKey: "boxesPerCarton", header: "Boxes / Carton" },
+    { accessorKey: "cartonMaterialName", header: "Carton Material" },
     { accessorKey: "packetsPerCarton", header: "Packets / Carton" },
     {
       id: "status", header: "Status", enableSorting: false,
       cell: ({ row }) => <StatusBadge used={row.original.usedInPackingRun} />,
     },
-  ], []);
+    {
+      id: "actions", header: "Actions", enableSorting: false,
+      cell: ({ row }) => (
+        <button
+          type="button"
+          onClick={() => handleDelete(row.original.id, row.original.name, row.original.usedInPackingRun)}
+          disabled={row.original.usedInPackingRun || deletingId === row.original.id}
+          title={row.original.usedInPackingRun ? "Already used in a packing run - cannot be deleted" : undefined}
+          className="rounded-lg border border-red-900 px-2.5 py-1 text-xs font-medium text-red-400 hover:bg-red-950 disabled:opacity-50"
+        >
+          {deletingId === row.original.id ? "Deleting..." : "Delete"}
+        </button>
+      ),
+    },
+  ], [deletingId]);
 
-  const canCreate = wrappers.length > 0 && boxes.length > 0;
+  const canCreate = wrappers.length > 0 && boxes.length > 0 && rawMaterials.length > 0;
 
   return (
     <div className="space-y-6">
@@ -210,7 +285,7 @@ export default function CartonConfigPage() {
         <button
           onClick={() => setDialogOpen(true)}
           disabled={!canCreate}
-          title={canCreate ? undefined : "Add at least one Wrapper and one Box first"}
+          title={canCreate ? undefined : "Add at least one Wrapper, one Box, and one Raw Material first"}
           className="rounded-lg bg-neutral-900 dark:bg-neutral-50 px-4 py-2 text-sm font-medium text-neutral-50 dark:text-neutral-950 hover:opacity-90 transition-opacity disabled:opacity-50"
         >
           + New Configuration
@@ -219,7 +294,7 @@ export default function CartonConfigPage() {
 
       {!canCreate && (
         <div className="rounded-xl border border-amber-900 bg-amber-950 p-4 text-sm text-amber-400">
-          You need at least one Wrapper and one Box before creating a carton configuration.
+          You need at least one Wrapper, one Box, and one Raw Material before creating a carton configuration.
         </div>
       )}
 

@@ -1,8 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { toast } from "@/components/ui/toast";
 import { useStore } from "@/lib/store";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 
 type ItemRow = {
   id: string;
@@ -154,16 +155,14 @@ export function PurchaseOrderDialog({
           <div>
             <label className="text-xs text-[var(--text-muted)]">Supplier</label>
             <div className="mt-1 flex gap-2">
-              <select
+              <SearchableSelect
                 value={supplierId}
-                onChange={(e) => setSupplierId(e.target.value)}
-                className="block w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]"
-              >
-                <option value="">Select supplier</option>
-                {suppliers.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
+                onChange={setSupplierId}
+                options={suppliers.map((s) => ({ value: s.id, label: s.name }))}
+                placeholder="Select supplier"
+                searchPlaceholder="Search suppliers..."
+                className="block w-full"
+              />
               <button
                 type="button"
                 onClick={() => setShowAddSupplier((v) => !v)}
@@ -239,16 +238,14 @@ export function PurchaseOrderDialog({
               <div key={row.id} className="flex flex-wrap items-end gap-2 rounded-lg border border-[var(--surface-border)] p-3">
                 <div className="min-w-[180px] flex-1">
                   <label className="text-xs text-[var(--text-muted)]">Raw material</label>
-                  <select
+                  <SearchableSelect
                     value={row.rawMaterialId}
-                    onChange={(e) => updateRow(row.id, { rawMaterialId: e.target.value })}
-                    className="mt-1 block w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]"
-                  >
-                    <option value="">Select material</option>
-                    {rawMaterials.map((m) => (
-                      <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>
-                    ))}
-                  </select>
+                    onChange={(v) => updateRow(row.id, { rawMaterialId: v })}
+                    options={rawMaterials.map((m) => ({ value: m.id, label: `${m.name}${m.category ? ` - ${m.category}` : ""} (${m.unit})` }))}
+                    placeholder="Select material"
+                    searchPlaceholder="Search raw materials..."
+                    className="mt-1 block w-full"
+                  />
                 </div>
                 <div className="w-28">
                   <label className="text-xs text-[var(--text-muted)]">Qty ordered</label>

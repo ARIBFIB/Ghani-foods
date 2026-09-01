@@ -1,4 +1,4 @@
-import { z } from "zod";
+﻿import { z } from "zod";
 
 // ---------------------------------------------------------------------------
 // Suppliers & Raw Material master
@@ -22,6 +22,7 @@ export const rawMaterialMasterSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters"),
   unit: z.string().trim().min(1, "Unit is required"),
   lowStockThreshold: z.coerce.number().min(0, "Threshold cannot be negative"),
+  category: z.string().trim().optional(),
 });
 export type RawMaterialMasterFormValues = z.infer<typeof rawMaterialMasterSchema>;
 
@@ -52,7 +53,7 @@ export type PurchaseReceiptFormValues = z.infer<typeof purchaseReceiptSchema>;
 export const wrapperDefinitionSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters"),
   rawMaterialId: z.string().min(1, "Select the underlying raw material"),
-  gramsPerUnit: z.coerce.number().positive("Grams per unit must be greater than 0"),
+  gramsPerUnit: z.coerce.number().positive("Quantity per unit must be greater than 0"),
   lowStockThreshold: z.coerce.number().min(0, "Threshold cannot be negative"),
 });
 export type WrapperDefinitionFormValues = z.infer<typeof wrapperDefinitionSchema>;
@@ -81,6 +82,9 @@ export const cartonConfigSchema = z.object({
   packetsPerBox: z.coerce.number().int("Must be a whole number").positive("Must be greater than 0"),
   boxId: z.string().min(1, "Select a box"),
   boxesPerCarton: z.coerce.number().int("Must be a whole number").positive("Must be greater than 0"),
+  // ISSUE 9: the physical carton itself is now a required, consumable input.
+  cartonMaterialId: z.string().min(1, "Select the physical carton material"),
+  cartonQtyPerCarton: z.coerce.number().positive("Must be greater than 0"),
 });
 export type CartonConfigFormValues = z.infer<typeof cartonConfigSchema>;
 

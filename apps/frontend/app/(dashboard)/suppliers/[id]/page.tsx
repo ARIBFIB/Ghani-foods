@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Fragment, use, useEffect, useMemo, useState } from "react";
 import { NavLink } from "@/components/ui/nav-link";
@@ -249,3 +249,13 @@ export default function SupplierDetailPage({ params }: { params: Promise<{ id: s
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+

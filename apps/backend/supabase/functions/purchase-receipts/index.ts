@@ -21,6 +21,7 @@ Deno.serve(async (req: Request) => {
       p_po_id: body.poId,
       p_purchase_date: body.purchaseDate ?? new Date().toISOString().slice(0, 10),
       p_items: body.items,
+      p_supplier_id: body.supplierId ?? null,
     };
 
     const { data, error } = await supabase.rpc("fn_create_purchase_receipt_from_po", rpcParams);

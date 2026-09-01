@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "@/components/ui/toast";
 import { useStore } from "@/lib/store";
 import { batchSchema, type BatchFormValues } from "@/lib/schemas";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 
 type ConsumptionRow = { id: string; rawMaterialId: string; qty: string; unit: string };
 type ExpenseRow = { id: string; name: string; amount: string };
@@ -176,9 +177,9 @@ export default function NewBatchPage() {
       });
 
       if (useLeftoverFirst) {
-        toast.success(`Batch ${newId} created — raw material stock deducted and ${leftoverKgUsed} kg leftover from ${leftoverBatchId} consumed`);
+        toast.success(`Batch ${newId} created â€” raw material stock deducted and ${leftoverKgUsed} kg leftover from ${leftoverBatchId} consumed`);
       } else {
-        toast.success(`Batch ${newId} created — raw material stock deducted`);
+        toast.success(`Batch ${newId} created â€” raw material stock deducted`);
       }
       navigate(`/batches/${newId}`);
     } catch (err) {
@@ -207,12 +208,14 @@ export default function NewBatchPage() {
             return (
               <div key={row.id} className="space-y-1">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                  <select value={row.rawMaterialId} onChange={(e) => handleMaterialChange(row.id, e.target.value)}
-                    className="flex-1 rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]">
-                    {rawMaterials.map((m) => (
-                      <option key={m.id} value={m.id}>{m.name} ({m.unit}) — {m.quantityInStock} in stock</option>
-                    ))}
-                  </select>
+                  <SearchableSelect
+                    value={row.rawMaterialId}
+                    onChange={(v) => handleMaterialChange(row.id, v)}
+                    options={rawMaterials.map((m) => ({ value: m.id, label: `${m.name}${m.category ? ` - ${m.category}` : ""} (${m.unit}) â€” ${m.quantityInStock} in stock` }))}
+                    placeholder="Select raw material..."
+                    searchPlaceholder="Search raw materials..."
+                    className="flex-1"
+                  />
                   <input value={row.qty} onChange={(e) => updateRow(row.id, { qty: e.target.value })} type="number" placeholder="Qty"
                     className="w-full sm:w-24 rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
                   {options.length > 1 ? (
@@ -345,7 +348,7 @@ export default function NewBatchPage() {
               >
                 <option value="">Select leftover batch...</option>
                 {leftoverBatches.map((b) => (
-                  <option key={b.id} value={b.id}>{b.id} — {b.leftoverQtyKg} kg available @ Rs. {b.bulkCostPerKg}/kg</option>
+                  <option key={b.id} value={b.id}>{b.id} â€” {b.leftoverQtyKg} kg available @ Rs. {b.bulkCostPerKg}/kg</option>
                 ))}
               </select>
             </div>

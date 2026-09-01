@@ -8,9 +8,9 @@ Deno.serve(async (req: Request) => {
     const body = await req.json();
     const supabase = getClient(req);
 
-    if (!body.name || !body.wrapperId || !body.boxId || !body.packetsPerBox || !body.boxesPerCarton) {
+    if (!body.name || !body.wrapperId || !body.boxId || !body.packetsPerBox || !body.boxesPerCarton || !body.cartonMaterialId || !body.cartonQtyPerCarton) {
       return jsonResponse(envelopeError(
-        "name, wrapperId, boxId, packetsPerBox and boxesPerCarton are required", "BAD_REQUEST"
+        "name, wrapperId, boxId, packetsPerBox, boxesPerCarton, cartonMaterialId and cartonQtyPerCarton are required", "BAD_REQUEST"
       ), 400, corsHeaders);
     }
 
@@ -22,6 +22,8 @@ Deno.serve(async (req: Request) => {
         packets_per_box: body.packetsPerBox,
         box_id: body.boxId,
         boxes_per_carton: body.boxesPerCarton,
+        carton_material_id: body.cartonMaterialId,
+        carton_qty_per_carton: body.cartonQtyPerCarton,
       })
       .select()
       .single();

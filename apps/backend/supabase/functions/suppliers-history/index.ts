@@ -10,14 +10,28 @@ Deno.serve(async (req: Request) => {
     const supplierId = url.searchParams.get("supplierId");
     if (!supplierId) return jsonResponse(envelopeError("supplierId is required", "BAD_REQUEST"), 400, corsHeaders);
 
-    const { data, error } = await supabase
+    const { data: receipts, error: receiptsError } = await supabase
       .from("purchase_receipts")
       .select("id, purchase_date, created_at, purchase_receipt_lines(id, raw_material_id, qty, cost, avg_cost_after)")
       .eq("supplier_id", supplierId)
       .order("purchase_date", { ascending: false });
 
-    if (error) return jsonResponse(envelopeError(error.message, "DB_ERROR"), 500, corsHeaders);
-    return jsonResponse(envelopeSuccess(data), 200, corsHeaders);
+    if (receiptsError) return jsonResponse(envelopeError(receiptsError.message, "DB_ERROR"), 500, corsHeaders);
+
+    const { data: ledger, error: ledgerError } = await supabase
+      .from("supplier_ledger_entries")
+      .select("id, amount, type, reference_id, running_balance, note, entry_date, created_at")
+      .eq("supplier_id", supplierId)
+      .order("created_at", { ascending: false });
+
+    if (ledgerError) return jsonResponse(envelopeError(ledgerError.message, "DB_ERROR"), 500, corsHeaders);
+
+    const { data: balance, error: balanceError } = await supabase
+      .rpc("fn_supplier_balance", { p_supplier_id: supplierId });
+
+    if (balanceError) return jsonResponse(envelopeError(balanceError.message, "DB_ERROR"), 500, corsHeaders);
+
+    return jsonResponse(envelopeSuccess({ receipts, ledger, balance }), 200, corsHeaders);
   } catch (err) {
     return jsonResponse(envelopeError(err instanceof Error ? err.message : "Unknown error", "BAD_REQUEST"), 400, corsHeaders);
   }

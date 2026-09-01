@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { create } from "zustand";
 import { createClient } from "@/lib/supabase/client";
@@ -26,6 +26,7 @@ function mapRawMaterialRow(row: Record<string, any>): RawMaterial {
     quantityInStock: Number(row.quantity_in_stock),
     avgUnitCost: Number(row.avg_unit_cost),
     lowStockThreshold: Number(row.low_stock_threshold),
+    category: row.category ?? undefined,
   };
 }
 function mapReceiptRow(row: Record<string, any>): PurchaseReceipt {
@@ -100,6 +101,8 @@ function mapCartonConfigRow(row: Record<string, any>): CartonConfiguration {
     packetsPerBox: Number(row.packets_per_box),
     boxId: row.box_id,
     boxesPerCarton: Number(row.boxes_per_carton),
+    cartonMaterialId: row.carton_material_id ?? "",
+    cartonQtyPerCarton: Number(row.carton_qty_per_carton ?? 0),
     usedInPackingRun: Boolean(row.used_in_packing_run),
   };
 }
@@ -223,6 +226,7 @@ export type RawMaterial = {
   quantityInStock: number;
   avgUnitCost: number;
   lowStockThreshold: number;
+  category?: string;
 };
 
 export type PurchaseReceipt = { id: string; supplierId: string; purchaseDate: string; poId?: string };
@@ -277,6 +281,8 @@ export type CartonConfiguration = {
   packetsPerBox: number;
   boxId: string;
   boxesPerCarton: number;
+  cartonMaterialId: string;
+  cartonQtyPerCarton: number;
   usedInPackingRun: boolean;
 };
 
@@ -385,18 +391,45 @@ export type AppSettings = {
 // Unit-conversion helper for Wrapper/Box grams-per-unit consumption
 // =============================================================================
 
-function unitToGramsMultiplier(unit: string): number {
-  const u = unit.trim().toLowerCase();
-  if (u === "kg" || u === "kilogram" || u === "kilograms") return 1000;
-  if (u === "g" || u === "gram" || u === "grams") return 1;
-  return 1;
+// ISSUE 8 FIX: this used to assume every raw material's stock was tracked
+// in grams (or convertible kg->g), and silently defaulted every OTHER
+// unit - including "piece" - to the same 1:1 grams multiplier. That is
+// wrong: a Box/Wrapper's "quantity per unit" is always defined in the
+// SAME unit the underlying raw material's own stock/avgUnitCost is
+// tracked in, so it must be compared/multiplied directly, unit-for-unit,
+// with no silent scaling. If a real kg<->g style conversion is ever
+// needed, it must be explicit - not assumed here.
+export function computePackagingUnitCost(quantityPerUnit: number, rawMaterial: RawMaterial | undefined): number {
+  if (!rawMaterial) return 0;
+  // avgUnitCost is always "cost per 1 <rawMaterial.unit>", so cost of
+  // quantityPerUnit (in that same unit) is a straight multiplication.
+  return quantityPerUnit * rawMaterial.avgUnitCost;
 }
 
-export function computePackagingUnitCost(gramsPerUnit: number, rawMaterial: RawMaterial | undefined): number {
-  if (!rawMaterial) return 0;
-  const multiplier = unitToGramsMultiplier(rawMaterial.unit);
-  const costPerGram = rawMaterial.avgUnitCost / multiplier;
-  return gramsPerUnit * costPerGram;
+// Human-readable "<Unit> per Unit" label for packaging quantity fields,
+// e.g. "Kg per Unit", "Pieces per Unit", "Grams per Unit" - driven by the
+// underlying raw material's actual unit instead of a hardcoded "Grams".
+export function packagingQtyLabel(unit: string | undefined): string {
+  const u = (unit ?? "").trim().toLowerCase();
+  const known: Record<string, string> = {
+    kg: "Kg per Unit", g: "Grams per Unit", gram: "Grams per Unit", grams: "Grams per Unit",
+    litre: "Litres per Unit", liter: "Litres per Unit", ml: "Millilitres per Unit",
+    piece: "Pieces per Unit", dozen: "Dozens per Unit", box: "Boxes per Unit",
+    packet: "Packets per Unit", bag: "Bags per Unit",
+  };
+  if (known[u]) return known[u];
+  if (!unit) return "Quantity per Unit";
+  return `${unit.charAt(0).toUpperCase()}${unit.slice(1)} per Unit`;
+}
+
+// Short unit abbreviation for inline quantity display, e.g. "24 pc", "5 kg".
+export function packagingUnitAbbrev(unit: string | undefined): string {
+  const u = (unit ?? "").trim().toLowerCase();
+  const known: Record<string, string> = {
+    kg: "kg", g: "g", gram: "g", grams: "g", litre: "l", liter: "l", ml: "ml",
+    piece: "pc", dozen: "dz", box: "box", packet: "pkt", bag: "bag",
+  };
+  return known[u] ?? (unit ?? "");
 }
 
 const emptySettings: AppSettings = {
@@ -444,7 +477,7 @@ type State = {
   // Suppliers / Raw Materials / Purchase Receipts
   loadRawMaterialsModule: () => Promise<void>;
   addSupplier: (item: { name: string; phone: string; address?: string }) => Promise<string>;
-  addRawMaterial: (item: { name: string; unit: string; lowStockThreshold: number }) => Promise<string>;
+  addRawMaterial: (item: { name: string; unit: string; lowStockThreshold: number; category?: string }) => Promise<string>;
   createPurchaseReceipt: (input: {
     poId: string;
     supplierId: string;
@@ -452,6 +485,8 @@ type State = {
     items: { rawMaterialId: string; qty: number; cost: number }[];
   }) => Promise<string>;
   deleteReceipt: (receiptId: string) => Promise<void>;
+  deleteRawMaterial: (id: string) => Promise<void>;
+  deleteCartonConfiguration: (id: string) => Promise<void>;
   updateReceipt: (receiptId: string, input: {
     supplierId: string;
     purchaseDate: string;
@@ -484,8 +519,10 @@ type State = {
     packetsPerBox: number;
     boxId: string;
     boxesPerCarton: number;
+    cartonMaterialId: string;
+    cartonQtyPerCarton: number;
   }) => Promise<string>;
-  updateCartonConfiguration: (id: string, patch: { name?: string; packetsPerBox?: number; boxesPerCarton?: number }) => Promise<{ ok: boolean; reason?: string }>;
+  updateCartonConfiguration: (id: string, patch: { name?: string; packetsPerBox?: number; boxesPerCarton?: number; cartonMaterialId?: string; cartonQtyPerCarton?: number }) => Promise<{ ok: boolean; reason?: string }>;
 
   // Production Batch
   loadProductionBatches: () => Promise<void>;
@@ -625,7 +662,7 @@ export const useStore = create<State>()((set, get) => ({
   addRawMaterial: async (item) => {
     const { data, error } = await supabase
       .from("raw_materials")
-      .insert({ name: item.name, unit: item.unit, low_stock_threshold: item.lowStockThreshold })
+      .insert({ name: item.name, unit: item.unit, low_stock_threshold: item.lowStockThreshold, category: item.category?.trim() || null })
       .select()
       .single();
     if (error || !data) throw new Error(error?.message ?? "Failed to add raw material");
@@ -651,6 +688,12 @@ export const useStore = create<State>()((set, get) => ({
   deleteReceipt: async (receiptId) => {
     const { error } = await supabase.rpc("fn_delete_purchase_receipt", { p_receipt_id: receiptId });
     if (error) throw new Error(error.message ?? "Failed to delete receipt");
+    await get().loadRawMaterialsModule();
+  },
+
+  deleteRawMaterial: async (id) => {
+    const { error } = await supabase.rpc("fn_delete_raw_material", { p_raw_material_id: id });
+    if (error) throw new Error(error.message ?? "Failed to delete raw material");
     await get().loadRawMaterialsModule();
   },
 
@@ -783,6 +826,12 @@ export const useStore = create<State>()((set, get) => ({
     if (error) return { ok: false, reason: error.message };
     await get().loadCartonConfigurations();
     return { ok: true, ...(data as any) };
+  },
+
+  deleteCartonConfiguration: async (id) => {
+    const { error } = await supabase.rpc("fn_delete_carton_configuration", { p_id: id });
+    if (error) throw new Error(error.message ?? "Failed to delete carton configuration");
+    await get().loadCartonConfigurations();
   },
 
   // ---------------------------------------------------------------------

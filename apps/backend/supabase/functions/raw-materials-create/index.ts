@@ -13,15 +13,25 @@ Deno.serve(async (req: Request) => {
       return jsonResponse(envelopeError("name and unit are required", "BAD_REQUEST"), 400, corsHeaders);
     }
 
-    const { data: existing } = await supabase.from("raw_materials").select("id").eq("name", body.name).maybeSingle();
+    const trimmedName = String(body.name).trim();
+
+    const { data: existing } = await supabase
+      .from("raw_materials")
+      .select("id, name")
+      .ilike("name", trimmedName)
+      .maybeSingle();
     if (existing) {
-      return jsonResponse(envelopeError(`raw material "${body.name}" already exists`, "CONFLICT"), 409, corsHeaders);
+      return jsonResponse(
+        envelopeError(`Is naam ka raw material pehle se maujood hai: ${existing.name}`, "CONFLICT"),
+        409,
+        corsHeaders
+      );
     }
 
     const { data, error } = await supabase
       .from("raw_materials")
       .insert({
-        name: body.name,
+        name: trimmedName,
         unit: body.unit,
         quantity_in_stock: body.quantityInStock ?? 0,
         avg_unit_cost: body.avgUnitCost ?? 0,

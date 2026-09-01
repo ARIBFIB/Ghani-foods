@@ -1,12 +1,13 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import { NavLink } from "@/components/ui/nav-link";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "@/components/ui/toast";
 import { type ColumnDef } from "@tanstack/react-table";
-import { useStore, type Wrapper, type Box, type RawMaterial } from "@/lib/store";
+import { useStore, type Wrapper, type Box, type RawMaterial, packagingQtyLabel, packagingUnitAbbrev } from "@/lib/store";
 import {
   wrapperDefinitionSchema,
   boxDefinitionSchema,
@@ -46,7 +47,7 @@ function DefineDialog({ kind, open, onClose }: { kind: PackagingKind; open: bool
   const addBox = useStore((s) => s.addBox);
   const schema = kind === "wrapper" ? wrapperDefinitionSchema : boxDefinitionSchema;
 
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<
+  const { register, control, handleSubmit, reset, watch, formState: { errors, isSubmitting } } = useForm<
     WrapperDefinitionFormValues | BoxDefinitionFormValues
   >({
     resolver: zodResolver(schema),
@@ -57,6 +58,12 @@ function DefineDialog({ kind, open, onClose }: { kind: PackagingKind; open: bool
       lowStockThreshold: kind === "wrapper" ? 500 : 100,
     },
   });
+
+  // ISSUE 8 FIX: label must follow whichever raw material is actually
+  // selected, not a hardcoded "Grams".
+  const selectedRawMaterialId = watch("rawMaterialId");
+  const selectedRawMaterial = rawMaterials.find((m) => m.id === selectedRawMaterialId);
+  const qtyPerUnitLabel = packagingQtyLabel(selectedRawMaterial?.unit);
 
   if (!open) return null;
   const label = kind === "wrapper" ? "Wrapper" : "Box";
@@ -82,18 +89,26 @@ function DefineDialog({ kind, open, onClose }: { kind: PackagingKind; open: bool
           </div>
           <div>
             <label className="text-sm text-[var(--text-muted)]">Underlying Raw Material</label>
-            <select {...register("rawMaterialId")}
-              className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]">
-              {rawMaterials.map((m: RawMaterial) => (
-                <option key={m.id} value={m.id}>{m.name} ({m.unit})</option>
-              ))}
-            </select>
+            <Controller
+              control={control}
+              name="rawMaterialId"
+              render={({ field }) => (
+                <SearchableSelect
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={rawMaterials.map((m: RawMaterial) => ({ value: m.id, label: `${m.name}${m.category ? ` - ${m.category}` : ""} (${m.unit})` }))}
+                  placeholder="Select raw material..."
+                  searchPlaceholder="Search raw materials..."
+                  className="mt-1"
+                />
+              )}
+            />
             {errors.rawMaterialId && <p className="text-xs text-red-400 mt-1">{errors.rawMaterialId.message}</p>}
           </div>
           <div>
             <label className="text-sm text-[var(--text-muted)] inline-flex items-center">
-              Grams per Unit
-              <InfoTip text={`How many grams of the underlying raw material are used to make one ${label.toLowerCase()}`} />
+              {qtyPerUnitLabel}
+              <InfoTip text={`How many ${(selectedRawMaterial?.unit || "units").toLowerCase()} of the underlying raw material are used to make one ${label.toLowerCase()}`} />
             </label>
             <input {...register("gramsPerUnit")} type="number" step="any"
               className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
@@ -135,11 +150,14 @@ function ProduceDialog({ target, onClose }: { target: ProduceTarget; onClose: ()
   if (!target) return null;
   const { kind, item } = target;
   const rawMaterial = rawMaterials.find((m) => m.id === item.rawMaterialId);
-  const unit = (rawMaterial?.unit ?? "").trim().toLowerCase();
-  const multiplier = unit === "kg" || unit === "kilogram" || unit === "kilograms" ? 1000 : 1;
-  const availableGrams = rawMaterial ? rawMaterial.quantityInStock * multiplier : 0;
-  const gramsToConsume = item.gramsPerUnit * quantityProduced;
-  const insufficient = gramsToConsume > availableGrams;
+  // ISSUE 8 FIX: no more hardcoded grams / silent kg->g conversion. The
+  // packaging item's per-unit quantity is defined in the raw material's
+  // OWN unit, so it is compared directly against quantityInStock (also in
+  // that same unit) with no scaling.
+  const unitAbbrev = packagingUnitAbbrev(rawMaterial?.unit);
+  const availableQty = rawMaterial ? rawMaterial.quantityInStock : 0;
+  const qtyToConsume = item.gramsPerUnit * quantityProduced;
+  const insufficient = qtyToConsume > availableQty;
 
   const onSubmit = async (values: ProductionRunFormValues) => {
     const result = kind === "wrapper" ? await produceWrapper(item.id, values.quantityProduced) : await produceBox(item.id, values.quantityProduced);
@@ -159,12 +177,12 @@ function ProduceDialog({ target, onClose }: { target: ProduceTarget; onClose: ()
 
         <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--background)] p-3 space-y-1 text-xs text-[var(--text-muted)]">
           <div className="flex justify-between">
-            <span>Grams per Unit</span>
-            <span className="text-[var(--foreground)]">{item.gramsPerUnit.toLocaleString()} g</span>
+            <span>{packagingQtyLabel(rawMaterial?.unit)}</span>
+            <span className="text-[var(--foreground)]">{item.gramsPerUnit.toLocaleString()} {unitAbbrev}</span>
           </div>
           <div className="flex justify-between">
             <span>{rawMaterial?.name ?? "Raw material"} in stock</span>
-            <span className="text-[var(--foreground)]">{availableGrams.toLocaleString()} g</span>
+            <span className="text-[var(--foreground)]">{availableQty.toLocaleString()} {unitAbbrev}</span>
           </div>
         </div>
 
@@ -177,9 +195,9 @@ function ProduceDialog({ target, onClose }: { target: ProduceTarget; onClose: ()
 
         <div className={`rounded-lg border p-3 text-xs ${insufficient ? "border-red-900 bg-red-950 text-red-400" : "border-[var(--surface-border)] bg-[var(--background)] text-[var(--text-muted)]"}`}>
           <div className="flex justify-between">
-            <span>Grams to be consumed</span>
+            <span>{(rawMaterial?.unit ? rawMaterial.unit.charAt(0).toUpperCase() + rawMaterial.unit.slice(1) : "Quantity")} to be consumed</span>
             <span className={insufficient ? "text-red-400 font-medium" : "text-[var(--foreground)] font-medium"}>
-              {gramsToConsume.toLocaleString()} g
+              {qtyToConsume.toLocaleString()} {unitAbbrev}
             </span>
           </div>
           {insufficient && (
@@ -211,11 +229,12 @@ export default function PackagingPage() {
   const [produceTarget, setProduceTarget] = useState<ProduceTarget>(null);
 
   const materialName = (id: string) => rawMaterials.find((m) => m.id === id)?.name ?? "-";
+  const materialUnitAbbrev = (id: string) => packagingUnitAbbrev(rawMaterials.find((m) => m.id === id)?.unit);
 
   const wrapperColumns = useMemo<ColumnDef<Wrapper, unknown>[]>(() => [
     { accessorKey: "name", header: "Name", cell: ({ getValue }) => <span className="text-[var(--foreground)]">{getValue() as string}</span> },
     { id: "rawMaterial", header: "Underlying Raw Material", cell: ({ row }) => materialName(row.original.rawMaterialId) },
-    { accessorKey: "gramsPerUnit", header: "Grams per Unit", cell: ({ getValue }) => `${(getValue() as number).toLocaleString()} g` },
+    { accessorKey: "gramsPerUnit", header: "Qty per Unit", cell: ({ row }) => `${row.original.gramsPerUnit.toLocaleString()} ${materialUnitAbbrev(row.original.rawMaterialId)}` },
     { id: "unitCost", header: "Derived Unit Cost", cell: ({ row }) => `Rs. ${wrapperUnitCost(row.original.id).toFixed(2)}` },
     { accessorKey: "stockQty", header: "Stock Qty", cell: ({ getValue }) => (getValue() as number).toLocaleString() },
     { accessorKey: "lowStockThreshold", header: "Threshold", cell: ({ getValue }) => (getValue() as number).toLocaleString() },
@@ -237,7 +256,7 @@ export default function PackagingPage() {
   const boxColumns = useMemo<ColumnDef<Box, unknown>[]>(() => [
     { accessorKey: "name", header: "Name", cell: ({ getValue }) => <span className="text-[var(--foreground)]">{getValue() as string}</span> },
     { id: "rawMaterial", header: "Underlying Raw Material", cell: ({ row }) => materialName(row.original.rawMaterialId) },
-    { accessorKey: "gramsPerUnit", header: "Grams per Unit", cell: ({ getValue }) => `${(getValue() as number).toLocaleString()} g` },
+    { accessorKey: "gramsPerUnit", header: "Qty per Unit", cell: ({ row }) => `${row.original.gramsPerUnit.toLocaleString()} ${materialUnitAbbrev(row.original.rawMaterialId)}` },
     { id: "unitCost", header: "Derived Unit Cost", cell: ({ row }) => `Rs. ${boxUnitCost(row.original.id).toFixed(2)}` },
     { accessorKey: "stockQty", header: "Stock Qty", cell: ({ getValue }) => (getValue() as number).toLocaleString() },
     { accessorKey: "lowStockThreshold", header: "Threshold", cell: ({ getValue }) => (getValue() as number).toLocaleString() },

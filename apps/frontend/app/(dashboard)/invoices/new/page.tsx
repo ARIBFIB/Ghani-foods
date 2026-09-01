@@ -1,9 +1,10 @@
-"use client";
+﻿"use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useNavigationLoading } from "@/lib/navigation-loading-context";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "@/components/ui/toast";
 import { Info } from "lucide-react";
@@ -56,6 +57,7 @@ function NewInvoiceForm() {
 
   const {
     register,
+    control,
     handleSubmit,
     watch,
     formState: { errors, isSubmitting },
@@ -144,11 +146,20 @@ function NewInvoiceForm() {
       <div className="rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] p-5 space-y-4">
         <div>
           <label className="text-sm text-[var(--text-muted)]">Customer</label>
-          <select {...register("customerId")}
-            className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]">
-            <option value="">Select a customer</option>
-            {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+          <Controller
+            control={control}
+            name="customerId"
+            render={({ field }) => (
+              <SearchableSelect
+                value={field.value}
+                onChange={field.onChange}
+                options={customers.map((c) => ({ value: c.id, label: c.name }))}
+                placeholder="Select a customer"
+                searchPlaceholder="Search customers..."
+                className="mt-1"
+              />
+            )}
+          />
           {errors.customerId && <p className="text-xs text-red-400 mt-1">{errors.customerId.message}</p>}
           {selectedCustomer && (
             <p className="text-xs text-[var(--text-faint)] mt-1">
@@ -183,11 +194,14 @@ function NewInvoiceForm() {
             return (
               <div key={line.id} className="space-y-1">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                  <select value={line.itemId} onChange={(e) => handleItemChange(line.id, e.target.value)}
-                    className="flex-1 rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]">
-                    <option value="">Select item</option>
-                    {finishedCartons.map((c) => <option key={c.id} value={c.id}>{c.name} {"\u2014"} {c.stockQty} in stock</option>)}
-                  </select>
+                  <SearchableSelect
+                    value={line.itemId}
+                    onChange={(v) => handleItemChange(line.id, v)}
+                    options={finishedCartons.map((c) => ({ value: c.id, label: `${c.name} \u2014 ${c.stockQty} in stock` }))}
+                    placeholder="Select item"
+                    searchPlaceholder="Search items..."
+                    className="flex-1"
+                  />
                   <input value={line.qty} onChange={(e) => updateLine(line.id, { qty: e.target.value })} type="number" placeholder="Qty"
                     className="w-full sm:w-20 rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
                   <input value={line.unitPrice} onChange={(e) => handlePriceChange(line.id, e.target.value)} type="number" placeholder="Unit Price"

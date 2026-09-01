@@ -1,0 +1,106 @@
+{
+  "migrationSql": "-- Adds a free-text `category` column to raw_materials so items can be\n-- organized/filtered (e.g. Flour, Oil/Ghee, Spices, Packaging) and so\n-- picker dropdowns can show the category alongside the item name.\n-- Also added to wrappers/boxes where those tables exist, since the\n-- ticket asks for packaging materials to ideally get this too.\n-- Nullable - existing rows are unaffected; category is optional.\n\nalter table if exists public.raw_materials\n  add column if not exists category text;\n\ndo $$\nbegin\n  if to_regclass('public.wrappers') is not null then\n    alter table public.wrappers add column if not exists category text;\n  end if;\n  if to_regclass('public.boxes') is not null then\n    alter table public.boxes add column if not exists category text;\n  end if;\n  if to_regclass('public.packaging_materials') is not null then\n    alter table public.packaging_materials add column if not exists category text;\n  end if;\nend $$;\n",
+  "categoriesTs": "// Starter category list shown as <datalist> suggestions on the Add/Edit\n// Raw Material form. The field is free-text/creatable - typing anything\n// not in this list is fine, it just won't autocomplete.\nexport const RAW_MATERIAL_CATEGORY_OPTIONS: string[] = [\n  \"Flour\",\n  \"Oil/Ghee\",\n  \"Spices\",\n  \"Seasoning\",\n  \"Packaging\",\n  \"Other\",\n];\n",
+  "schemasSteps": [
+    {
+      "description": "category field on rawMaterialMasterSchema",
+      "anchor": "export const rawMaterialMasterSchema = z.object({\n  name: z.string().trim().min(2, \"Name must be at least 2 characters\"),\n  unit: z.string().trim().min(1, \"Unit is required\"),\n  lowStockThreshold: z.coerce.number().min(0, \"Threshold cannot be negative\"),\n});",
+      "replacement": "export const rawMaterialMasterSchema = z.object({\n  name: z.string().trim().min(2, \"Name must be at least 2 characters\"),\n  unit: z.string().trim().min(1, \"Unit is required\"),\n  lowStockThreshold: z.coerce.number().min(0, \"Threshold cannot be negative\"),\n  category: z.string().trim().optional(),\n});"
+    }
+  ],
+  "storeSteps": [
+    {
+      "description": "RawMaterial type gains category",
+      "anchor": "export type RawMaterial = {\n  id: string;\n  name: string;\n  unit: string;\n  quantityInStock: number;\n  avgUnitCost: number;\n  lowStockThreshold: number;\n};",
+      "replacement": "export type RawMaterial = {\n  id: string;\n  name: string;\n  unit: string;\n  quantityInStock: number;\n  avgUnitCost: number;\n  lowStockThreshold: number;\n  category?: string;\n};"
+    },
+    {
+      "description": "mapRawMaterialRow carries category",
+      "anchor": "function mapRawMaterialRow(row: Record<string, any>): RawMaterial {\n  return {\n    id: row.id,\n    name: row.name,\n    unit: row.unit,\n    quantityInStock: Number(row.quantity_in_stock),\n    avgUnitCost: Number(row.avg_unit_cost),\n    lowStockThreshold: Number(row.low_stock_threshold),\n  };\n}",
+      "replacement": "function mapRawMaterialRow(row: Record<string, any>): RawMaterial {\n  return {\n    id: row.id,\n    name: row.name,\n    unit: row.unit,\n    quantityInStock: Number(row.quantity_in_stock),\n    avgUnitCost: Number(row.avg_unit_cost),\n    lowStockThreshold: Number(row.low_stock_threshold),\n    category: row.category ?? undefined,\n  };\n}"
+    },
+    {
+      "description": "addRawMaterial type signature gains category",
+      "anchor": "  addRawMaterial: (item: { name: string; unit: string; lowStockThreshold: number }) => Promise<string>;",
+      "replacement": "  addRawMaterial: (item: { name: string; unit: string; lowStockThreshold: number; category?: string }) => Promise<string>;"
+    },
+    {
+      "description": "addRawMaterial implementation inserts category",
+      "anchor": "  addRawMaterial: async (item) => {\n    const { data, error } = await supabase\n      .from(\"raw_materials\")\n      .insert({ name: item.name, unit: item.unit, low_stock_threshold: item.lowStockThreshold })\n      .select()\n      .single();",
+      "replacement": "  addRawMaterial: async (item) => {\n    const { data, error } = await supabase\n      .from(\"raw_materials\")\n      .insert({ name: item.name, unit: item.unit, low_stock_threshold: item.lowStockThreshold, category: item.category?.trim() || null })\n      .select()\n      .single();"
+    }
+  ],
+  "rawMaterialsPageSteps": [
+    {
+      "description": "import category suggestions constant",
+      "anchor": "import { UNIT_OPTIONS } from \"@/lib/constants/units\";",
+      "replacement": "import { UNIT_OPTIONS } from \"@/lib/constants/units\";\nimport { RAW_MATERIAL_CATEGORY_OPTIONS } from \"@/lib/constants/raw-material-categories\";"
+    },
+    {
+      "description": "Add form defaultValues include category",
+      "anchor": "    defaultValues: { name: \"\", unit: \"kg\", lowStockThreshold: 50 },",
+      "replacement": "    defaultValues: { name: \"\", unit: \"kg\", lowStockThreshold: 50, category: \"\" },"
+    },
+    {
+      "description": "Category field on Add Raw Material form",
+      "anchor": "          <div>\n            <label className=\"text-sm text-[var(--text-muted)]\">Low Stock Threshold</label>",
+      "replacement": "          <div>\n            <label className=\"text-sm text-[var(--text-muted)]\">Category</label>\n            <input {...register(\"category\")} list=\"raw-material-category-suggestions\" placeholder=\"e.g. Flour\"\n              className=\"mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]\" />\n            <datalist id=\"raw-material-category-suggestions\">\n              {RAW_MATERIAL_CATEGORY_OPTIONS.map((c) => <option key={c} value={c} />)}\n            </datalist>\n            {errors.category && <p className=\"text-xs text-red-400 mt-1\">{errors.category.message}</p>}\n          </div>\n          <div>\n            <label className=\"text-sm text-[var(--text-muted)]\">Low Stock Threshold</label>"
+    },
+    {
+      "description": "category filter state + filtered logic",
+      "anchor": "  const filtered = useMemo(() => {\n    const q = search.trim().toLowerCase();\n    if (!q) return rawMaterials;\n    return rawMaterials.filter((m) => m.name.toLowerCase().includes(q) || m.unit.toLowerCase().includes(q));\n  }, [rawMaterials, search]);",
+      "replacement": "  const categoryOptions = useMemo(() => {\n    const set = new Set(rawMaterials.map((m) => m.category).filter((c): c is string => !!c && c.trim().length > 0));\n    return Array.from(set).sort();\n  }, [rawMaterials]);\n\n  const filtered = useMemo(() => {\n    const q = search.trim().toLowerCase();\n    return rawMaterials.filter((m) => {\n      const matchesSearch = !q || m.name.toLowerCase().includes(q) || m.unit.toLowerCase().includes(q) || (m.category ?? \"\").toLowerCase().includes(q);\n      const matchesCategory = categoryFilter === \"all\" || (m.category ?? \"\") === categoryFilter;\n      return matchesSearch && matchesCategory;\n    });\n  }, [rawMaterials, search, categoryFilter]);"
+    },
+    {
+      "description": "categoryFilter state declaration",
+      "anchor": "  const [search, setSearch] = useState(\"\");",
+      "replacement": "  const [search, setSearch] = useState(\"\");\n  const [categoryFilter, setCategoryFilter] = useState(\"all\");"
+    },
+    {
+      "description": "Category filter dropdown next to search box",
+      "anchor": "      <input\n        value={search}\n        onChange={(e) => setSearch(e.target.value)}\n        placeholder=\"Search raw materials...\"\n        className=\"w-full max-w-sm rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--text-faint)] outline-none focus:border-[var(--surface-border-strong)]\"\n      />",
+      "replacement": "      <div className=\"flex flex-wrap items-center gap-2\">\n        <input\n          value={search}\n          onChange={(e) => setSearch(e.target.value)}\n          placeholder=\"Search raw materials...\"\n          className=\"w-full max-w-sm rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--text-faint)] outline-none focus:border-[var(--surface-border-strong)]\"\n        />\n        <select\n          value={categoryFilter}\n          onChange={(e) => setCategoryFilter(e.target.value)}\n          className=\"rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]\"\n        >\n          <option value=\"all\">All categories</option>\n          {categoryOptions.map((c) => <option key={c} value={c}>{c}</option>)}\n        </select>\n      </div>"
+    },
+    {
+      "description": "Category column header",
+      "anchor": "              <th className=\"px-4 py-3 font-medium\">Unit</th>",
+      "replacement": "              <th className=\"px-4 py-3 font-medium\">Unit</th>\n              <th className=\"px-4 py-3 font-medium\">Category</th>"
+    },
+    {
+      "description": "Category cell in row",
+      "anchor": "                    <td className=\"px-4 py-3 text-[var(--text-secondary)]\">{m.unit}</td>",
+      "replacement": "                    <td className=\"px-4 py-3 text-[var(--text-secondary)]\">{m.unit}</td>\n                    <td className=\"px-4 py-3 text-[var(--text-secondary)]\">{m.category || \"-\"}</td>"
+    },
+    {
+      "description": "colSpan 8 -> 9 for empty-state row",
+      "anchor": "<tr><td colSpan={8} className=\"px-4 py-8 text-center text-[var(--text-faint)]\">No raw materials found.</td></tr>",
+      "replacement": "<tr><td colSpan={9} className=\"px-4 py-8 text-center text-[var(--text-faint)]\">No raw materials found.</td></tr>"
+    },
+    {
+      "description": "colSpan 7 -> 8 for expanded history row",
+      "anchor": "<td colSpan={7} className=\"px-4 py-3\">",
+      "replacement": "<td colSpan={8} className=\"px-4 py-3\">"
+    }
+  ],
+  "packagingSteps": [
+    {
+      "description": "Underlying Raw Material label includes category",
+      "anchor": "                  options={rawMaterials.map((m: RawMaterial) => ({ value: m.id, label: `${m.name} (${m.unit})` }))}",
+      "replacement": "                  options={rawMaterials.map((m: RawMaterial) => ({ value: m.id, label: `${m.name}${m.category ? ` - ${m.category}` : \"\"} (${m.unit})` }))}"
+    }
+  ],
+  "batchesNewSteps": [
+    {
+      "description": "Raw Material Consumption label includes category",
+      "anchor": "                    options={rawMaterials.map((m) => ({ value: m.id, label: `${m.name} (${m.unit}) â€” ${m.quantityInStock} in stock` }))}",
+      "replacement": "                    options={rawMaterials.map((m) => ({ value: m.id, label: `${m.name}${m.category ? ` - ${m.category}` : \"\"} (${m.unit}) â€” ${m.quantityInStock} in stock` }))}"
+    }
+  ],
+  "poDialogSteps": [
+    {
+      "description": "PO line raw material label includes category",
+      "anchor": "                    options={rawMaterials.map((m) => ({ value: m.id, label: `${m.name} (${m.unit})` }))}",
+      "replacement": "                    options={rawMaterials.map((m) => ({ value: m.id, label: `${m.name}${m.category ? ` - ${m.category}` : \"\"} (${m.unit})` }))}"
+    }
+  ]
+}

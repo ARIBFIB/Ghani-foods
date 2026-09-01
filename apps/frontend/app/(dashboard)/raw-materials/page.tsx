@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { NavLink } from "@/components/ui/nav-link";
@@ -11,6 +11,8 @@ import { rawMaterialMasterSchema, type RawMaterialMasterFormValues } from "@/lib
 import { PurchaseReceiptDialog } from "@/components/ui/purchase-receipt-dialog";
 import { InfoTip } from "@/components/ui/info-tip";
 
+import { UNIT_OPTIONS } from "@/lib/constants/units";
+import { RAW_MATERIAL_CATEGORY_OPTIONS } from "@/lib/constants/raw-material-categories";
 function StatusBadge({ isLow }: { isLow: boolean }) {
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
@@ -24,9 +26,10 @@ function StatusBadge({ isLow }: { isLow: boolean }) {
 function AddRawMaterialMasterDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const addRawMaterial = useStore((s) => s.addRawMaterial);
   const loadRawMaterialsModule = useStore((s) => s.loadRawMaterialsModule);
+  const deleteRawMaterial = useStore((s) => s.deleteRawMaterial);
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<RawMaterialMasterFormValues>({
     resolver: zodResolver(rawMaterialMasterSchema),
-    defaultValues: { name: "", unit: "kg", lowStockThreshold: 50 },
+    defaultValues: { name: "", unit: "kg", lowStockThreshold: 50, category: "" },
   });
 
   if (!open) return null;
@@ -61,13 +64,20 @@ function AddRawMaterialMasterDialog({ open, onClose }: { open: boolean; onClose:
             <label className="text-sm text-[var(--text-muted)]">Unit</label>
             <select {...register("unit")}
               className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]">
-              <option value="kg">kg</option>
-              <option value="g">g</option>
-              <option value="litre">litre</option>
-              <option value="ml">ml</option>
-              <option value="piece">piece</option>
+              {UNIT_OPTIONS.map((u) => (
+                <option key={u.value} value={u.value}>{u.label}</option>
+              ))}
             </select>
             {errors.unit && <p className="text-xs text-red-400 mt-1">{errors.unit.message}</p>}
+          </div>
+          <div>
+            <label className="text-sm text-[var(--text-muted)]">Category</label>
+            <input {...register("category")} list="raw-material-category-suggestions" placeholder="e.g. Flour"
+              className="mt-1 w-full rounded-lg border border-[var(--surface-border)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]" />
+            <datalist id="raw-material-category-suggestions">
+              {RAW_MATERIAL_CATEGORY_OPTIONS.map((c) => <option key={c} value={c} />)}
+            </datalist>
+            {errors.category && <p className="text-xs text-red-400 mt-1">{errors.category.message}</p>}
           </div>
           <div>
             <label className="text-sm text-[var(--text-muted)]">Low Stock Threshold</label>
@@ -113,15 +123,37 @@ export default function RawMaterialsPage() {
   };
 
   const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [receiptOpen, setReceiptOpen] = useState(false);
 
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const handleDelete = async (id: string, name: string) => {
+    if (!window.confirm(`Delete raw material "${name}"? This cannot be undone.`)) return;
+    setDeletingId(id);
+    try {
+      await deleteRawMaterial(id);
+      toast.success("Raw material deleted");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete raw material");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+  const categoryOptions = useMemo(() => {
+    const set = new Set(rawMaterials.map((m) => m.category).filter((c): c is string => !!c && c.trim().length > 0));
+    return Array.from(set).sort();
+  }, [rawMaterials]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return rawMaterials;
-    return rawMaterials.filter((m) => m.name.toLowerCase().includes(q) || m.unit.toLowerCase().includes(q));
-  }, [rawMaterials, search]);
+    return rawMaterials.filter((m) => {
+      const matchesSearch = !q || m.name.toLowerCase().includes(q) || m.unit.toLowerCase().includes(q) || (m.category ?? "").toLowerCase().includes(q);
+      const matchesCategory = categoryFilter === "all" || (m.category ?? "") === categoryFilter;
+      return matchesSearch && matchesCategory;
+    });
+  }, [rawMaterials, search, categoryFilter]);
 
   const historyFor = (materialId: string) => {
     return receiptLines
@@ -160,12 +192,22 @@ export default function RawMaterialsPage() {
         </div>
       </div>
 
-      <input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search raw materials..."
-        className="w-full max-w-sm rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--text-faint)] outline-none focus:border-[var(--surface-border-strong)]"
-      />
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search raw materials..."
+          className="w-full max-w-sm rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--foreground)] placeholder:text-[var(--text-faint)] outline-none focus:border-[var(--surface-border-strong)]"
+        />
+        <select
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+          className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--foreground)] outline-none focus:border-[var(--surface-border-strong)]"
+        >
+          <option value="all">All categories</option>
+          {categoryOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </div>
 
       <div className="overflow-x-auto rounded-xl border border-[var(--surface-border)]">
         <table className="w-full min-w-[720px] text-sm">
@@ -174,6 +216,7 @@ export default function RawMaterialsPage() {
               <th className="px-4 py-3 font-medium w-8"></th>
               <th className="px-4 py-3 font-medium">Name</th>
               <th className="px-4 py-3 font-medium">Unit</th>
+              <th className="px-4 py-3 font-medium">Category</th>
               <th className="px-4 py-3 font-medium">Qty in Stock</th>
               <th className="px-4 py-3 font-medium">
                 <span className="inline-flex items-center">
@@ -183,11 +226,12 @@ export default function RawMaterialsPage() {
               </th>
               <th className="px-4 py-3 font-medium">Threshold</th>
               <th className="px-4 py-3 font-medium">Status</th>
+              <th className="px-4 py-3 font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 && (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-[var(--text-faint)]">No raw materials found.</td></tr>
+              <tr><td colSpan={9} className="px-4 py-8 text-center text-[var(--text-faint)]">No raw materials found.</td></tr>
             )}
             {filtered.map((m) => {
               const isLow = m.quantityInStock < m.lowStockThreshold;
@@ -212,15 +256,26 @@ export default function RawMaterialsPage() {
                       </NavLink>
                     </td>
                     <td className="px-4 py-3 text-[var(--text-secondary)]">{m.unit}</td>
+                    <td className="px-4 py-3 text-[var(--text-secondary)]">{m.category || "-"}</td>
                     <td className="px-4 py-3 text-[var(--text-secondary)]">{m.quantityInStock}</td>
                     <td className="px-4 py-3 text-[var(--text-secondary)]">Rs. {m.avgUnitCost.toLocaleString()}</td>
                     <td className="px-4 py-3 text-[var(--text-secondary)]">{m.lowStockThreshold}</td>
                     <td className="px-4 py-3"><StatusBadge isLow={isLow} /></td>
+                    <td className="px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(m.id, m.name)}
+                        disabled={deletingId === m.id}
+                        className="rounded-lg border border-red-900 px-2.5 py-1 text-xs font-medium text-red-400 hover:bg-red-950 disabled:opacity-50"
+                      >
+                        {deletingId === m.id ? "Deleting..." : "Delete"}
+                      </button>
+                    </td>
                   </tr>
                   {isExpanded && (
                     <tr className="border-b border-[var(--surface-border)] last:border-0 bg-[var(--background)]">
                       <td></td>
-                      <td colSpan={6} className="px-4 py-3">
+                      <td colSpan={8} className="px-4 py-3">
                         {history.length === 0 ? (
                           <p className="text-xs text-[var(--text-faint)] py-2">No purchase history yet for this material.</p>
                         ) : (
