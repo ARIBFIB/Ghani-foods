@@ -170,23 +170,45 @@ $connStr = "postgresql://postgres:$DbPassword@db.$projectRef.supabase.co:5432/po
 $NodeScratchDir = $null
 if ($queryMethod -eq "node") {
     $NodeScratchDir = Join-Path $env:TEMP "supplier-ledger-pg-check"
-    if (-not (Test-Path $NodeScratchDir)) { New-Item -ItemType Directory -Path $NodeScratchDir | Out-Null }
-    if (-not (Test-Path (Join-Path $NodeScratchDir "node_modules\pg"))) {
-        Write-Step "Installing the 'pg' package once into a scratch folder (not your project)..."
-        Push-Location $NodeScratchDir
-        try {
-            $npmOutput = cmd.exe /c "npm install pg --no-save 2>&1"
-            $npmOutput = $npmOutput | Out-String
-        }
-        finally {
-            Pop-Location
-        }
+
+    # Wipe and recreate fresh every time - a stale/contaminated scratch dir
+    # (e.g. from an unrelated prior npm run reusing this path, or npm
+    # hoisting into some parent node_modules) is exactly what caused the
+    # previous "up to date, nothing installed" false result.
+    if (Test-Path $NodeScratchDir) {
+        Remove-Item -Path $NodeScratchDir -Recurse -Force
     }
-    if (-not (Test-Path (Join-Path $NodeScratchDir "node_modules\pg"))) {
-        Write-Fail "Could not install the 'pg' package. Real npm output below - read this, not a generic guess:"
+    New-Item -ItemType Directory -Path $NodeScratchDir | Out-Null
+
+    # A minimal package.json anchors this as its OWN npm project root, so
+    # npm cannot hoist the install up into some unrelated parent folder's
+    # node_modules.
+    Set-Content -Path (Join-Path $NodeScratchDir "package.json") -Value '{"name":"supplier-ledger-pg-check","private":true}' -Encoding UTF8
+
+    Write-Step "Installing the 'pg' package into a fresh scratch folder (not your project)..."
+    Push-Location $NodeScratchDir
+    try {
+        $npmOutput = cmd.exe /c "npm install pg --no-save 2>&1"
+        $npmOutput = $npmOutput | Out-String
         Write-Host $npmOutput
+
+        # Authoritative check: ask Node itself, from inside this folder,
+        # whether it can actually resolve 'pg' - not a guess based on
+        # folder existence.
+        $resolveCheck = cmd.exe /c "node -e ""console.log(require.resolve('pg'))"" 2>&1" | Out-String
+    }
+    finally {
+        Pop-Location
+    }
+
+    if ($resolveCheck -notmatch 'pg') {
+        Write-Fail "Could not install/resolve the 'pg' package. npm output above. node's own resolve check said:"
+        Write-Host $resolveCheck
+        Write-Warn2 "Directory listing of $NodeScratchDir for diagnosis:"
+        Get-ChildItem -Path $NodeScratchDir -Recurse -Depth 1 -ErrorAction SilentlyContinue | Select-Object FullName | Format-Table -AutoSize | Out-String | Write-Host
         exit 1
     }
+    Write-Ok "pg package confirmed installed and resolvable."
 
     $queryScript = @'
 const { Client } = require("pg");

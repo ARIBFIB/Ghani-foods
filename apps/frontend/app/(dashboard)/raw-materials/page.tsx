@@ -103,6 +103,7 @@ export default function RawMaterialsPage() {
   const receiptLines = useStore((s) => s.receiptLines);
   const suppliers = useStore((s) => s.suppliers);
   const loadRawMaterialsModule = useStore((s) => s.loadRawMaterialsModule);
+  const deleteRawMaterial = useStore((s) => s.deleteRawMaterial);
 
   useEffect(() => {
     loadRawMaterialsModule();
