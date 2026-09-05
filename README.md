@@ -3,9 +3,6 @@
 A production, inventory, sales, and finance management system built for **Ghani Foods (Nimco)**, a food manufacturing business. It covers the full flow from raw material purchasing through production, packaging, invoicing, customer/supplier ledgers, and financial reporting.
 
 **Live app:** [ghani-foods.vercel.app/login](https://ghani-foods.vercel.app/login)
-
-> ⚠️ **Security note:** older diagnostic scripts in this repo (`.diag-tmp/`) contained hardcoded Supabase database credentials. If this repo has ever been pushed publicly with those files, rotate the database password immediately and keep `.diag-tmp/` out of version control (see [Security](#security) below).
-
 ---
 
 ## Overview
