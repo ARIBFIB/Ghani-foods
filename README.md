@@ -2,8 +2,7 @@
 
 A production, inventory, sales, and finance management system built for **Ghani Foods (Nimco)**, a food manufacturing business. It covers the full flow from raw material purchasing through production, packaging, invoicing, customer/supplier ledgers, and financial reporting.
 
-**Live app:** [(https://ghani-foods-git-main-nas-projects-14fae130.vercel.app/login)]([https://ghani-foods.vercel.app/login](https://ghani-foods-git-main-nas-projects-14fae130.vercel.app/login))
----
+Ye line replace kar do: **Live app:** [https://ghani-foods-git-main-nas-projects-14fae130.vercel.app/login](https://ghani-foods-git-main-nas-projects-14fae130.vercel.app/login)---
 
 ## Overview
 
