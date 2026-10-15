@@ -2,4 +2,12 @@ node_modules
 .next
 dist
 .env
-*.log
+*.log# --- security: secrets / temp ---
+.diag-tmp/
+*.bak
+.env.*
+!.env.example
+apps/backend/supabase/.temp/
+supabase/.temp/
+edits.json
+code-export.json

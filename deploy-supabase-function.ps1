@@ -22,7 +22,7 @@
       .\deploy-supabase-function.ps1 -SkipMigrations
 
     Provide the DB password so "db push" doesn't stop and wait for input:
-      .\deploy-supabase-function.ps1 -DbPassword "S0ep2CxuMkk0FgEH"
+      .\deploy-supabase-function.ps1 -DbPassword "<YOUR_DB_PASSWORD>"
 
   NOTES:
     - Run this from the PROJECT ROOT (folder that contains "apps\backend\supabase\").
