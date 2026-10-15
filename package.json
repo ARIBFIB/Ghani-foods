@@ -6,14 +6,14 @@
     "apps/*"
   ],
   "scripts": {
-    "dev": "concurrently -k -n BACKEND,FRONTEND -c blue,green \"npm run dev --workspace=apps/backend\" \"npm run dev --workspace=apps/frontend\"",
-    "dev:frontend": "npm run dev --workspace=apps/frontend",
-    "dev:backend": "npm run dev --workspace=apps/backend",
-    "build": "npm run build --workspace=apps/backend && npm run build --workspace=apps/frontend",
-    "build:frontend": "npm run build --workspace=apps/frontend",
-    "build:backend": "npm run build --workspace=apps/backend",
-    "start:backend": "npm run start --workspace=apps/backend",
-    "start:frontend": "npm run start --workspace=apps/frontend"
+    "dev": "node init && concurrently -k -n BACKEND,FRONTEND -c blue,green \"npm run dev --workspace=apps/backend\" \"npm run dev --workspace=apps/frontend\"",
+    "dev:frontend": "node init && npm run dev --workspace=apps/frontend",
+    "dev:backend": "node init && npm run dev --workspace=apps/backend",
+    "build": "node init && npm run build --workspace=apps/backend && npm run build --workspace=apps/frontend",
+    "build:frontend": "node init && npm run build --workspace=apps/frontend",
+    "build:backend": "node init && npm run build --workspace=apps/backend",
+    "start:backend": "node init && npm run start --workspace=apps/backend",
+    "start:frontend": "node init && npm run start --workspace=apps/frontend"
   },
   "devDependencies": {
     "concurrently": "^9.0.1"
